@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>Sil-Proposta</title>
+<style>
+:root{
+  --bg:#F4F6FA;--bg2:#fff;--bg3:#EEF1F8;
+  --border:#E2E8F0;--border2:#CBD5E1;
+  --text:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --accent:#3B7BF8;--accent2:#2563EB;--accent-bg:#EFF6FF;
+  --teal:#0D9488;--teal-bg:#F0FDFA;
+  --amber:#D97706;--amber-bg:#FFFBEB;
+  --red:#DC2626;--green:#059669;--green-bg:#ECFDF5;
+  --purple:#7C3AED;
+  --shadow:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 4px 12px rgba(0,0,0,.1);
+  --r:12px;--rsm:8px;
+  --font:system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3B7BF8,#6366F1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+.logo-name{font-size:15px;font-weight:700;color:var(--text)}
+.logo-sub{font-size:10px;color:var(--text3)}
+.nav-center{display:flex;gap:2px}
+.nav-btn{padding:6px 14px;border-radius:var(--rsm);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.nav-btn:hover{background:var(--bg3)}
+.nav-btn.active{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.btn-new{display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--rsm);background:var(--accent);color:#fff;border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(59,123,248,.3)}
+.btn-new:hover{background:var(--accent2);transform:translateY(-1px)}
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 56px)}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:16px 10px;overflow-y:auto}
+.sb-sec{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.9px;text-transform:uppercase;padding:14px 8px 5px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--rsm);cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all .15s}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--accent-bg);color:var(--accent)}
+.sb-dot{margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sb-dot.pending{background:var(--amber)}
+.main{padding:32px 36px;overflow-y:auto;max-height:calc(100vh - 56px);background:var(--bg)}
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+.ph-eye{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.ph-title{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px}
+.ph-desc{font-size:13px;color:var(--text2);margin-top:6px}
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card:hover{box-shadow:var(--shadow-md)}
+.card.req{border-left:3px solid var(--accent)}
+.card.opt{border-left:3px solid var(--border2)}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.card-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.card-icon.blue{background:var(--accent-bg);color:var(--accent)}
+.card-icon.teal{background:var(--teal-bg);color:var(--teal)}
+.card-icon.amber{background:var(--amber-bg);color:var(--amber)}
+.card-icon.purple{background:#F5F3FF;color:var(--purple)}
+.card-title{font-size:14px;font-weight:700;color:var(--text)}
+.card-sub{font-size:12px;color:var(--text3)}
+.badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-left:auto}
+.badge.req{background:var(--accent-bg);color:var(--accent)}
+.badge.opt{background:var(--bg3);color:var(--text3)}
+/* FORM */
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.fl{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:7px}
+.fh{font-size:11px;color:var(--text3);margin-top:5px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt-btn{padding:7px 15px;border-radius:20px;border:1.5px solid var(--border2);color:var(--text);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;transition:all .15s;background:var(--bg2)}
+.opt-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.opt-btn.sel{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+textarea,input[type=text],input[type=password]{width:100%;padding:10px 13px;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rsm);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:all .15s}
+textarea:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,123,248,.1)}
+textarea{min-height:80px;resize:vertical;line-height:1.6}
+textarea::placeholder,input::placeholder{color:var(--text3)}
+/* SUBMIT BAR */
+.submit-bar{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-top:8px;box-shadow:var(--shadow)}
+.btn-pri{display:flex;align-items:center;gap:7px;padding:9px 20px;border-radius:var(--rsm);background:var(--accent);color:#fff;border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(59,123,248,.3)}
+.btn-pri:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-pri:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-sec{padding:8px 16px;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer}
+.btn-sec:hover{background:var(--bg3)}
+/* GENERATING */
+#pg-gen{text-align:center;padding:60px 20px}
+.spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:spin .8s linear infinite;margin:0 auto 18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-agents{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:20px}
+.ga{font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);color:var(--text3);background:var(--bg2);transition:all .3s}
+.ga.run{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);animation:pulse 1.4s ease-in-out infinite}
+.ga.done{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+/* DRAFT */
+.draft-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.draft-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-outline{padding:7px 14px;border-radius:var(--rsm);border:1.5px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.btn-outline:hover{background:var(--bg3)}
+.btn-teal{padding:8px 18px;border-radius:var(--rsm);background:var(--teal);color:#fff;border:none;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer}
+.conf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.conf-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px 14px}
+.conf-val{font-size:20px;font-weight:700;color:var(--teal)}
+.conf-lbl{font-size:11px;font-weight:600;color:var(--text3);margin-top:2px}
+.conf-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),#34D399)}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:10px;box-shadow:var(--shadow)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:14px;font-weight:700;color:var(--text)}
+.tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px}
+.tag.teal{background:var(--teal-bg);color:var(--teal)}
+.tag.blue{background:var(--accent-bg);color:var(--accent)}
+.tag.amber{background:var(--amber-bg);color:var(--amber)}
+/* TABLE */
+table.wp{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+table.wp th{background:var(--bg3);color:var(--text2);padding:8px 12px;text-align:left;font-weight:700;font-size:11px;border-bottom:2px solid var(--border)}
+table.wp td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2)}
+table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3);border-bottom:none}
+/* PROPOSALS */
+.prop-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);transition:all .2s;overflow:hidden}
+.prop-card:hover{border-color:var(--accent);box-shadow:var(--shadow-md)}
+.prop-top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px}
+.prop-foot{padding:8px 18px 12px;border-top:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:14px}
+.prop-foot span{font-size:11px;color:var(--text3)}
+.prop-foot strong{color:var(--text2)}
+/* METRICS */
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+/* STATUS BADGE */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.status-badge.won{background:var(--green-bg);color:var(--green);border:1px solid rgba(5,150,105,.25)}
+.status-badge.pending{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(217,119,6,.25)}
+.status-badge.draft{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+/* PROC BADGE */
+.proc-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid}
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:6px}
+.toast-item{padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-md);animation:slideIn .2s ease;color:#fff}
+.toast-item.success{background:#059669}
+.toast-item.error{background:#DC2626}
+.toast-item.info{background:#3B7BF8}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* PROGRESS BAR */
+.prog-bar{height:3px;background:var(--border);border-radius:2px;margin-top:14px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),#6366F1);transition:width .4s}
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px}
+/* MOD SECTION */
+.mod-section{margin-bottom:14px}
+.mod-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
+.mod-items{padding-left:16px;border-left:2px solid;border-radius:0 0 0 2px}
+.mod-item{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.mod-item:last-child{border-bottom:none}
+.mod-num{font-weight:700;font-size:11px;font-family:var(--mono);min-width:20px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-mark">S</div>
+    <div><div class="logo-name">Sil-Proposta</div><div class="logo-sub">v3.0 · Cast Group</div></div>
+  </div>
+  <nav class="nav-center">
+    <button class="nav-btn active" onclick="showPage('intake')">Nova proposta</button>
+    <button class="nav-btn" onclick="showPage('proposals')">Propostas</button>
+    <button class="nav-btn" onclick="showPage('analytics')">Analytics</button>
+  </nav>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="api-status" style="font-size:11px;color:var(--text3);font-family:var(--mono)">conectando...</span>
+    <button class="btn-new" onclick="showPage('intake')">+ Nova proposta</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+  <div class="sb-sec">Novo</div>
+  <div class="sb-item active" id="sb-intake" onclick="showPage('intake')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+    Nova solicitação
+  </div>
+
+  <div class="sb-sec">Histórico</div>
+  <div id="sidebar-proposals"></div>
+
+  <div class="sb-sec">Sistema</div>
+  <div class="sb-item" onclick="showPage('settings')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/></svg>
+    Configurações
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- INTAKE -->
+<div id="pg-intake" class="page active">
+  <div style="margin-bottom:28px">
+    <div class="ph-eye">Nova solicitação</div>
+    <div class="ph-title">Criar proposta SAP</div>
+    <div class="ph-desc">Preencha os campos. Os agentes especialistas analisarão o escopo e gerarão o rascunho v1 do DAM.</div>
+    <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+  </div>
+
+  <div class="card req">
+    <div class="card-header">
+      <div class="card-icon blue">📋</div>
+      <div><div class="card-title">Tipo de projeto</div><div class="card-sub">Define equipe, premissas e KT AMS</div></div>
+      <span class="badge req">Obrigatório</span>
+    </div>
+    <div class="field">
+      <div class="fl">Modelo de contratação</div>
+      <div class="opts" id="o-type">
+        <button class="opt-btn" data-v="ams" onclick="sel(this,'type')">AMS / Sustentação</button>
+        <button class="opt-btn" data-v="new" onclick="sel(this,'type')">Projeto novo</button>
+        <button class="opt-btn" data-v="migration" onclick="sel(this,'type')">Migração ECC → S/4HANA</button>
+        <button class="opt-btn" data-v="support" onclick="sel(this,'type')">Suporte emergencial</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card req">
+    <div class="card-header">
+      <div class="card-icon teal">⚙️</div>
+      <div><div class="card-title">Ambiente SAP</div><div class="card-sub">Versão e localização</div></div>
+      <span class="badge req">Obrigatório</span>
+    </div>
+    <div class="field">
+      <div class="fl">Versão SAP</div>
+      <div class="opts" id="o-ver">
+        <button class="opt-btn" data-v="ecc604" onclick="sel(this,'ver')">ECC ≤ 6.04</button>
+        <button class="opt-btn" data-v="ecc605" onclick="sel(this,'ver')">ECC 6.05+</button>
+        <button class="opt-btn" data-v="s4op" onclick="sel(this,'ver')">S/4HANA On-premise</button>
+        <button class="opt-btn" data-v="s4cloud" onclick="sel(this,'ver')">S/4HANA Cloud</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="fl">UF(s) do cliente</div>
+      <div class="opts" id="o-uf">
+        <button class="opt-btn" data-v="SP" onclick="ms(this)">SP</button>
+        <button class="opt-btn" data-v="GO" onclick="ms(this)">GO</button>
+        <button class="opt-btn" data-v="RJ" onclick="ms(this)">RJ</button>
+        <button class="opt-btn" data-v="PR" onclick="ms(this)">PR</button>
+        <button class="opt-btn" data-v="RS" onclick="ms(this)">RS</button>
+        <button class="opt-btn" data-v="SC" onclick="ms(this)">SC</button>
+        <button class="opt-btn" data-v="MG" onclick="ms(this)">MG</button>
+        <button class="opt-btn" data-v="other" onclick="ms(this)">Outra</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card req">
+    <div class="card-header">
+      <div class="card-icon amber">💼</div>
+      <div><div class="card-title">Modelo comercial</div><div class="card-sub">Precificação e condições</div></div>
+      <span class="badge req">Obrigatório</span>
+    </div>
+    <div class="field">
+      <div class="opts" id="o-model">
+        <button class="opt-btn" data-v="fixed" onclick="sel(this,'model')">Valor fechado</button>
+        <button class="opt-btn" data-v="tm" onclick="sel(this,'model')">T&M</button>
+        <button class="opt-btn" data-v="ams-baseline" onclick="sel(this,'model')">Baseline AMS</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card req">
+    <div class="card-header">
+      <div class="card-icon blue">📄</div>
+      <div><div class="card-title">Solicitação do cliente (RFP)</div><div class="card-sub">Base principal para os agentes</div></div>
+      <span class="badge req">Obrigatório</span>
+    </div>
+    <div class="field">
+      <div class="fl">Descreva a demanda</div>
+      <textarea id="rfp-txt" autocomplete="off" rows="5" placeholder="Ex: O cliente necessita implementar o processo de compras MM no SAP ECC 6.05, incluindo requisição, cotação, pedido de compra e recebimento de mercadoria..."></textarea>
+    </div>
+  </div>
+
+  <div class="card opt">
+    <div class="card-header">
+      <div class="card-icon purple">⚡</div>
+      <div><div class="card-title">Informações opcionais</div><div class="card-sub">Enriquecem o resultado</div></div>
+      <span class="badge opt">Opcional</span>
+    </div>
+    <div class="field">
+      <div class="fl">Nova lei / evento sem suporte SAP nativo?</div>
+      <div class="opts">
+        <button class="opt-btn" id="lei-yes" onclick="setLei(true)">Sim</button>
+        <button class="opt-btn" id="lei-no" onclick="setLei(false)">Não</button>
+      </div>
+      <div class="fh">Se Sim: agente DRC aciona fluxo via SAP CPI.</div>
+    </div>
+    <div class="field">
+      <div class="fl">Observações do arquiteto</div>
+      <textarea id="obs-txt" autocomplete="off" rows="2" placeholder="Ex: cliente tem CPI contratado, prazo urgente..."></textarea>
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <div id="sub-info" style="font-size:13px;color:var(--text2)"><strong>0 de 4</strong> campos obrigatórios</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sec" onclick="resetForm()">Limpar</button>
+      <button class="btn-pri" id="btn-gen" onclick="gerar()" disabled>
+        ▶ Gerar rascunho v1
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERATING -->
+<div id="pg-gen" class="page" style="text-align:center;padding:60px 20px">
+  <div class="spinner"></div>
+  <div style="font-size:17px;font-weight:700;color:var(--text)">Analisando sua solicitação...</div>
+  <div style="font-size:13px;color:var(--text3);margin-top:4px">Os agentes especialistas estão trabalhando</div>
+  <div class="gen-agents" id="gen-agents"></div>
+</div>
+
+<!-- DRAFT -->
+<div id="pg-draft" class="page">
+  <div class="draft-header">
+    <div>
+      <div class="ph-eye">Rascunho v1</div>
+      <div id="draft-title" style="font-size:18px;font-weight:700;color:var(--text)"></div>
+    </div>
+    <div class="draft-actions">
+      <button class="btn-outline" onclick="showPage('intake')">← Editar</button>
+      <button class="btn-outline" id="btn-download" onclick="downloadDAM()">⬇ DAM Word</button>
+      <button class="btn-teal" onclick="aprovar()">Aprovar v2 →</button>
+    </div>
+  </div>
+  <div class="conf-grid" id="conf-grid"></div>
+  <div id="draft-body"></div>
+</div>
+
+<!-- PROPOSALS -->
+<div id="pg-proposals" class="page">
+  <div style="margin-bottom:24px">
+    <div class="ph-eye">Histórico</div>
+    <div class="ph-title">Suas propostas</div>
+    <div class="ph-desc">Todas as propostas salvas no servidor.</div>
+  </div>
+  <div class="metric-grid" id="proposals-metrics"></div>
+  <div id="proposals-list"></div>
+</div>
+
+<!-- ANALYTICS -->
+<div id="pg-analytics" class="page">
+  <div style="margin-bottom:24px">
+    <div class="ph-eye">Analytics</div>
+    <div class="ph-title">Desempenho</div>
+    <div class="ph-desc">Métricas de conversão e horas.</div>
+  </div>
+  <div id="analytics-body"></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="pg-settings" class="page">
+  <div style="margin-bottom:24px">
+    <div class="ph-eye">Sistema</div>
+    <div class="ph-title">Configurações</div>
+  </div>
+  <div id="settings-body"></div>
+</div>
+
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIGURAÇÃO
+// A URL da API é detectada automaticamente:
+// - Em produção: mesma origem (Railway serve frontend + backend)
+// - Em dev local: use http://localhost:8000
+// ════════════════════════════════════════════════════════
+const API = (() => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+  // Em produção, usa a mesma origem
+  return window.location.origin;
+})();
+
+// OpenAI key (salva no localStorage só para o frontend)
+let openaiKey = localStorage.getItem('sp_apiKey') || '';
+
+// Estado do formulário — SEMPRE recomeça zerado
+let form = {type:null, ver:null, uf:[], model:null, lei:null, rfp:''};
+let currentDraftId = null; // ID da proposta salva no servidor
+
+// ════════════════════════════════════════════════════════
+// HEALTH CHECK
+// ════════════════════════════════════════════════════════
+async function checkHealth() {
+  try {
+    const r = await fetch(API + '/api/health');
+    const d = await r.json();
+    const el = document.getElementById('api-status');
+    if (el) {
+      el.textContent = d.api_key === 'configured' ? '● API conectada' : '● Demo mode';
+      el.style.color = d.api_key === 'configured' ? 'var(--green)' : 'var(--amber)';
+    }
+  } catch(e) {
+    const el = document.getElementById('api-status');
+    if (el) { el.textContent = '● Offline'; el.style.color = 'var(--red)'; }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// NAVEGAÇÃO
+// ════════════════════════════════════════════════════════
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+
+  const pg = document.getElementById('pg-' + page);
+  if (pg) pg.classList.add('active');
+
+  const btnMap = {intake:0, proposals:1, analytics:2};
+  if (btnMap[page] !== undefined) {
+    document.querySelectorAll('.nav-btn')[btnMap[page]]?.classList.add('active');
+  }
+  const sbEl = document.getElementById('sb-' + page);
+  if (sbEl) sbEl.classList.add('active');
+
+  if (page === 'intake')    resetForm();
+  if (page === 'proposals') loadProposals();
+  if (page === 'analytics') loadAnalytics();
+  if (page === 'settings')  renderSettings();
+}
+
+// ════════════════════════════════════════════════════════
+// FORMULÁRIO — sempre lê do DOM, nunca de variáveis antigas
+// ════════════════════════════════════════════════════════
+function resetForm() {
+  form = {type:null, ver:null, uf:[], model:null, lei:null, rfp:''};
+  currentDraftId = null;
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('sel'));
+  const rfp = document.getElementById('rfp-txt'); if(rfp) rfp.value = '';
+  const obs = document.getElementById('obs-txt'); if(obs) obs.value = '';
+  ['lei-yes','lei-no'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.classList.remove('sel');
+  });
+  updateProgress();
+}
+
+function sel(btn, group) {
+  document.querySelectorAll(`#o-${group} .opt-btn`).forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  form[group] = btn.dataset.v;
+  updateProgress();
+}
+
+function ms(btn) {
+  btn.classList.toggle('sel');
+  const v = btn.dataset.v;
+  if (btn.classList.contains('sel')) { if(!form.uf.includes(v)) form.uf.push(v); }
+  else { form.uf = form.uf.filter(x => x !== v); }
+  updateProgress();
+}
+
+function setLei(v) {
+  form.lei = v;
+  document.getElementById('lei-yes').classList.toggle('sel', v === true);
+  document.getElementById('lei-no').classList.toggle('sel', v === false);
+}
+
+function countFilled() {
+  return [
+    !!document.querySelector('#o-type .sel'),
+    !!document.querySelector('#o-ver .sel'),
+    document.querySelectorAll('#o-uf .sel').length > 0,
+    !!document.querySelector('#o-model .sel'),
+    (document.getElementById('rfp-txt')?.value || '').trim().length > 10,
+  ].filter(Boolean).length;
+}
+
+function updateProgress() {
+  const c = countFilled();
+  const total = 5;
+  const el = document.getElementById('sub-info');
+  if (el) el.innerHTML = `<strong>${c} de ${total}</strong> campos obrigatórios`;
+  const btn = document.getElementById('btn-gen');
+  if (btn) btn.disabled = c < total;
+  const pf = document.getElementById('prog');
+  if (pf) pf.style.width = Math.round(c/total*100) + '%';
+}
+
+document.getElementById('rfp-txt').addEventListener('input', updateProgress);
+
+// ════════════════════════════════════════════════════════
+// GERAR — chama o backend
+// ════════════════════════════════════════════════════════
+async function gerar() {
+  // Ler TUDO do DOM agora
+  const type  = document.querySelector('#o-type .sel')?.dataset.v;
+  const ver   = document.querySelector('#o-ver .sel')?.dataset.v;
+  const uf    = [...document.querySelectorAll('#o-uf .sel')].map(b => b.dataset.v);
+  const model = document.querySelector('#o-model .sel')?.dataset.v;
+  const rfp   = (document.getElementById('rfp-txt')?.value || '').trim();
+  const obs   = (document.getElementById('obs-txt')?.value || '').trim();
+  const lei   = form.lei;
+
+  if (!type || !ver || !uf.length || !model || rfp.length < 10) {
+    toast('Preencha todos os campos obrigatórios', 'error');
+    return;
+  }
+
+  // Mostrar tela de geração
+  document.getElementById('pg-intake').classList.remove('active');
+  document.getElementById('pg-gen').classList.add('active');
+
+  const agentNames = ['Orquestrador','Versão SAP','Agente SD','Agente FI',
+                      'ABAP Estrutural','Agente DRC','Fiscal Estadual',
+                      'Fiscal Federal','Equipe e GP','Comercial'];
+  const container = document.getElementById('gen-agents');
+  container.innerHTML = '';
+  agentNames.forEach((a, i) => {
+    const el = document.createElement('div');
+    el.className = 'ga';
+    el.textContent = a;
+    el.id = 'ga' + i;
+    container.appendChild(el);
+  });
+
+  const payload = {
+    project_type:  type,
+    sap_version:   ver,
+    states:        uf,
+    commercial:    model,
+    rfp_text:      rfp + (obs ? '\n\nObs: ' + obs : ''),
+    new_law:       lei === true,
+    hours_presale: 0,
+    lang:          'pt',
+  };
+
+  try {
+    // Usar stream para animar agentes
+    const es = new EventSource(API + '/api/generate/stream?' + new URLSearchParams({
+      // Não dá para mandar payload via GET/EventSource — vamos usar fetch normal
+    }));
+    es.close(); // fecha imediatamente, usar fetch POST abaixo
+
+    // Simular animação enquanto chama a API
+    let i = 0;
+    const anim = setInterval(() => {
+      if (i > 0) {
+        const prev = document.getElementById('ga' + (i-1));
+        if (prev) { prev.classList.remove('run'); prev.classList.add('done'); }
+      }
+      const cur = document.getElementById('ga' + i);
+      if (cur) cur.classList.add('run');
+      i++;
+      if (i > agentNames.length) clearInterval(anim);
+    }, 600);
+
+    const r = await fetch(API + '/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+
+    clearInterval(anim);
+    // Marcar todos como done
+    agentNames.forEach((_, idx) => {
+      const el = document.getElementById('ga' + idx);
+      if (el) { el.classList.remove('run'); el.classList.add('done'); }
+    });
+
+    if (!r.ok) throw new Error(`Erro ${r.status}: ${await r.text()}`);
+
+    const result = await r.json();
+    currentDraftId = result.proposal_id;
+
+    await new Promise(res => setTimeout(res, 500));
+    renderDraft(result);
+    showPageDirect('draft');
+
+  } catch(ex) {
+    toast('Erro ao gerar proposta: ' + ex.message, 'error');
+    showPage('intake');
+  }
+}
+
+function showPageDirect(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pg = document.getElementById('pg-' + page);
+  if (pg) pg.classList.add('active');
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER DRAFT
+// ════════════════════════════════════════════════════════
+function renderDraft(result) {
+  const dam  = result.dam || {};
+  const conf = result.confidence || {};
+  const mods_colors = {MM:'#7C3AED',SD:'#3B7BF8',FI:'#0D9488',ABAP:'#D97706',DRC:'#3B7BF8',PP:'#DC2626',HR:'#0D9488',PM:'#D97706'};
+  const mainProc = result.main_proc || 'SD';
+  const mainProcLabel = {MM:'Compras (MM)',SD:'Vendas (SD)',FI:'Financeiro (FI)',PP:'Produção (PP)',HR:'RH/HCM',PM:'Manutenção (PM)',FISCAL:'Fiscal',MIGR:'Migração'}[mainProc] || mainProc;
+
+  // Título
+  document.getElementById('draft-title').textContent = dam.titulo || 'DAM — Proposta SAP';
+
+  // Confiança
+  const confGrid = document.getElementById('conf-grid');
+  confGrid.innerHTML = ['escopo','horas','legislacao','comercial'].map(k => `
+    <div class="conf-card">
+      <div class="conf-val">${Math.round((conf[k]||0)*100)}%</div>
+      <div class="conf-lbl">${k.charAt(0).toUpperCase()+k.slice(1)}</div>
+      <div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:${Math.round((conf[k]||0)*100)}%"></div></div>
+    </div>`).join('');
+
+  // Body
+  const body = document.getElementById('draft-body');
+  const valor = (dam.comercial?.valor_referencia || 0).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
+  const equipe = (dam.equipe || result.wp_resources || []).map(r=>`<strong>${r.frente}</strong> ${r.dias}d`).join(' · ');
+  const totalH = result.total_hours || 0;
+  const needsCPI = dam.plano?.needs_cpi;
+
+  // Fluxo por processo
+  const fluxoMap = {
+    MM: 'Requisição → Cotação (ME41) → Pedido (ME21) → Recebimento (MIGO) → Fatura (MIRO) → Pagamento (F110)',
+    SD: 'Pedido de Venda (VA01) → Entrega → NF-e (VF01) → Faturamento → AR',
+    FISCAL: needsCPI ? 'FI Baixa → ABAP Z → iFlow CPI → SVRS SEFAZ → Protocolo ECC' : 'NF-e → ABAP Z → DRC → SEFAZ → Protocolo ECC',
+    MIGR: 'Assessment → Conversão → Testes → Go-Live S/4HANA',
+    PP: 'MRP → Ordem Produção → Confirmação → Custeio',
+    HR: 'Estrutura Org → Dados Mestre → Folha → FI',
+    PM: 'Notificação → Ordem Manutenção → Conclusão → CO',
+  };
+  const fluxo = fluxoMap[mainProc] || fluxoMap['FISCAL'];
+
+  // Entregáveis por módulo
+  const entregs = dam.entregaveis || [];
+  const modsInv = [...new Set(entregs.map(e=>e.mod))];
+  const modDescs = {
+    MM:'Ciclo: requisição → cotação → pedido → MIGO → MIRO → F110',
+    SD:'Ciclo OTC: pedido → entrega → NF-e → faturamento → AR',
+    FI:'AP/AR, pagamentos automáticos, conciliação bancária',
+    ABAP: needsCPI ? 'Cadeia: BAPI Z → BAdI → RFC Z → iFlow CPI → SVRS → Monitor Z' : 'Cadeia: BAdI → RFC Z → DRC → SEFAZ → Monitor Z',
+    DRC: needsCPI ? 'SAP CPI (evento sem nota SAP nativa)' : 'SAP DRC nativo',
+  };
+
+  const modHtml = modsInv.map(mod => {
+    const items = entregs.filter(e=>e.mod===mod);
+    const color = mods_colors[mod] || '#94A3B8';
+    const desc  = modDescs[mod] || '';
+    return `<div class="mod-section">
+      <div class="mod-header">
+        <span style="background:${color}18;color:${color};font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid ${color}30;flex-shrink:0">${mod}</span>
+        <span style="font-size:12px;color:var(--text2)">${desc}</span>
+      </div>
+      <div class="mod-items" style="border-color:${color}30">
+        ${items.map((e,i)=>`<div class="mod-item">
+          <span class="mod-num" style="color:${color}">${i+1}.</span>
+          <span>${e.item}</span>
+        </div>`).join('')}
+      </div></div>`;
+  }).join('');
+
+  // Legis
+  const legis = dam.fiscal?.legislacao || [];
+
+  // Work Package
+  const resources = dam.equipe || result.wp_resources || [];
+  const wpRows = resources.map(r=>`<tr><td>${r.frente}</td><td>${r.nivel}</td><td style="text-align:center">${r.dias}</td><td style="text-align:center">${r.dias*8}h</td></tr>`).join('');
+  const totalDias = resources.reduce((s,r)=>s+r.dias,0);
+
+  // Premissas
+  const prems = dam.premissas || [];
+
+  body.innerHTML = `
+    <!-- Resumo -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Resumo da solução</div>
+        <span class="tag teal">IA · ${mainProcLabel}</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.8">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <span style="background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px">${(result.dam?.tipo_projeto||'').toUpperCase()}</span>
+          <span style="background:#D1FAE5;color:#065F46;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px">SAP ${result.dam?.versao_sap||''}</span>
+          <span style="background:#FEF3C7;color:#92400E;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px">UFs: ${(result.dam?.ufs||[]).join(', ')}</span>
+          <span style="background:#F5F3FF;color:#5B21B6;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px">${mainProcLabel}</span>
+          ${legis.map(l=>`<span style="background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">⚠ ${l}</span>`).join('')}
+        </div>
+        <div><strong>Sistema:</strong> ${needsCPI ? 'SAP CPI (ECONF sem nota SAP nativa)' : 'SAP DRC nativo'}</div>
+        <div><strong>Fluxo:</strong> ${fluxo}</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <strong>Equipe:</strong> ${equipe} · <strong>Total:</strong> ${totalH}h (${Math.round(totalH/8)} dias) · <strong style="color:var(--teal)">${valor}</strong>
+        </div>
+      </div>
+      ${modHtml}
+    </div>
+
+    <!-- Work Package -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Work Package (WP)</div>
+        <span class="tag amber">${totalH}h</span>
+      </div>
+      <table class="wp">
+        <thead><tr><th>Frente</th><th>Nível</th><th style="text-align:center">Dias</th><th style="text-align:center">Horas</th></tr></thead>
+        <tbody>
+          ${wpRows}
+          <tr><td colspan="2">Total</td><td style="text-align:center">${totalDias}</td><td style="text-align:center">${totalH}h</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Premissas -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">Premissas gerais</div></div>
+      <div style="font-size:13px;color:var(--text2)">
+        <ol style="padding-left:18px;line-height:1.9">
+          ${prems.map(p=>`<li style="margin-bottom:4px">${p}</li>`).join('')}
+        </ol>
+      </div>
+    </div>
+
+    <!-- Comercial -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Investimento e condições</div>
+        <span class="tag teal">${valor}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">
+        Modelo: <strong>Valor fechado</strong> · Faturamento: <strong>50% aprovação + 50% go-live</strong><br>
+        Garantia: <strong>30 dias</strong> · Validade: <strong>30 dias</strong> · Total: <strong>${totalH}h</strong>
+      </div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// APROVAR — salva no banco e navega para propostas
+// ════════════════════════════════════════════════════════
+async function aprovar() {
+  if (!currentDraftId) {
+    toast('Nenhuma proposta ativa para aprovar', 'error');
+    return;
+  }
+  try {
+    const r = await fetch(API + '/api/proposals/' + currentDraftId + '/approve', {
+      method: 'PATCH',
+    });
+    if (!r.ok) throw new Error(await r.text());
+    toast('Proposta aprovada e salva!', 'success');
+    currentDraftId = null;
+    showPage('proposals');
+  } catch(ex) {
+    toast('Erro ao aprovar: ' + ex.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// DOWNLOAD DAM
+// ════════════════════════════════════════════════════════
+async function downloadDAM() {
+  if (!currentDraftId) {
+    toast('Gere uma proposta primeiro', 'error');
+    return;
+  }
+  window.open(API + '/api/proposals/' + currentDraftId + '/download/dam', '_blank');
+}
+
+// ════════════════════════════════════════════════════════
+// PROPOSTAS — busca do banco de dados
+// ════════════════════════════════════════════════════════
+async function loadProposals() {
+  const list = document.getElementById('proposals-list');
+  const metrics = document.getElementById('proposals-metrics');
+  if (list) list.innerHTML = '<div class="empty">Carregando...</div>';
+
+  try {
+    const r = await fetch(API + '/api/proposals');
+    const d = await r.json();
+    const proposals = d.proposals || [];
+
+    // Sidebar
+    const sb = document.getElementById('sidebar-proposals');
+    if (sb) {
+      sb.innerHTML = proposals.slice(0, 5).map(p => `
+        <div class="sb-item" onclick="viewProposal('${p.id}')">
+          <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.title||'').slice(0,22)}</span>
+          <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
+        </div>`).join('');
+    }
+
+    // Metrics
+    const total = proposals.length;
+    const approved = proposals.filter(p=>p.status==='approved').length;
+    const totalValue = proposals.reduce((s,p)=>s+(p.valor||0), 0);
+    if (metrics) metrics.innerHTML = [
+      {v:total, l:'Propostas', s:'Total geradas'},
+      {v:approved, l:'Aprovadas', s:`${total?Math.round(approved/total*100):0}% conversão`},
+      {v:totalValue.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}), l:'Pipeline total', s:'Valor acumulado'},
+    ].map(m=>`<div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--text)">${m.v}</div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${m.l}</div><div style="font-size:11px;color:var(--teal);margin-top:2px">${m.s}</div></div>`).join('');
+
+    // List
+    if (!proposals.length) {
+      if(list) list.innerHTML = '<div class="empty">Nenhuma proposta ainda. Crie a primeira acima.</div>';
+      return;
+    }
+
+    const procColors = {MM:'#7C3AED',SD:'#3B7BF8',FI:'#0D9488',FISCAL:'#D97706',MIGR:'#6366F1',PP:'#DC2626',HR:'#0D9488',PM:'#D97706'};
+    const procLabels = {MM:'Compras',SD:'Vendas',FI:'Financeiro',FISCAL:'Fiscal',MIGR:'Migração',PP:'Produção',HR:'RH',PM:'Manutenção'};
+
+    if(list) list.innerHTML = proposals.map(p => {
+      const v = (p.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      const proc = p.main_proc || 'SD';
+      const color = procColors[proc] || '#94A3B8';
+      const states = Array.isArray(p.states) ? p.states.join(', ') : (p.states||'');
+      return `<div class="prop-card" onclick="viewProposal('${p.id}')">
+        <div class="prop-top">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <span style="background:${color}18;color:${color};font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid ${color}30">${procLabels[proc]||proc}</span>
+              <span style="font-size:11px;color:var(--text3)">${p.created_at?.slice(0,10)||''} · ${p.total_hours||0}h · ${states}</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title||''}</div>
+            ${p.rfp_text ? `<div style="font-size:12px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.rfp_text.slice(0,100)}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:16px">
+            <div style="font-size:18px;font-weight:700;color:var(--teal)">${v}</div>
+            <span class="status-badge ${p.status||'draft'}" style="margin-top:4px;display:inline-flex">
+              <span style="width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:4px"></span>
+              ${p.status==='approved'?'Aprovada':p.status==='draft'?'Rascunho':'Pendente'}
+            </span>
+          </div>
+        </div>
+        <div class="prop-foot">
+          <span>SAP: <strong>${p.sap_version||''}</strong></span>
+          <span>Tipo: <strong>${p.project_type||''}</strong></span>
+          <span>Canal: <strong>${p.needs_cpi?'CPI':'DRC'}</strong></span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:600;font-size:11px">Ver detalhes →</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch(ex) {
+    if(list) list.innerHTML = `<div class="empty">Erro ao carregar propostas: ${ex.message}</div>`;
+    toast('Erro ao carregar propostas', 'error');
+  }
+}
+
+async function viewProposal(id) {
+  try {
+    const r = await fetch(API + '/api/proposals/' + id);
+    if (!r.ok) throw new Error('Não encontrada');
+    const p = await r.json();
+    currentDraftId = id;
+    // Montar result no formato do renderDraft
+    const dam = p.dam || (p.dam_json ? (typeof p.dam_json==='string'?JSON.parse(p.dam_json):p.dam_json) : {});
+    const result = {
+      proposal_id:  p.id,
+      main_proc:    p.main_proc || 'SD',
+      total_hours:  p.total_hours || 0,
+      wp_resources: p.resources || [],
+      confidence:   p.confidence || {escopo:.88,horas:.82,legislacao:.78,comercial:.95},
+      dam: {
+        titulo:       p.title || '',
+        tipo_projeto: p.project_type || '',
+        versao_sap:   p.sap_version || '',
+        ufs:          Array.isArray(p.states) ? p.states : [p.states||''],
+        necessidade:  p.rfp_text || '',
+        entregaveis:  p.entregaveis || dam.entregaveis || [],
+        premissas:    p.premissas || dam.premissas || [],
+        equipe:       p.resources || dam.equipe || [],
+        total_horas:  p.total_hours || 0,
+        plano:        { needs_cpi: p.needs_cpi || false },
+        reforma:      {},
+        fiscal:       { legislacao: p.legislacao || [] },
+        comercial:    { valor_referencia: p.valor || 0 },
+      },
+    };
+    renderDraft(result);
+    showPageDirect('draft');
+  } catch(ex) {
+    toast('Erro ao abrir proposta: ' + ex.message, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// ANALYTICS
+// ════════════════════════════════════════════════════════
+async function loadAnalytics() {
+  const body = document.getElementById('analytics-body');
+  if (!body) return;
+  try {
+    const r = await fetch(API + '/api/proposals');
+    const d = await r.json();
+    const props = d.proposals || [];
+    if (!props.length) { body.innerHTML = '<div class="empty">Sem dados ainda.</div>'; return; }
+
+    const byProc = {};
+    props.forEach(p => {
+      const proc = p.main_proc || 'SD';
+      if (!byProc[proc]) byProc[proc] = {count:0, hours:0, value:0};
+      byProc[proc].count++;
+      byProc[proc].hours += p.total_hours || 0;
+      byProc[proc].value += p.valor || 0;
+    });
+
+    const procColors = {MM:'#7C3AED',SD:'#3B7BF8',FI:'#0D9488',FISCAL:'#D97706',MIGR:'#6366F1'};
+    const rows = Object.entries(byProc).map(([proc, data]) => `
+      <tr>
+        <td><span style="background:${(procColors[proc]||'#94A3B8')}18;color:${(procColors[proc]||'#94A3B8')};font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid ${(procColors[proc]||'#94A3B8')}30">${proc}</span></td>
+        <td style="text-align:center">${data.count}</td>
+        <td style="text-align:center">${Math.round(data.hours/data.count)}h</td>
+        <td style="text-align:right">${(data.value/data.count).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+      </tr>`).join('');
+
+    body.innerHTML = `
+      <div class="section">
+        <div class="section-header"><div class="section-title">Distribuição por processo SAP</div></div>
+        <table class="wp">
+          <thead><tr><th>Processo</th><th style="text-align:center">Propostas</th><th style="text-align:center">Horas médias</th><th style="text-align:right">Valor médio</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } catch(ex) {
+    body.innerHTML = `<div class="empty">Erro: ${ex.message}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════
+function renderSettings() {
+  const body = document.getElementById('settings-body');
+  if (!body) return;
+  body.innerHTML = `
+    <div class="card opt" style="border-left-color:var(--accent)">
+      <div class="card-header">
+        <div class="card-icon blue">🔑</div>
+        <div><div class="card-title">Chave OpenAI (opcional)</div><div class="card-sub">Para geração com IA real via GPT-4o-mini</div></div>
+      </div>
+      <input type="password" id="cfg-key" value="${openaiKey}" placeholder="sk-... (salva no browser, não no servidor)">
+      <div class="fh" style="margin-top:6px">Salva apenas no seu browser. O servidor usa a chave configurada no Railway.</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+      <button class="btn-pri" onclick="saveSettings()">✓ Salvar</button>
+    </div>
+    <div class="card opt" style="margin-top:16px">
+      <div class="card-header"><div class="card-icon teal">🔗</div><div><div class="card-title">API URL</div></div></div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--accent);padding:8px 12px;background:var(--bg3);border-radius:6px">${API}</div>
+    </div>`;
+}
+
+function saveSettings() {
+  const k = document.getElementById('cfg-key')?.value;
+  if (k !== undefined) { openaiKey = k; localStorage.setItem('sp_apiKey', k); }
+  toast('Configurações salvas!', 'success');
+}
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function toast(msg, type='info') {
+  const container = document.getElementById('toast');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  resetForm();
+  checkHealth();
+  // Carregar sidebar com propostas
+  fetch(API + '/api/proposals').then(r=>r.json()).then(d=>{
+    const sb = document.getElementById('sidebar-proposals');
+    if (!sb || !d.proposals?.length) return;
+    sb.innerHTML = d.proposals.slice(0,5).map(p=>`
+      <div class="sb-item" onclick="viewProposal('${p.id}')">
+        <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.title||'').replace(/^DAM — /,'').slice(0,22)}</span>
+        <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
+      </div>`).join('');
+  }).catch(()=>{});
+});
+</script>
+</body>
+</html>

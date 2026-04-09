@@ -1,0 +1,59 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">
+<style>body{font-family:Arial,sans-serif;font-size:11pt;margin:2.5cm}h1{color:#1F4E79;font-size:14pt;border-bottom:2pt solid #2E75B6;padding-bottom:4pt;margin-top:18pt}h2{color:#2E75B6;font-size:12pt;margin-top:14pt}table{border-collapse:collapse;width:100%;margin-bottom:12pt}th{background:#D9E1F2;font-weight:bold;border:1px solid #ccc;padding:5px;font-size:10pt}p,li{font-size:10.5pt;line-height:1.5}</style></head><body>
+<h1 style="text-align:center;font-size:16pt;border:none">CAST GROUP PARTNER</h1>
+<p style="text-align:center;font-size:12pt;font-weight:bold">DAM — O cliente necessita que o SAP esteja apto ao preenchime (other)</p>
+<p style="text-align:center;color:#2E75B6">DAM — Documento de Arquitetura de Melhoria — v1</p>
+<table><tr><th style="width:35%">Data criação</th><td>07/04/2026</td></tr><tr><th>Arquiteto</th><td>Sil-Proposta (IA + OpenAI GPT-4)</td></tr><tr><th>Consultoria</th><td>Cast Group Partner</td></tr><tr><th>Versão SAP</th><td>S/4HANA On-premise</td></tr><tr><th>UFs</th><td>other</td></tr></table>
+<h1>1. Necessidade</h1><p>O cliente necessita que o SAP esteja apto ao preenchimento dos campos relacionados à Nota Técnica 2019.001, versão 1.70, que trata diversos ajustes, relacionados à NF-e/NFC-e versão 4.0, dentre eles:
+I.	Ajuste nas regras de validação referentes a CST e Código de Benefício Fiscal e insere uma para ordem sequencial do item
+II.	Inclusão de campo para código de benefício fiscal de redução de base de cálculo dentro do CST51 quando acumular com o diferimento
+III.	Quadro com datas de ativação das RV, respectivas exceções e possíveis modelos para UF que ativaram/estão ativando tais RV
+IV.	Publicação de cronograma de ativação de regras de validação para SP (Ativação SP: Homologação – 12/01/2026 / Produção – 06/04/2026)</p>
+<h2>1.1 Benefício esperado</h2><table><tr><th>Benefício</th><td>Garantir conformidade fiscal e evitar autuações por omissão de receita.</td></tr></table>
+<h1>2. Solução</h1>
+<h2>2.1 Resumo</h2><p>Canal: <strong>SAP DRC</strong></p><p>Fluxo: FI Baixa → ABAP Z → DRC → SEFAZ → Protocolo retorna ao ECC</p>
+<h2>2.2 Escopo da melhoria</h2><table><tr><th style="width:60px">Mód.</th><th>Produto / Entregável</th><th style="width:60px">Escopo</th></tr><tr><td style="border:1px solid #ccc;padding:4px;width:60px">SD</td><td style="border:1px solid #ccc;padding:4px">Especificação funcional — ciclo de vendas OTC</td><td style="border:1px solid #ccc;padding:4px;width:60px;text-align:center">Sim</td></tr><tr><td style="border:1px solid #ccc;padding:4px;width:60px">SD</td><td style="border:1px solid #ccc;padding:4px">Configuração organização de vendas, canal, setor e empresa</td><td style="border:1px solid #ccc;padding:4px;width:60px;text-align:center">Sim</td></tr><tr><td style="border:1px solid #ccc;padding:4px;width:60px">SD</td><td style="border:1px solid #ccc;padding:4px">Tipos de documento de venda e determinação de preços (V/08)</td><td style="border:1px solid #ccc;padding:4px;width:60px;text-align:center">Sim</td></tr><tr><td style="border:1px solid #ccc;padding:4px;width:60px">FI</td><td style="border:1px solid #ccc;padding:4px">Contas a receber (AR) — integração SD/FI</td><td style="border:1px solid #ccc;padding:4px;width:60px;text-align:center">Sim</td></tr><tr><td style="border:1px solid #ccc;padding:4px;width:60px">SD</td><td style="border:1px solid #ccc;padding:4px">Saída fiscal NF-e e DANFE</td><td style="border:1px solid #ccc;padding:4px;width:60px;text-align:center">Sim</td></tr></table>
+<h2>2.3 Premissas Gerais</h2><ol><li style="margin-bottom:5px">Os acessos necessários deverão estar liberados até o início.</li><li style="margin-bottom:5px">Todos os desenvolvimentos em ABAP.</li><li style="margin-bottom:5px">Gerenciamento remoto durante toda a execução.</li><li style="margin-bottom:5px">Dia de consultoria: 8h (08h30–12h/13h30–18h), segunda a sexta.</li></ol>
+<h2>2.4 Equipe do projeto</h2><table><tr><th>Frente</th><th>Nível</th><th>Dias</th><th>Horas</th></tr><tr><td style="border:1px solid #ccc;padding:4px">SD</td><td style="border:1px solid #ccc;padding:4px">Senior</td><td style="border:1px solid #ccc;padding:4px;text-align:center">10</td><td style="border:1px solid #ccc;padding:4px;text-align:center">80h</td></tr><tr><td style="border:1px solid #ccc;padding:4px">FI</td><td style="border:1px solid #ccc;padding:4px">Senior</td><td style="border:1px solid #ccc;padding:4px;text-align:center">6</td><td style="border:1px solid #ccc;padding:4px;text-align:center">48h</td></tr><tr><td colspan="2"><strong>Total</strong></td><td style="text-align:center"><strong>16</strong></td><td style="text-align:center"><strong>128h</strong></td></tr></table>
+<h1>3. Investimento</h1><table><tr><th>Título da Demanda</th><th>Total</th></tr><tr><td>DAM — O cliente necessita que o SAP esteja apto ao preenchime (other)</td><td><strong>R$ 28.160,00</strong></td></tr></table>
+<p>Modelo de Sustentação Cast Group: valor fechado com garantia de 30 dias.</p>
+<h2>3.1 Condições de Faturamento</h2><ul><li>Validade: 30 dias.</li><li>Faturamento: 50% aprovação + 50% Go-Live.</li><li>Garantia pós go-live: 30 dias.</li><li>Valores incluem ISS, PIS e COFINS vigentes.</li></ul>
+
+<!-- ── MODAL DETALHES ── -->
+<div id="modal-detalhes" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px">
+  <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <!-- Header do modal -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #E2E8F0;background:linear-gradient(135deg,#EFF6FF,#F0FDFA)">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#3B7BF8;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px">Detalhes técnicos</div>
+        <div id="modal-titulo" style="font-size:17px;font-weight:700;color:#0F172A"></div>
+      </div>
+      <button onclick="fecharDetalhes()" style="width:34px;height:34px;border-radius:8px;border:1px solid #E2E8F0;background:white;cursor:pointer;font-size:18px;color:#94A3B8;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <!-- Tabs -->
+    <div id="modal-tabs" style="display:flex;gap:0;border-bottom:1px solid #E2E8F0;padding:0 24px;overflow-x:auto"></div>
+    <!-- Conteúdo -->
+    <div id="modal-content" style="padding:24px;min-height:300px"></div>
+  </div>
+</div>
+
+<style>
+.tab-btn{padding:10px 18px;border:none;border-bottom:2.5px solid transparent;background:transparent;font-family:var(--font);font-size:13px;font-weight:600;color:#94A3B8;cursor:pointer;white-space:nowrap;transition:all .15s}
+.tab-btn.active{color:#3B7BF8;border-bottom-color:#3B7BF8}
+.tab-btn:hover{color:#475569}
+.detail-block{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.detail-role{font-size:11px;font-weight:700;color:#3B7BF8;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px}
+.detail-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #F1F5F9;font-size:13px;color:#334155}
+.detail-item:last-child{border-bottom:none}
+.detail-num{color:#3B7BF8;font-weight:700;font-size:11px;font-family:var(--mono);min-width:20px}
+pre.abap-code{background:#0F172A;color:#E2E8F0;border-radius:10px;padding:16px;font-family:var(--mono);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre;margin-top:10px}
+pre.abap-code .kw{color:#60A5FA}
+pre.abap-code .str{color:#86EFAC}
+pre.abap-code .cmt{color:#64748B;font-style:italic}
+pre.abap-code .type{color:#FBBF24}
+pre.abap-code .var{color:#FDA4AF}
+.code-tab-btn{padding:5px 14px;border-radius:7px;border:1px solid #E2E8F0;background:white;font-family:var(--mono);font-size:11px;cursor:pointer;margin-right:6px;transition:all .15s;color:#475569}
+.code-tab-btn.active{background:#0F172A;color:#60A5FA;border-color:#0F172A}
+</style>
+
+</body></html>

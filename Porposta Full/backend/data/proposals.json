@@ -1,0 +1,247 @@
+[
+  {
+    "proposal_id": "7d8e4c10",
+    "dam_sections": {
+      "titulo": "DAM — Proposta SAP (GO)",
+      "tipo_projeto": "ams",
+      "versao_sap": "ecc605",
+      "ufs": [
+        "GO"
+      ],
+      "necessidade": "Cliente opera SAP ECC 6.05 em Goiás. Precisa implementar o Evento de Conciliação Financeira ECONF (NT 2024.002) conforme IN 1.608/2025-GSE. Possui terminais de pagamento TEF integrados ao checkout. Necessita integração automática dos dados de pagamento eletrônico na NF-e.",
+      "entregaveis": [
+        "BAPI Z terminal",
+        "BAdI Grupo YA",
+        "RFC Z XML",
+        "iFlow CPI ECONF 110750",
+        "Monitor Z ECONF"
+      ],
+      "premissas": [
+        "Esta proposta não contempla a extração dos dados da maquininha.",
+        "Todos os desenvolvimentos em ABAP.",
+        "Gerenciamento remoto durante toda a execução."
+      ],
+      "equipe": [
+        {
+          "frente": "SD",
+          "nivel": "Senior",
+          "dias": 9
+        },
+        {
+          "frente": "FI",
+          "nivel": "Senior",
+          "dias": 11
+        },
+        {
+          "frente": "GP",
+          "nivel": "Senior",
+          "dias": 4
+        },
+        {
+          "frente": "ABAP 1",
+          "nivel": "Senior",
+          "dias": 14
+        },
+        {
+          "frente": "ABAP 2",
+          "nivel": "Senior",
+          "dias": 14
+        },
+        {
+          "frente": "ABAP 3",
+          "nivel": "Senior",
+          "dias": 14
+        }
+      ],
+      "total_horas": 528,
+      "plano": {
+        "needs_cpi": true,
+        "modules": [
+          "SD",
+          "FI",
+          "ABAP"
+        ]
+      },
+      "reforma": {
+        "decisao": "monitorar"
+      },
+      "fiscal": {
+        "legislacao": []
+      },
+      "comercial": {
+        "valor_referencia": 121440
+      }
+    },
+    "wp_resources": [
+      {
+        "frente": "SD",
+        "nivel": "Senior",
+        "dias": 9
+      },
+      {
+        "frente": "FI",
+        "nivel": "Senior",
+        "dias": 11
+      },
+      {
+        "frente": "GP",
+        "nivel": "Senior",
+        "dias": 4
+      },
+      {
+        "frente": "ABAP 1",
+        "nivel": "Senior",
+        "dias": 14
+      },
+      {
+        "frente": "ABAP 2",
+        "nivel": "Senior",
+        "dias": 14
+      },
+      {
+        "frente": "ABAP 3",
+        "nivel": "Senior",
+        "dias": 14
+      }
+    ],
+    "total_hours": 528,
+    "presale_hours": 9,
+    "confidence": {
+      "escopo": 0.85,
+      "horas": 0.8,
+      "legislacao": 0.88,
+      "comercial": 0.95
+    },
+    "agents_fired": [
+      "Orquestrador",
+      "SD",
+      "FI",
+      "ABAP",
+      "DRC",
+      "Equipe",
+      "Comercial"
+    ],
+    "lang": "pt",
+    "demo_mode": true,
+    "saved_at": "2026-04-05T14:00:52.395489"
+  },
+  {
+    "proposal_id": "final_test",
+    "dam_sections": {
+      "titulo": "DAM Teste Final",
+      "tipo_projeto": "ams",
+      "versao_sap": "ECC 6.05+",
+      "ufs": [
+        "GO"
+      ],
+      "necessidade": "ECONF IN 1.608/2025-GSE.",
+      "entregaveis": [
+        "BAPI Z",
+        "BAdI Grupo YA",
+        "RFC Z",
+        "iFlow CPI ECONF",
+        "Monitor Z"
+      ],
+      "premissas": [
+        "Esta proposta não contempla extração da maquininha."
+      ],
+      "equipe": [
+        {
+          "frente": "SD",
+          "nivel": "Senior",
+          "dias": 9
+        },
+        {
+          "frente": "FI",
+          "nivel": "Senior",
+          "dias": 11
+        },
+        {
+          "frente": "ABAP 1",
+          "nivel": "Senior",
+          "dias": 14
+        }
+      ],
+      "total_horas": 272,
+      "plano": {
+        "needs_cpi": true
+      },
+      "reforma": {
+        "decisao": "monitorar"
+      },
+      "comercial": {
+        "valor_referencia": 62560
+      },
+      "fiscal": {}
+    },
+    "wp_resources": [
+      {
+        "frente": "SD",
+        "nivel": "Senior",
+        "dias": 9
+      },
+      {
+        "frente": "ABAP 1",
+        "nivel": "Senior",
+        "dias": 14
+      }
+    ],
+    "total_hours": 272,
+    "presale_hours": 9,
+    "status": "pending",
+    "saved_at": "2026-04-05T12:03:43.836155"
+  },
+  {
+    "proposal_id": "test01",
+    "dam_sections": {
+      "titulo": "DAM teste",
+      "tipo_projeto": "ams",
+      "versao_sap": "ECC 6.05+",
+      "ufs": [
+        "GO"
+      ],
+      "necessidade": "Teste.",
+      "entregaveis": [
+        "BAPI Z",
+        "iFlow CPI"
+      ],
+      "premissas": [
+        "Teste premissa"
+      ],
+      "equipe": [
+        {
+          "frente": "SD",
+          "nivel": "Senior",
+          "dias": 9
+        }
+      ],
+      "total_horas": 72,
+      "plano": {
+        "needs_cpi": true
+      },
+      "reforma": {
+        "decisao": "monitorar"
+      },
+      "comercial": {
+        "valor_referencia": 16560
+      },
+      "fiscal": {}
+    },
+    "wp_resources": [
+      {
+        "frente": "SD",
+        "nivel": "Senior",
+        "dias": 9
+      },
+      {
+        "frente": "ABAP 1",
+        "nivel": "Senior",
+        "dias": 14
+      }
+    ],
+    "total_hours": 184,
+    "presale_hours": 4,
+    "status": "won",
+    "saved_at": "2026-04-05T12:02:34.495431"
+  }
+]
