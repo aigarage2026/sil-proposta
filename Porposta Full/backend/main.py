@@ -2,6 +2,9 @@
 Sil-Proposta — Backend FastAPI v3
 Banco de dados real (SQLite local / PostgreSQL producao)
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -15,6 +18,7 @@ from contextlib import asynccontextmanager
 sys.path.insert(0, os.path.dirname(__file__))
 from database import init_db, get_db
 from demo_engine import gerar_proposta_demo
+from agents.orchestrator import Orchestrator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,6 +45,7 @@ for _fdir in _frontend_candidates:
 class IntakePayload(BaseModel):
     project_type:  str
     sap_version:   str
+    client_name:   str = ""
     states:        List[str]
     commercial:    str
     tax_reform:    str = "auto"
@@ -50,12 +55,20 @@ class IntakePayload(BaseModel):
     notes:         Optional[str]  = None
     lang:          str = "pt"
 
+def _get_engine():
+    """Determina qual engine usar: orchestrator (OpenAI) > demo."""
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if openai_key and openai_key != "sua-chave-aqui":
+        return "orchestrator", openai_key
+    return "demo", ""
+
 @app.get("/api/health")
 async def health():
-    has_key = bool(os.environ.get("OPENAI_API_KEY"))
-    return {"status": "ok", "version": "3.0.0",
+    engine, _ = _get_engine()
+    return {"status": "ok", "version": "4.0.0",
             "ts": datetime.utcnow().isoformat(),
-            "api_key": "configured" if has_key else "demo_mode",
+            "engine": engine,
+            "api_key": "configured" if engine != "demo" else "demo_mode",
             "db": "connected"}
 
 @app.get("/")
@@ -85,21 +98,35 @@ async def upload_rfp(file: UploadFile = File(...)):
 
 @app.post("/api/generate")
 async def generate(payload: IntakePayload, db=Depends(get_db)):
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-    if openai_key:
+    engine, api_key = _get_engine()
+    result = None
+
+    # 1. Orchestrator multi-agente (OpenAI GPT-4o)
+    if engine == "orchestrator":
         try:
-            result = await _gerar_com_llm(payload, openai_key)
+            print(f"[generate] Usando orchestrator multi-agente (OpenAI)")
+            orch = Orchestrator(payload)
+            result = await orch.run()
         except Exception as ex:
-            print(f"LLM error: {ex} — fallback demo")
-            result = gerar_proposta_demo(payload)
-    else:
+            print(f"[generate] Orchestrator error: {ex} — fallback demo")
+            result = None
+
+    # 2. Fallback: demo engine (sem API key)
+    if result is None:
+        print(f"[generate] Usando demo engine")
         result = gerar_proposta_demo(payload)
 
     pid = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
+    prop_number = await db.get_next_proposal_number(datetime.utcnow().year)
+    client_name = payload.client_name or "Cliente"
+    title = f"{client_name} — {prop_number}"
     await db.save_proposal({
         "id": pid, "created_at": now, "updated_at": now,
-        "title": result["dam"]["titulo"],
+        "title": title,
+        "client_name": client_name,
+        "proposal_number": prop_number,
+        "version": 1,
         "rfp_text": payload.rfp_text or "",
         "project_type": payload.project_type,
         "sap_version": payload.sap_version,
@@ -121,40 +148,61 @@ async def generate(payload: IntakePayload, db=Depends(get_db)):
         "lang": payload.lang,
     })
     result["proposal_id"] = pid
+    result["title"] = title
+    result["status"] = "draft"
+    result["version"] = 1
+    result["client_name"] = client_name
+    result["proposal_number"] = prop_number
     result["saved_to_db"] = True
     return result
 
 @app.post("/api/generate/stream")
 async def generate_stream(payload: IntakePayload, db=Depends(get_db)):
     async def stream():
-        openai_key = os.environ.get("OPENAI_API_KEY", "")
-        agents = [
-            ("orch","Orquestrador"),("ver","Versao SAP"),("sd","Agente SD"),
-            ("fi","Agente FI"),("abap","ABAP Estrutural"),("drc","Agente DRC"),
-            ("fest","Fiscal Estadual"),("ffed","Fiscal Federal"),
-            ("eq","Equipe e GP"),("com","Comercial"),
-        ]
-        yield f"data: {json.dumps({'type':'start','msg':'Analisando intake...'})}\n\n"
-        for ag_id, ag_name in agents:
-            await asyncio.sleep(0.5 + 0.2 * (hash(ag_id) % 4))
-            yield f"data: {json.dumps({'type':'agent','id':ag_id,'name':ag_name,'status':'running'})}\n\n"
-            await asyncio.sleep(0.3)
-            yield f"data: {json.dumps({'type':'agent','id':ag_id,'name':ag_name,'status':'done'})}\n\n"
+        engine, api_key = _get_engine()
+        result = None
 
-        if openai_key:
+        # Orchestrator com streaming real dos agentes
+        if engine == "orchestrator":
             try:
-                result = await _gerar_com_llm(payload, openai_key)
+                orch = Orchestrator(payload)
+                async for event in orch.stream():
+                    if event.get("type") == "complete":
+                        result = event["result"]
+                    else:
+                        yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             except Exception as ex:
-                print(f"LLM error: {ex}")
-                result = gerar_proposta_demo(payload)
-        else:
+                print(f"[stream] Orchestrator error: {ex}")
+                yield f"data: {json.dumps({'type':'agent','name':'Orquestrador','status':'error','error':str(ex)})}\n\n"
+
+        # Fallback: demo engine com animação simulada
+        if result is None:
+            agents_sim = [
+                ("orch","Orquestrador"),("sd","Agente SD"),("fi","Agente FI"),
+                ("abap","ABAP Estrutural"),("drc","Agente DRC"),
+                ("fest","Fiscal Estadual"),("ffed","Fiscal Federal"),
+                ("eq","Equipe/GP"),("com","Comercial"),
+            ]
+            yield f"data: {json.dumps({'type':'start','msg':'Analisando demanda...'})}\n\n"
+            for ag_id, ag_name in agents_sim:
+                yield f"data: {json.dumps({'type':'agent','id':ag_id,'name':ag_name,'status':'running'})}\n\n"
+                await asyncio.sleep(0.3)
+                yield f"data: {json.dumps({'type':'agent','id':ag_id,'name':ag_name,'status':'done'})}\n\n"
+
             result = gerar_proposta_demo(payload)
 
+        # Salvar no banco
         pid = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
+        prop_number = await db.get_next_proposal_number(datetime.utcnow().year)
+        client_name = payload.client_name or "Cliente"
+        title = f"{client_name} — {prop_number}"
         await db.save_proposal({
             "id": pid, "created_at": now, "updated_at": now,
-            "title": result["dam"]["titulo"],
+            "title": title,
+            "client_name": client_name,
+            "proposal_number": prop_number,
+            "version": 1,
             "rfp_text": payload.rfp_text or "",
             "project_type": payload.project_type,
             "sap_version": payload.sap_version,
@@ -164,20 +212,23 @@ async def generate_stream(payload: IntakePayload, db=Depends(get_db)):
             "hours_presale": payload.hours_presale or 0,
             "status": "draft",
             "main_proc": result.get("main_proc","SD"),
-            "needs_cpi": result["dam"].get("plano",{}).get("needs_cpi",False),
-            "total_hours": result["total_hours"],
-            "valor": result["dam"]["comercial"].get("valor_referencia",0),
-            "resources_json":   json.dumps(result["wp_resources"]),
-            "entregaveis_json": json.dumps(result["dam"].get("entregaveis",[])),
-            "premissas_json":   json.dumps(result["dam"].get("premissas",[])),
-            "legislacao_json":  json.dumps(result["dam"].get("fiscal",{}).get("legislacao",[])),
-            "dam_json":         json.dumps(result["dam"]),
+            "needs_cpi": result.get("dam",{}).get("plano",{}).get("needs_cpi",False),
+            "total_hours": result.get("total_hours",0),
+            "valor": result.get("dam",{}).get("comercial",{}).get("valor_referencia",0),
+            "resources_json":   json.dumps(result.get("wp_resources",[])),
+            "entregaveis_json": json.dumps(result.get("dam",{}).get("entregaveis",[])),
+            "premissas_json":   json.dumps(result.get("dam",{}).get("premissas",[])),
+            "legislacao_json":  json.dumps(result.get("dam",{}).get("fiscal",{}).get("legislacao",[])),
+            "dam_json":         json.dumps(result.get("dam",{})),
             "confidence_json":  json.dumps(result.get("confidence",{})),
             "lang": payload.lang,
         })
         result["proposal_id"] = pid
+        result["title"] = title
+        result["client_name"] = client_name
+        result["proposal_number"] = prop_number
         result["saved_to_db"] = True
-        yield f"data: {json.dumps({'type':'complete','result':result})}\n\n"
+        yield f"data: {json.dumps({'type':'complete','result':result}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
@@ -201,6 +252,215 @@ async def approve_proposal(pid: str, db=Depends(get_db)):
         raise HTTPException(404, "Proposta nao encontrada")
     return {"ok": True, "proposal_id": pid, "status": "approved"}
 
+@app.patch("/api/proposals/{pid}/approve-architect")
+async def approve_architect(pid: str, db=Depends(get_db)):
+    p = await db.get_proposal(pid)
+    if not p:
+        raise HTTPException(404, "Proposta nao encontrada")
+    if p.get("status") not in ("draft", None, ""):
+        raise HTTPException(400, f"Proposta precisa estar em rascunho (status atual: {p.get('status')})")
+    ok = await db.update_proposal(pid, {"status": "architect_approved", "updated_at": datetime.utcnow().isoformat()})
+    return {"ok": ok, "proposal_id": pid, "status": "architect_approved"}
+
+@app.patch("/api/proposals/{pid}/approve-client")
+async def approve_client(pid: str, db=Depends(get_db)):
+    p = await db.get_proposal(pid)
+    if not p:
+        raise HTTPException(404, "Proposta nao encontrada")
+    if p.get("status") != "architect_approved":
+        raise HTTPException(400, "Proposta precisa ter aprovacao do arquiteto primeiro")
+    ok = await db.update_proposal(pid, {"status": "client_approved", "updated_at": datetime.utcnow().isoformat()})
+    return {"ok": ok, "proposal_id": pid, "status": "client_approved"}
+
+@app.post("/api/proposals/{pid}/regenerate")
+async def regenerate_proposal(pid: str, payload: IntakePayload, db=Depends(get_db)):
+    """Re-generate proposal, incrementing version."""
+    old = await db.get_proposal(pid)
+    if not old:
+        raise HTTPException(404, "Proposta nao encontrada")
+
+    engine, api_key = _get_engine()
+    result = None
+
+    if engine == "orchestrator":
+        try:
+            orch = Orchestrator(payload)
+            result = await orch.run()
+        except Exception as ex:
+            print(f"[regenerate] Orchestrator error: {ex}")
+
+    if result is None:
+        result = gerar_proposta_demo(payload)
+
+    now = datetime.utcnow().isoformat()
+    new_version = (old.get("version") or 1) + 1
+    client_name = payload.client_name or old.get("client_name") or "Cliente"
+    prop_number = old.get("proposal_number") or ""
+    title = f"{client_name} — {prop_number}" if prop_number else old.get("title", "Proposta")
+
+    total_hours = result.get("total_hours", 0)
+    await db.update_proposal(pid, {
+        "updated_at": now,
+        "title": title,
+        "client_name": client_name,
+        "version": new_version,
+        "status": "draft",
+        "rfp_text": payload.rfp_text or "",
+        "project_type": payload.project_type,
+        "sap_version": payload.sap_version,
+        "states": json.dumps(payload.states),
+        "commercial": payload.commercial,
+        "new_law": 1 if payload.new_law else 0,
+        "main_proc": result.get("main_proc", "SD"),
+        "needs_cpi": 1 if result.get("dam", {}).get("plano", {}).get("needs_cpi") else 0,
+        "total_hours": total_hours,
+        "valor": result.get("dam", {}).get("comercial", {}).get("valor_referencia", 0),
+        "resources_json": json.dumps(result.get("wp_resources", [])),
+        "entregaveis_json": json.dumps(result.get("dam", {}).get("entregaveis", [])),
+        "premissas_json": json.dumps(result.get("dam", {}).get("premissas", [])),
+        "legislacao_json": json.dumps(result.get("dam", {}).get("fiscal", {}).get("legislacao", [])),
+        "dam_json": json.dumps(result.get("dam", {})),
+        "confidence_json": json.dumps(result.get("confidence", {})),
+    })
+
+    result["proposal_id"] = pid
+    result["title"] = title
+    result["status"] = "draft"
+    result["version"] = new_version
+    result["client_name"] = client_name
+    result["proposal_number"] = prop_number
+    return result
+
+@app.get("/api/dashboard")
+async def dashboard(db=Depends(get_db)):
+    stats = await db.get_dashboard_stats()
+    return stats
+
+# ════════════════════════════════════════════════════════
+# LEGISLAÇÃO
+# ════════════════════════════════════════════════════════
+@app.get("/api/legislacao")
+async def list_legislacao(tipo: str = None, db=Depends(get_db)):
+    items = await db.list_legislacao(tipo)
+    return {"items": items, "total": len(items)}
+
+@app.post("/api/legislacao")
+async def create_legislacao(data: dict, db=Depends(get_db)):
+    lid = str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    record = {
+        "id": lid,
+        "created_at": now,
+        "updated_at": now,
+        "tipo": data.get("tipo", "federal"),
+        "nome": data.get("nome", ""),
+        "descricao": data.get("descricao", ""),
+        "url_fonte": data.get("url_fonte", ""),
+        "texto_completo": data.get("texto_completo", ""),
+        "data_publicacao": data.get("data_publicacao", now[:10]),
+        "data_limite_homo": data.get("data_limite_homo", ""),
+        "data_limite_prod": data.get("data_limite_prod", ""),
+        "ufs_afetadas": json.dumps(data.get("ufs_afetadas", ["TODAS"])),
+        "setores": json.dumps(data.get("setores", [])),
+        "impacto_sap": json.dumps(data.get("impacto_sap", [])),
+        "status": "nova",
+        "proposal_id": "",
+        "fonte": data.get("fonte", "manual"),
+    }
+    ok = await db.save_legislacao(record)
+    return {"ok": ok, "id": lid}
+
+@app.delete("/api/legislacao")
+async def delete_all_legislacao(db=Depends(get_db)):
+    count = await db.delete_all_legislacao()
+    return {"ok": True, "deleted": count}
+
+@app.delete("/api/legislacao/{lid}")
+async def delete_legislacao(lid: str, db=Depends(get_db)):
+    ok = await db.delete_legislacao(lid)
+    if not ok:
+        raise HTTPException(404, "Legislacao nao encontrada")
+    return {"ok": True}
+
+@app.post("/api/legislacao/scrape")
+async def scrape_legislacao(db=Depends(get_db)):
+    """Run scrapers to fetch new legislation from government portals."""
+    from scraper import run_full_scrape
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    try:
+        items = await run_full_scrape(api_key)
+        saved = 0
+        for item in items:
+            lid = str(uuid.uuid4())
+            now = datetime.utcnow().isoformat()
+            record = {
+                "id": lid,
+                "created_at": now,
+                "updated_at": now,
+                "tipo": item.get("tipo", "federal"),
+                "nome": item.get("nome", "")[:200],
+                "descricao": item.get("descricao", "")[:1000],
+                "url_fonte": item.get("url_fonte", ""),
+                "texto_completo": "",
+                "data_publicacao": item.get("data_publicacao", now[:10]),
+                "data_limite_homo": item.get("data_limite_homo") or "",
+                "data_limite_prod": item.get("data_limite_prod") or "",
+                "ufs_afetadas": json.dumps(item.get("ufs_afetadas", ["TODAS"])) if isinstance(item.get("ufs_afetadas"), list) else json.dumps(["TODAS"]),
+                "setores": json.dumps(item.get("setores", [])) if isinstance(item.get("setores"), list) else json.dumps([]),
+                "impacto_sap": json.dumps(item.get("impacto_sap", [])) if isinstance(item.get("impacto_sap"), list) else json.dumps([]),
+                "status": "nova",
+                "proposal_id": "",
+                "fonte": item.get("fonte", "scraper"),
+            }
+            ok = await db.save_legislacao(record)
+            if ok:
+                saved += 1
+        return {"ok": True, "scraped": len(items), "saved": saved}
+    except Exception as ex:
+        raise HTTPException(500, f"Erro no scraping: {ex}")
+
+@app.post("/api/legislacao/scrape-url")
+async def scrape_legislacao_url(data: dict, db=Depends(get_db)):
+    """Scrape specific URLs provided by the user."""
+    from scraper import scrape_urls, classify_with_ai
+    urls = data.get("urls", [])
+    if not urls:
+        raise HTTPException(400, "Nenhuma URL fornecida")
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    try:
+        items = await scrape_urls(urls)
+        if api_key and items:
+            items = await classify_with_ai(items, api_key)
+        saved = 0
+        for item in items:
+            lid = str(uuid.uuid4())
+            now = datetime.utcnow().isoformat()
+            record = {
+                "id": lid,
+                "created_at": now,
+                "updated_at": now,
+                "tipo": item.get("tipo", "federal"),
+                "nome": item.get("nome", "")[:200],
+                "descricao": item.get("descricao", "")[:1000],
+                "url_fonte": item.get("url_fonte", ""),
+                "texto_completo": item.get("texto_completo", "")[:5000],
+                "data_publicacao": item.get("data_publicacao", now[:10]),
+                "data_limite_homo": item.get("data_limite_homo") or "",
+                "data_limite_prod": item.get("data_limite_prod") or "",
+                "ufs_afetadas": json.dumps(item.get("ufs_afetadas", ["TODAS"])) if isinstance(item.get("ufs_afetadas"), list) else json.dumps(["TODAS"]),
+                "setores": json.dumps(item.get("setores", [])) if isinstance(item.get("setores"), list) else json.dumps([]),
+                "impacto_sap": json.dumps(item.get("impacto_sap", [])) if isinstance(item.get("impacto_sap"), list) else json.dumps([]),
+                "status": "nova",
+                "proposal_id": "",
+                "fonte": "url",
+            }
+            ok = await db.save_legislacao(record)
+            if ok:
+                saved += 1
+        return {"ok": True, "scraped": len(items), "saved": saved}
+    except Exception as ex:
+        raise HTTPException(500, f"Erro ao buscar URLs: {ex}")
+
 @app.delete("/api/proposals/{pid}")
 async def delete_proposal(pid: str, db=Depends(get_db)):
     ok = await db.delete_proposal(pid)
@@ -217,7 +477,10 @@ async def download_dam(pid: str, db=Depends(get_db)):
         from generators.dam import generate_dam
         dam_data = json.loads(p.get("dam_json") or "{}")
         buf = generate_dam(dam_data, p)
-        fname = f"DAM_{str(p.get('title','Proposta'))[:30].replace(' ','_')}.docx"
+        import unicodedata
+        raw_title = str(p.get('title','Proposta'))[:30].replace(' ','_')
+        fname = unicodedata.normalize('NFKD', raw_title).encode('ascii', 'ignore').decode('ascii')
+        fname = f"DAM_{fname or 'Proposta'}.docx"
         return StreamingResponse(buf,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={"Content-Disposition": f'attachment; filename="{fname}"'})

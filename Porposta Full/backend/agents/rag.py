@@ -142,6 +142,113 @@ Impacto SAP: módulos SD (NF-e com novos campos IBS/CBS), FI (contas contábeis 
 MM (NF entrada), CO (novos centros de custo), SPED (novos registros).
 Lógica Sil-Proposta: go-live pós jul/2026 + escopo SD/FI → fazer agora."""},
 
+    # ── Fontes Federais de Legislação ──
+    {"id":"fonte-dou-001","source":"Imprensa Nacional","category":"Legislação Federal",
+     "title":"Diário Oficial da União — Imprensa Nacional",
+     "content":"""Portal oficial do Diário Oficial da União (DOU).
+URL: https://www.in.gov.br/
+Publicação de leis, decretos, instruções normativas, portarias e demais atos oficiais federais.
+Consulta obrigatória para verificar vigência de novas normas tributárias (CBS, IBS, IS),
+instruções normativas da Receita Federal e portarias do Ministério da Fazenda.
+Busca por edição, seção (1, 2, 3) e data de publicação."""},
+
+    {"id":"fonte-planalto-001","source":"Planalto","category":"Legislação Federal",
+     "title":"Portal da Legislação — Planalto",
+     "content":"""Portal oficial da Presidência da República para legislação federal consolidada.
+URL: https://www4.planalto.gov.br/legislacao
+Acesso a: Constituição Federal, Leis Complementares (LC 214/2021 — Reforma Tributária),
+Leis Ordinárias, Medidas Provisórias, Decretos e Emendas Constitucionais (EC 132/2023).
+Fonte primária para texto integral e consolidado de leis federais que impactam SAP fiscal."""},
+
+    {"id":"fonte-normas-001","source":"LegBr","category":"Legislação Federal",
+     "title":"Normas.leg.br — Pesquisa de Normas Jurídicas",
+     "content":"""Portal de pesquisa de normas jurídicas mantido pelo Poder Legislativo.
+URL: https://normas.leg.br/
+Busca unificada de legislação federal incluindo leis, decretos, medidas provisórias
+e atos normativos. Útil para pesquisa consolidada de normas tributárias e fiscais
+que impactam obrigações acessórias (SPED, NF-e, EFD)."""},
+
+    {"id":"fonte-lexml-001","source":"LexML","category":"Legislação Federal",
+     "title":"LexML Brasil — Rede de Informação Legislativa e Jurídica",
+     "content":"""Portal de busca integrada de legislação, jurisprudência e proposições legislativas.
+URL: https://www.lexml.gov.br/
+Agrega normas de todas as esferas (federal, estadual, municipal) e poderes.
+Ferramenta de pesquisa para encontrar legislação tributária por tema, número ou ementa.
+Indexa também decisões do CARF e jurisprudência tributária relevante para análise de risco."""},
+
+    {"id":"fonte-sped-001","source":"RFB/SPED","category":"Legislação Federal",
+     "title":"Portal SPED — Sistema Público de Escrituração Digital",
+     "content":"""Portal oficial do SPED mantido pela Receita Federal do Brasil.
+URL: http://sped.rfb.gov.br/
+Documentação técnica de todas as obrigações SPED: EFD-ICMS/IPI, EFD-Contribuições,
+ECF, ECD, EFD-Reinf, e-Financeira. Contém leiautes, guias práticos, tabelas de códigos,
+perguntas frequentes e notas técnicas. Fonte obrigatória para validar registros SPED
+impactados por mudanças fiscais no SAP (novos campos IBS/CBS na Reforma Tributária)."""},
+
+    {"id":"fonte-nfe-001","source":"Portal NF-e","category":"Legislação Federal",
+     "title":"Portal Nacional da NF-e — SEFAZ/CONFAZ",
+     "content":"""Portal oficial da Nota Fiscal Eletrônica mantido pelo ENCAT/CONFAZ.
+URL: https://www.nfe.fazenda.gov.br/
+Publicação de Notas Técnicas (NT 2024.002 — ECONF, entre outras), schemas XML,
+Web Services, regras de validação, tabelas de códigos (cBenef, CFOP, CST) e manuais.
+Fonte primária para qualquer alteração no layout XML da NF-e modelo 55/65 que impacta SAP DRC."""},
+
+    {"id":"fonte-esocial-001","source":"Gov.br/eSocial","category":"Legislação Federal",
+     "title":"eSocial — Documentação Técnica",
+     "content":"""Portal oficial da documentação técnica do eSocial.
+URL: https://www.gov.br/esocial/pt-br/documentacao-tecnica
+Leiautes, manuais de orientação, notas técnicas e schemas XSD do eSocial.
+Relevante para projetos SAP HCM/SuccessFactors que envolvem obrigações trabalhistas
+e previdenciárias digitais. Eventos periódicos, não periódicos e de tabela."""},
+
+    {"id":"fonte-confaz-001","source":"CONFAZ","category":"Legislação Federal",
+     "title":"CONFAZ — Conselho Nacional de Política Fazendária",
+     "content":"""Portal oficial do CONFAZ — deliberações entre os estados sobre ICMS.
+URL: https://www.confaz.fazenda.gov.br/
+Publicação de Convênios ICMS, Protocolos, Ajustes SINIEF e Atos COTEPE.
+Fonte obrigatória para validar regras interestaduais de ICMS, substituição tributária,
+benefícios fiscais e diferencial de alíquota (DIFAL) que impactam configuração SAP SD/FI."""},
+
+    {"id":"fonte-reforma-rfb-001","source":"RFB","category":"Reforma Tributária",
+     "title":"Receita Federal — Reforma do Consumo (IBS/CBS)",
+     "content":"""Portal da Receita Federal dedicado à Reforma Tributária do Consumo.
+URL: https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-consumo
+Informações oficiais sobre a implementação da CBS (Contribuição sobre Bens e Serviços),
+cronograma de transição, regulamentação infralegal, split payment e obrigações acessórias.
+Fonte primária para acompanhar regras que impactarão SAP FI/SD na transição 2026-2033."""},
+
+    {"id":"fonte-reforma-com-001","source":"reformatributaria.com","category":"Reforma Tributária",
+     "title":"ReformaTributaria.com — Portal de Acompanhamento",
+     "content":"""Portal independente de acompanhamento da Reforma Tributária brasileira.
+URL: https://www.reformatributaria.com/
+Análises, comparativos, simuladores e atualizações sobre IBS, CBS e IS.
+Útil para contextualização e análise de impacto em propostas SAP,
+complementando as fontes oficiais do governo."""},
+
+    {"id":"fonte-reforma-org-001","source":"reformatributaria.org.br","category":"Reforma Tributária",
+     "title":"ReformaTributaria.org.br — Centro de Estudos",
+     "content":"""Centro de estudos e debates sobre a Reforma Tributária.
+URL: https://www.reformatributaria.org.br
+Artigos técnicos, pareceres e análises sobre a EC 132/2023 e LC 214/2021.
+Referência para embasamento técnico em propostas SAP que envolvem adequação
+à nova legislação tributária (IBS/CBS/IS) e seus impactos nos módulos fiscais."""},
+
+    {"id":"fonte-camara-001","source":"Câmara dos Deputados","category":"Legislação Federal",
+     "title":"Câmara dos Deputados — Pesquisa de Proposições",
+     "content":"""Portal de pesquisa de proposições legislativas da Câmara dos Deputados.
+URL: https://www.camara.leg.br/busca-portal/proposicoes/pesquisa-simplificada
+Busca de Projetos de Lei (PL), Projetos de Lei Complementar (PLP), Medidas Provisórias (MP)
+e emendas em tramitação. Útil para monitorar proposições tributárias e fiscais
+que possam impactar obrigações SAP antes mesmo da sanção presidencial."""},
+
+    {"id":"fonte-senado-001","source":"Senado Federal","category":"Legislação Federal",
+     "title":"Senado Federal — Portal Legislativo",
+     "content":"""Portal legislativo do Senado Federal.
+URL: https://www12.senado.leg.br/hpsenado
+Acompanhamento de projetos de lei em tramitação no Senado, incluindo regulamentação
+da Reforma Tributária, proposições sobre obrigações acessórias e alterações no CTN.
+Complementa a pesquisa da Câmara para visão completa do processo legislativo."""},
+
     # ── SAP Activate ──
     {"id":"activate-001","source":"SAP Activate","category":"Metodologia",
      "title":"SAP Activate — fases e estimativas de horas",
@@ -228,10 +335,11 @@ def get_context_for_agent(agent_type: str, intake_text: str) -> str:
         "COMERCIAL":       "Padrão Proposta",
     }
     cat     = category_map.get(agent_type)
-    results = search(intake_text, top_k=3, category=cat)
+    k = 5 if agent_type in ("FISCAL_FEDERAL", "REFORMA") else 3
+    results = search(intake_text, top_k=k, category=cat)
 
     if not results:
-        results = search(intake_text, top_k=3)
+        results = search(intake_text, top_k=k)
 
     context = "\n\n---\n\n".join(
         f"[{r['source']} | {r['title']}]\n{r['content']}"

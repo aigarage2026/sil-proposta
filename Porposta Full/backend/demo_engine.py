@@ -50,6 +50,7 @@ def detectar_processo(rfp_text: str):
 def gerar_proposta_demo(payload) -> dict:
     rfp   = (payload.rfp_text or "").strip()
     obs   = getattr(payload, 'notes', '') or ''
+    client_name = getattr(payload, 'client_name', '') or ''
     ufs   = payload.states or ["SP"]
     tipo  = payload.project_type or "ams"
     ver   = payload.sap_version or "ecc605"
@@ -63,7 +64,7 @@ def gerar_proposta_demo(payload) -> dict:
 
     needsCPI = lei or hasGO or "econf" in txt or "110750" in txt or "tef" in txt
     hasTerm  = "tef" in txt or "maquininha" in txt or "pinpad" in txt
-    hasCBen  = "cbenef" in txt or (hasSP and ("nf-e" in txt or "fiscal" in txt))
+    hasCBen  = "cbenef" in txt or "beneficio fiscal" in txt or "benefício fiscal" in txt or "codigo de beneficio" in txt or "código de benefício" in txt or "portaria sre" in txt
 
     # Detectar processo e se precisa de ABAP obrigatório
     main_proc, needs_abap_forced = detectar_processo(rfp)
@@ -168,7 +169,7 @@ def gerar_proposta_demo(payload) -> dict:
     # ════════════════════════════════════════════
     # CASO: FISCAL / ECONF
     # ════════════════════════════════════════════
-    elif main_proc in ("FISCAL",) or (main_proc == "SD" and (hasGO or hasSP or lei)):
+    elif main_proc in ("FISCAL",) or (main_proc == "SD" and (hasGO or lei) and is_fiscal_change):
         dSD = 3 if isSupp else 9 if hasGO else 8 if hasCBen else 6
         dFI = 2 if isSupp else 11 if hasGO else 8
         mods = [
@@ -193,11 +194,16 @@ def gerar_proposta_demo(payload) -> dict:
         for i in range(1, nAb+1):
             mods.append({"frente":f"ABAP {i}" if nAb > 1 else "ABAP","nivel":"Senior","dias":dAb})
 
+        has_fi_scope = any(k in txt for k in ["conciliacao","conciliação","bancaria","bancária","baixa de titulo","baixa de título","contas a pagar","contas a receber","f110","pagamento automatico","pagamento automático"])
+
         entr = [
             {"mod":"SD",   "item":"Entendimento do cenário — análise da legislação e cenários fiscais", "horas":8},
             {"mod":"SD",   "item":"Especificação funcional SD","horas":16},
-            {"mod":"FI",   "item":"Especificação conciliação bancária e baixa de título","horas":16},
         ]
+        if has_fi_scope:
+            entr.append({"mod":"FI", "item":"Especificação conciliação bancária e baixa de título","horas":16})
+        else:
+            entr.append({"mod":"FI", "item":"Especificação funcional FI — integração fiscal","horas":16})
         if hasGO or lei:
             entr.append({"mod":"SD","item":"Configuração Grupo YA na NF-e (tpIntegra=1 — IN 1.608/2025-GO)","horas":8})
         if hasCBen:
@@ -349,6 +355,29 @@ def gerar_proposta_demo(payload) -> dict:
         {"id":"03","descricao":"Atraso por falta de acesso","probabilidade":"Média","impacto":"Médio","classificacao":"Moderado","solucao":"Liberação de acessos antes do início do projeto"},
     ]
 
+    # Agents fired based on proposal content
+    agents_fired = ["Orquestrador", "Versão SAP", "Equipe / GP", "Comercial"]
+    if main_proc in ("SD",) or any(m["frente"] == "SD" for m in mods):
+        agents_fired.append("Agente SD")
+    if main_proc in ("FI",) or any(m["frente"] == "FI" for m in mods):
+        agents_fired.append("Agente FI")
+    if main_proc in ("MM",) or any(m["frente"] == "MM" for m in mods):
+        agents_fired.append("Agente MM")
+    if main_proc in ("PP",):
+        agents_fired.append("Agente PP")
+    if main_proc in ("HR",):
+        agents_fired.append("Agente HR")
+    if needs_abap or any("ABAP" in m["frente"] for m in mods):
+        agents_fired.append("ABAP Estrutural")
+    if needsCPI:
+        agents_fired.append("Agente DRC")
+    if hasGO or hasSP or lei or main_proc == "FISCAL":
+        agents_fired.extend(["Fiscal Estadual", "Fiscal Federal", "Fiscal Municipal"])
+    if lei or main_proc == "FISCAL":
+        agents_fired.append("Reforma Tributária")
+    if isMigr or main_proc == "MIGR":
+        agents_fired.extend(["Migração/Dados", "Basis/Infra"])
+
     return {
         "main_proc":    main_proc,
         "total_hours":  totalH,
@@ -359,10 +388,10 @@ def gerar_proposta_demo(payload) -> dict:
             "legislacao": 0.91 if legis else 0.72,
             "comercial": 0.95,
         },
-        "agents_fired": ["Orquestrador","SD","FI","ABAP","DRC","Fiscal","Equipe","Comercial"],
+        "agents_fired": agents_fired,
         "dam": {
             "titulo":       titulo,
-            "cliente":      cliente,
+            "cliente":      client_name or cliente,
             "tipo_projeto": tipo,
             "versao_sap":   ver_label,
             "ufs":          ufs,

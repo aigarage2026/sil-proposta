@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" id="html-root">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -103,11 +103,14 @@ textarea::placeholder,input::placeholder{color:var(--text3)}
 .btn-outline:hover{background:var(--bg3)}
 .btn-teal{padding:8px 18px;border-radius:var(--rsm);background:var(--teal);color:#fff;border:none;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer}
 .conf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-.conf-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px 14px}
+.conf-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px 14px;position:relative;cursor:help}
 .conf-val{font-size:20px;font-weight:700;color:var(--teal)}
 .conf-lbl{font-size:11px;font-weight:600;color:var(--text3);margin-top:2px}
 .conf-bar-wrap{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
 .conf-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),#34D399)}
+.conf-tooltip{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1a1a2e;color:#e0e0e0;border:1px solid #2d2d44;border-radius:var(--rsm);padding:10px 12px;font-size:11px;line-height:1.5;width:220px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.5);transition:opacity .2s,visibility .2s;pointer-events:none}
+.conf-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#2d2d44}
+.conf-card:hover .conf-tooltip{visibility:visible;opacity:1}
 .section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:10px;box-shadow:var(--shadow)}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .section-title{font-size:14px;font-weight:700;color:var(--text)}
@@ -153,9 +156,54 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 .mod-section{margin-bottom:14px}
 .mod-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
 .mod-items{padding-left:16px;border-left:2px solid;border-radius:0 0 0 2px}
-.mod-item{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.mod-item{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);align-items:center}
 .mod-item:last-child{border-bottom:none}
 .mod-num{font-weight:700;font-size:11px;font-family:var(--mono);min-width:20px}
+/* WP DETAIL BTN */
+.btn-detail{padding:4px 10px;border-radius:6px;border:1.5px solid var(--accent);background:var(--accent-bg);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;flex-shrink:0}
+.btn-detail:hover{background:var(--accent);color:#fff;transform:translateY(-1px);box-shadow:0 3px 10px rgba(59,123,248,.3)}
+/* DETAIL MODAL */
+.detail-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.detail-modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:min(720px,92vw);max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.4);animation:modalIn .25s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.detail-hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--bg3)}
+.detail-hdr-left{display:flex;align-items:center;gap:12px}
+.detail-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff}
+.detail-title{font-size:16px;font-weight:700;color:var(--text)}
+.detail-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.detail-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.detail-close:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.detail-body{padding:22px;overflow-y:auto;flex:1}
+.detail-sect{margin-bottom:18px}
+.detail-sect-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.detail-sect-title .dtag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:12px}
+.txn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:6px}
+.txn-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 10px;transition:all .15s}
+.txn-card:hover{border-color:var(--accent);background:var(--accent-bg)}
+.txn-code{font-size:12px;font-weight:800;font-family:var(--mono);color:var(--accent)}
+.txn-desc{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.4}
+.act-list{list-style:none;padding:0}
+.act-list li{position:relative;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6}
+.act-list li:last-child{border-bottom:none}
+.act-item-hdr{display:flex;align-items:center;gap:6px;padding:8px 0 8px 4px;cursor:pointer;user-select:none}
+.act-item-hdr:hover{color:var(--text)}
+.act-arrow{color:var(--accent);font-weight:700;font-size:12px;transition:transform .2s;flex-shrink:0;width:14px;text-align:center}
+.act-arrow.open{transform:rotate(90deg)}
+.act-item-title{flex:1}
+.act-details{display:none;padding:8px 12px 12px 20px;font-size:11px;line-height:1.7;color:var(--text3);background:var(--bg1);border-radius:6px;margin:0 0 6px 20px;white-space:pre-line}
+.act-details.open{display:block}
+.act-details strong{color:var(--text2);font-weight:600}
+.abap-parallel-sect{margin:12px 0;padding:12px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--rsm)}
+.abap-parallel-title{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.abap-parallel-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:#D9770622;color:#D97706;font-weight:600}
+.code-block{background:#0D1117;border:1px solid #21262D;border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:11px;line-height:1.7;color:#C9D1D9;overflow-x:auto;white-space:pre;margin-top:6px;position:relative}
+.code-block .kw{color:#FF7B72}.code-block .str{color:#A5D6FF}.code-block .cm{color:#8B949E;font-style:italic}.code-block .tp{color:#79C0FF}.code-block .fn{color:#D2A8FF}.code-block .vr{color:#FFA657}
+.code-lang{position:absolute;top:8px;right:12px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.3)}
+.lang-sw{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:2px}
+.lang-btn{padding:4px 8px;border:none;border-radius:4px;background:transparent;color:var(--text3);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s}
+.lang-btn:hover{color:var(--text)}
+.lang-btn.active{background:var(--accent);color:#fff}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
@@ -192,32 +240,47 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
     <div><div class="logo-name">Sil-Proposta</div><div class="logo-sub">v3.0 · Cast Group</div></div>
   </div>
   <nav class="nav-center">
-    <button class="nav-btn active" onclick="showPage('intake')">Nova proposta</button>
-    <button class="nav-btn" onclick="showPage('proposals')">Propostas</button>
+    <button class="nav-btn active" onclick="showPage('intake')" data-i18n="nav_new">Nova proposta</button>
+    <button class="nav-btn" onclick="showPage('proposals')" data-i18n="nav_proposals">Propostas</button>
     <button class="nav-btn" onclick="showPage('analytics')">Analytics</button>
-    <button class="nav-btn" id="nav-viz" onclick="showPage('viz')">Visualização</button>
+    <button class="nav-btn" id="nav-viz" onclick="window.open('agents-viz.html','_blank')" data-i18n="nav_viz">Visualização</button>
+    <button class="nav-btn" onclick="showPage('dashboard')" data-i18n="nav_dashboard">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('legislacao')" data-i18n="nav_legislacao">Legislação</button>
   </nav>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span id="api-status" style="font-size:11px;color:var(--text3);font-family:var(--mono)">conectando...</span>
-    <button class="btn-new" onclick="showPage('intake')">+ Nova proposta</button>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="lang-sw">
+      <button class="lang-btn active" onclick="setLang('pt')">PT</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('es')">ES</button>
+    </div>
+    <span id="api-status" style="font-size:11px;color:var(--text3);font-family:var(--mono)" data-i18n="connecting">conectando...</span>
+    <button class="btn-new" onclick="showPage('intake')" data-i18n="btn_new">+ Nova proposta</button>
   </div>
 </header>
 
 <div class="layout">
 <aside class="sidebar">
-  <div class="sb-sec">Novo</div>
+  <div class="sb-sec" data-i18n="sb_new">Novo</div>
   <div class="sb-item active" id="sb-intake" onclick="showPage('intake')">
     <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="12" height="12" rx="2"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
-    Nova solicitação
+    <span data-i18n="sb_new_request">Nova solicitação</span>
   </div>
 
-  <div class="sb-sec">Histórico</div>
+  <div class="sb-sec" data-i18n="sb_history">Histórico</div>
   <div id="sidebar-proposals"></div>
+  <div class="sb-item" onclick="showPage('dashboard')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="3" height="6"/><rect x="7" y="4" width="3" height="10"/><rect x="12" y="2" width="3" height="12"/></svg>
+    <span data-i18n="nav_dashboard">Dashboard</span>
+  </div>
+  <div class="sb-item" onclick="showPage('legislacao')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><path d="M2 2h12v12H2z"/><path d="M5 5h6M5 8h4M5 11h5"/></svg>
+    <span data-i18n="nav_legislacao">Legislação</span>
+  </div>
 
-  <div class="sb-sec">Sistema</div>
+  <div class="sb-sec" data-i18n="sb_system">Sistema</div>
   <div class="sb-item" onclick="showPage('settings')">
     <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/></svg>
-    Configurações
+    <span data-i18n="sb_settings">Configurações</span>
   </div>
 </aside>
 
@@ -226,25 +289,37 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <!-- INTAKE -->
 <div id="pg-intake" class="page active">
   <div style="margin-bottom:28px">
-    <div class="ph-eye">Nova solicitação</div>
-    <div class="ph-title">Criar proposta SAP</div>
-    <div class="ph-desc">Preencha os campos. Os agentes especialistas analisarão o escopo e gerarão o rascunho v1 do DAM.</div>
+    <div class="ph-eye" data-i18n="intake_eye">Nova solicitação</div>
+    <div class="ph-title" data-i18n="intake_title">Criar proposta SAP</div>
+    <div class="ph-desc" data-i18n="intake_desc">Preencha os campos. Os agentes especialistas analisarão o escopo e gerarão o rascunho v1 do DAM.</div>
     <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
   </div>
 
   <div class="card req">
     <div class="card-header">
-      <div class="card-icon blue">📋</div>
-      <div><div class="card-title">Tipo de projeto</div><div class="card-sub">Define equipe, premissas e KT AMS</div></div>
-      <span class="badge req">Obrigatório</span>
+      <div class="card-icon blue">🏢</div>
+      <div><div class="card-title" data-i18n="card_client_name">Nome do cliente</div><div class="card-sub" data-i18n="card_client_sub">Identificação da empresa</div></div>
+      <span class="badge req" data-i18n="required">Obrigatório</span>
     </div>
     <div class="field">
-      <div class="fl">Modelo de contratação</div>
+      <div class="fl" data-i18n="fl_client_name">Nome do cliente</div>
+      <input type="text" id="client-name" autocomplete="off" data-i18n-ph="ph_client_name" placeholder="Ex: ARMAC, Votorantim, Grupo Ultra...">
+    </div>
+  </div>
+
+  <div class="card req">
+    <div class="card-header">
+      <div class="card-icon blue">📋</div>
+      <div><div class="card-title" data-i18n="card_project_type">Tipo de projeto</div><div class="card-sub" data-i18n="card_project_sub">Define equipe, premissas e KT AMS</div></div>
+      <span class="badge req" data-i18n="required">Obrigatório</span>
+    </div>
+    <div class="field">
+      <div class="fl" data-i18n="fl_contract_model">Modelo de contratação</div>
       <div class="opts" id="o-type">
-        <button class="opt-btn" data-v="ams" onclick="sel(this,'type')">AMS / Sustentação</button>
-        <button class="opt-btn" data-v="new" onclick="sel(this,'type')">Projeto novo</button>
-        <button class="opt-btn" data-v="migration" onclick="sel(this,'type')">Migração ECC → S/4HANA</button>
-        <button class="opt-btn" data-v="support" onclick="sel(this,'type')">Suporte emergencial</button>
+        <button class="opt-btn" data-v="ams" onclick="sel(this,'type')" data-i18n="opt_ams">AMS / Sustentação</button>
+        <button class="opt-btn" data-v="new" onclick="sel(this,'type')" data-i18n="opt_new_project">Projeto novo</button>
+        <button class="opt-btn" data-v="migration" onclick="sel(this,'type')" data-i18n="opt_migration">Migração ECC → S/4HANA</button>
+        <button class="opt-btn" data-v="support" onclick="sel(this,'type')" data-i18n="opt_support">Suporte emergencial</button>
       </div>
     </div>
   </div>
@@ -252,11 +327,11 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
   <div class="card req">
     <div class="card-header">
       <div class="card-icon teal">⚙️</div>
-      <div><div class="card-title">Ambiente SAP</div><div class="card-sub">Versão e localização</div></div>
-      <span class="badge req">Obrigatório</span>
+      <div><div class="card-title" data-i18n="card_sap_env">Ambiente SAP</div><div class="card-sub" data-i18n="card_sap_sub">Versão e localização</div></div>
+      <span class="badge req" data-i18n="required">Obrigatório</span>
     </div>
     <div class="field">
-      <div class="fl">Versão SAP</div>
+      <div class="fl" data-i18n="fl_sap_version">Versão SAP</div>
       <div class="opts" id="o-ver">
         <button class="opt-btn" data-v="ecc604" onclick="sel(this,'ver')">ECC ≤ 6.04</button>
         <button class="opt-btn" data-v="ecc605" onclick="sel(this,'ver')">ECC 6.05+</button>
@@ -265,7 +340,7 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
       </div>
     </div>
     <div class="field">
-      <div class="fl">UF(s) do cliente</div>
+      <div class="fl" data-i18n="fl_client_states">UF(s) do cliente</div>
       <div class="opts" id="o-uf">
         <button class="opt-btn" data-v="SP" onclick="ms(this)">SP</button>
         <button class="opt-btn" data-v="GO" onclick="ms(this)">GO</button>
@@ -274,7 +349,7 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
         <button class="opt-btn" data-v="RS" onclick="ms(this)">RS</button>
         <button class="opt-btn" data-v="SC" onclick="ms(this)">SC</button>
         <button class="opt-btn" data-v="MG" onclick="ms(this)">MG</button>
-        <button class="opt-btn" data-v="other" onclick="ms(this)">Outra</button>
+        <button class="opt-btn" data-v="other" onclick="ms(this)" data-i18n="opt_other">Outra</button>
       </div>
     </div>
   </div>
@@ -282,12 +357,12 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
   <div class="card req">
     <div class="card-header">
       <div class="card-icon amber">💼</div>
-      <div><div class="card-title">Modelo comercial</div><div class="card-sub">Precificação e condições</div></div>
-      <span class="badge req">Obrigatório</span>
+      <div><div class="card-title" data-i18n="card_commercial">Modelo comercial</div><div class="card-sub" data-i18n="card_commercial_sub">Precificação e condições</div></div>
+      <span class="badge req" data-i18n="required">Obrigatório</span>
     </div>
     <div class="field">
       <div class="opts" id="o-model">
-        <button class="opt-btn" data-v="fixed" onclick="sel(this,'model')">Valor fechado</button>
+        <button class="opt-btn" data-v="fixed" onclick="sel(this,'model')" data-i18n="opt_fixed">Valor fechado</button>
         <button class="opt-btn" data-v="tm" onclick="sel(this,'model')">T&M</button>
         <button class="opt-btn" data-v="ams-baseline" onclick="sel(this,'model')">Baseline AMS</button>
       </div>
@@ -297,40 +372,40 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
   <div class="card req">
     <div class="card-header">
       <div class="card-icon blue">📄</div>
-      <div><div class="card-title">Solicitação do cliente (RFP)</div><div class="card-sub">Base principal para os agentes</div></div>
-      <span class="badge req">Obrigatório</span>
+      <div><div class="card-title" data-i18n="card_rfp">Solicitação do cliente (RFP)</div><div class="card-sub" data-i18n="card_rfp_sub">Base principal para os agentes</div></div>
+      <span class="badge req" data-i18n="required">Obrigatório</span>
     </div>
     <div class="field">
-      <div class="fl">Descreva a demanda</div>
-      <textarea id="rfp-txt" autocomplete="off" rows="5" placeholder="Ex: O cliente necessita implementar o processo de compras MM no SAP ECC 6.05, incluindo requisição, cotação, pedido de compra e recebimento de mercadoria..."></textarea>
+      <div class="fl" data-i18n="fl_describe">Descreva a demanda</div>
+      <textarea id="rfp-txt" autocomplete="off" rows="5" data-i18n-ph="ph_rfp" placeholder="Ex: O cliente necessita implementar o processo de compras MM no SAP ECC 6.05, incluindo requisição, cotação, pedido de compra e recebimento de mercadoria..."></textarea>
     </div>
   </div>
 
   <div class="card opt">
     <div class="card-header">
       <div class="card-icon purple">⚡</div>
-      <div><div class="card-title">Informações opcionais</div><div class="card-sub">Enriquecem o resultado</div></div>
-      <span class="badge opt">Opcional</span>
+      <div><div class="card-title" data-i18n="card_optional">Informações opcionais</div><div class="card-sub" data-i18n="card_optional_sub">Enriquecem o resultado</div></div>
+      <span class="badge opt" data-i18n="optional">Opcional</span>
     </div>
     <div class="field">
-      <div class="fl">Nova lei / evento sem suporte SAP nativo?</div>
+      <div class="fl" data-i18n="fl_new_law">Nova lei / evento sem suporte SAP nativo?</div>
       <div class="opts">
-        <button class="opt-btn" id="lei-yes" onclick="setLei(true)">Sim</button>
-        <button class="opt-btn" id="lei-no" onclick="setLei(false)">Não</button>
+        <button class="opt-btn" id="lei-yes" onclick="setLei(true)" data-i18n="yes">Sim</button>
+        <button class="opt-btn" id="lei-no" onclick="setLei(false)" data-i18n="no">Não</button>
       </div>
-      <div class="fh">Se Sim: agente DRC aciona fluxo via SAP CPI.</div>
+      <div class="fh" data-i18n="fh_drc">Se Sim: agente DRC aciona fluxo via SAP CPI.</div>
     </div>
     <div class="field">
-      <div class="fl">Observações do arquiteto</div>
-      <textarea id="obs-txt" autocomplete="off" rows="2" placeholder="Ex: cliente tem CPI contratado, prazo urgente..."></textarea>
+      <div class="fl" data-i18n="fl_obs">Observações do arquiteto</div>
+      <textarea id="obs-txt" autocomplete="off" rows="2" data-i18n-ph="ph_obs" placeholder="Ex: cliente tem CPI contratado, prazo urgente..."></textarea>
     </div>
   </div>
 
   <div class="submit-bar">
     <div id="sub-info" style="font-size:13px;color:var(--text2)"><strong>0 de 4</strong> campos obrigatórios</div>
     <div style="display:flex;gap:8px">
-      <button class="btn-sec" onclick="resetForm()">Limpar</button>
-      <button class="btn-pri" id="btn-gen" onclick="gerar()" disabled>
+      <button class="btn-sec" onclick="resetForm()" data-i18n="btn_clear">Limpar</button>
+      <button class="btn-pri" id="btn-gen" onclick="gerar()" disabled data-i18n="btn_generate">
         ▶ Gerar rascunho v1
       </button>
     </div>
@@ -340,8 +415,8 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <!-- GENERATING -->
 <div id="pg-gen" class="page" style="text-align:center;padding:60px 20px">
   <div class="spinner"></div>
-  <div style="font-size:17px;font-weight:700;color:var(--text)">Analisando sua solicitação...</div>
-  <div style="font-size:13px;color:var(--text3);margin-top:4px">Os agentes especialistas estão trabalhando</div>
+  <div style="font-size:17px;font-weight:700;color:var(--text)" data-i18n="gen_analyzing">Analisando sua solicitação...</div>
+  <div style="font-size:13px;color:var(--text3);margin-top:4px" data-i18n="gen_agents_working">Os agentes especialistas estão trabalhando</div>
   <div class="gen-agents" id="gen-agents"></div>
 </div>
 
@@ -349,13 +424,16 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <div id="pg-draft" class="page">
   <div class="draft-header">
     <div>
-      <div class="ph-eye">Rascunho v1</div>
       <div id="draft-title" style="font-size:18px;font-weight:700;color:var(--text)"></div>
     </div>
-    <div class="draft-actions">
-      <button class="btn-outline" onclick="showPage('intake')">← Editar</button>
-      <button class="btn-outline" id="btn-download" onclick="downloadDAM()">⬇ DAM Word</button>
-      <button class="btn-teal" onclick="aprovar()">Aprovar v2 →</button>
+    <div class="draft-actions" style="flex-wrap:wrap">
+      <span id="draft-version-label" style="font-size:12px;font-weight:700;color:var(--accent);padding:6px 12px;background:var(--accent-bg);border-radius:6px">v1</span>
+      <button class="btn-outline" onclick="editProposal()" data-i18n="btn_edit">Editar</button>
+      <button class="btn-outline" id="btn-approve-arch" onclick="approveArchitect()" data-i18n="btn_approve_arch">Aprovação Arquiteto</button>
+      <button class="btn-outline" id="btn-approve-client" onclick="approveClient()" data-i18n="btn_approve_client" style="display:none">Aprovação Cliente</button>
+      <button class="btn-teal" onclick="downloadDAM()" data-i18n="btn_download_dam">⬇ DAM Word</button>
+      <button class="btn-teal" id="btn-gen-project" onclick="generateProject()" data-i18n="btn_gen_project" style="display:none;background:var(--green)">Gerar Projeto</button>
+      <button class="btn-outline" id="btn-view-project" onclick="viewProject()" style="display:none">📋 Ver Projeto</button>
     </div>
   </div>
   <div class="conf-grid" id="conf-grid"></div>
@@ -365,9 +443,9 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <!-- PROPOSALS -->
 <div id="pg-proposals" class="page">
   <div style="margin-bottom:24px">
-    <div class="ph-eye">Histórico</div>
-    <div class="ph-title">Suas propostas</div>
-    <div class="ph-desc">Todas as propostas salvas no servidor.</div>
+    <div class="ph-eye" data-i18n="proposals_eye">Histórico</div>
+    <div class="ph-title" data-i18n="proposals_title">Suas propostas</div>
+    <div class="ph-desc" data-i18n="proposals_desc">Todas as propostas salvas no servidor.</div>
   </div>
   <div class="metric-grid" id="proposals-metrics"></div>
   <div id="proposals-list"></div>
@@ -377,17 +455,70 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <div id="pg-analytics" class="page">
   <div style="margin-bottom:24px">
     <div class="ph-eye">Analytics</div>
-    <div class="ph-title">Desempenho</div>
-    <div class="ph-desc">Métricas de conversão e horas.</div>
+    <div class="ph-title" data-i18n="analytics_title">Desempenho</div>
+    <div class="ph-desc" data-i18n="analytics_desc">Métricas de conversão e horas.</div>
   </div>
   <div id="analytics-body"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="pg-dashboard" class="page">
+  <div style="margin-bottom:24px">
+    <div class="ph-eye" data-i18n="nav_dashboard">Dashboard</div>
+    <div class="ph-title" data-i18n="dash_title">Dashboard</div>
+    <div class="ph-desc" data-i18n="dash_desc">Visão geral das propostas e métricas.</div>
+  </div>
+  <div id="dashboard-body"></div>
+</div>
+
+<!-- PROJECT VIEW -->
+<div id="pg-project" class="page">
+  <div style="margin-bottom:24px">
+    <div class="ph-title" id="project-title">Projeto</div>
+    <div class="ph-desc">Cronograma waterfall do projeto SAP.</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn-outline" onclick="showPageDirect('draft')">← Voltar</button>
+    <button class="btn-outline" onclick="downloadProjectExcel()">⬇ Excel</button>
+    <button class="btn-outline" onclick="downloadProjectPDF()">⬇ PDF</button>
+  </div>
+  <div id="project-body"></div>
+</div>
+
+<!-- LEGISLAÇÃO -->
+<div id="pg-legislacao" class="page">
+  <div style="margin-bottom:20px">
+    <div class="ph-title" data-i18n="nav_legislacao">Legislação</div>
+    <div class="ph-desc">Monitoramento de legislação fiscal — Municipal, Estadual e Federal.</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn-pri" onclick="scrapeLegs()">🔍 Buscar novas leis</button>
+    <button class="btn-pri" onclick="scrapeByUrl()" style="background:var(--accent2)">🔗 Buscar Lei URL</button>
+    <button class="btn-outline" onclick="addLegManual()">+ Cadastrar manual</button>
+    <button class="btn-outline" onclick="clearAllLeg()" style="color:var(--red);border-color:var(--red)">🗑 Limpar tudo</button>
+    <span id="leg-status" style="font-size:11px;color:var(--text3);align-self:center"></span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px" id="leg-grid">
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#EC4899"></span> Municipal</div>
+      <div id="leg-municipal"></div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#FB923C"></span> Estadual</div>
+      <div id="leg-estadual"></div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#3B82F6"></span> Federal</div>
+      <div id="leg-federal"></div>
+    </div>
+  </div>
 </div>
 
 <!-- SETTINGS -->
 <div id="pg-settings" class="page">
   <div style="margin-bottom:24px">
-    <div class="ph-eye">Sistema</div>
-    <div class="ph-title">Configurações</div>
+    <div class="ph-eye" data-i18n="sb_system">Sistema</div>
+    <div class="ph-title" data-i18n="sb_settings">Configurações</div>
   </div>
   <div id="settings-body"></div>
 </div>
@@ -399,8 +530,8 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
 <div id="pg-viz" class="page">
   <div class="viz-topbar">
     <div style="display:flex;align-items:center;gap:12px">
-      <button onclick="showPage('intake')" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)">← Voltar</button>
-      <div class="viz-pill"><div class="viz-dot-green" id="viz-dot"></div><span id="viz-status">Sistema pronto</span></div>
+      <button onclick="showPage('intake')" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font)" data-i18n="btn_back">← Voltar</button>
+      <div class="viz-pill"><div class="viz-dot-green" id="viz-dot"></div><span id="viz-status" data-i18n="viz_ready">Sistema pronto</span></div>
       <span id="viz-stats" style="font-size:11px;color:rgba(255,255,255,.28)">0 / 15 agentes</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -442,10 +573,302 @@ const API = (() => {
 // OpenAI key (salva no localStorage só para o frontend)
 let openaiKey = localStorage.getItem('sp_apiKey') || '';
 
+// ════════════════════════════════════════════════════════
+// i18n — INTERNACIONALIZAÇÃO (PT-BR, EN, ES)
+// ════════════════════════════════════════════════════════
+let currentLang = localStorage.getItem('sp_lang') || 'pt';
+
+const I18N = {
+  pt: {
+    // Nav & sidebar
+    nav_new:'Nova proposta', nav_proposals:'Propostas', nav_viz:'Visualização', nav_legislacao:'Legislação',
+    btn_new:'+ Nova proposta', connecting:'conectando...',
+    sb_new:'Novo', sb_new_request:'Nova solicitação', sb_history:'Histórico',
+    sb_system:'Sistema', sb_settings:'Configurações',
+    // Intake
+    intake_eye:'Nova solicitação', intake_title:'Criar proposta SAP',
+    intake_desc:'Preencha os campos. Os agentes especialistas analisarão o escopo e gerarão o rascunho v1 do DAM.',
+    card_project_type:'Tipo de projeto', card_project_sub:'Define equipe, premissas e KT AMS',
+    required:'Obrigatório', optional:'Opcional',
+    fl_contract_model:'Modelo de contratação',
+    opt_ams:'AMS / Sustentação', opt_new_project:'Projeto novo',
+    opt_migration:'Migração ECC → S/4HANA', opt_support:'Suporte emergencial',
+    card_sap_env:'Ambiente SAP', card_sap_sub:'Versão e localização',
+    fl_sap_version:'Versão SAP', fl_client_states:'UF(s) do cliente', opt_other:'Outra',
+    card_commercial:'Modelo comercial', card_commercial_sub:'Precificação e condições',
+    opt_fixed:'Valor fechado',
+    card_rfp:'Solicitação do cliente (RFP)', card_rfp_sub:'Base principal para os agentes',
+    fl_describe:'Descreva a demanda',
+    ph_rfp:'Ex: O cliente necessita implementar o processo de compras MM no SAP ECC 6.05, incluindo requisição, cotação, pedido de compra e recebimento de mercadoria...',
+    card_optional:'Informações opcionais', card_optional_sub:'Enriquecem o resultado',
+    fl_new_law:'Nova lei / evento sem suporte SAP nativo?',
+    yes:'Sim', no:'Não',
+    fh_drc:'Se Sim: agente DRC aciona fluxo via SAP CPI.',
+    fl_obs:'Observações do arquiteto',
+    ph_obs:'Ex: cliente tem CPI contratado, prazo urgente...',
+    btn_clear:'Limpar', btn_generate:'▶ Gerar rascunho v1',
+    fields_of:'de', mandatory_fields:'campos obrigatórios',
+    // Generating
+    gen_analyzing:'Analisando sua solicitação...', gen_agents_working:'Os agentes especialistas estão trabalhando',
+    // Draft
+    draft_eye:'Rascunho v1', btn_edit:'← Editar', btn_download_dam:'⬇ DAM Word', btn_approve:'Aprovar v2 →',
+    // Proposals
+    proposals_eye:'Histórico', proposals_title:'Suas propostas',
+    proposals_desc:'Todas as propostas salvas no servidor.',
+    proposals_label:'Propostas', approved_label:'Aprovadas', pipeline_label:'Pipeline total',
+    total_generated:'Total geradas', conversion:'conversão', accumulated:'Valor acumulado',
+    no_proposals:'Nenhuma proposta ainda. Crie a primeira acima.',
+    loading:'Carregando...', see_details:'Ver detalhes →',
+    status_approved:'Aprovada', status_draft:'Rascunho', status_pending:'Pendente',
+    // Analytics
+    analytics_title:'Desempenho', analytics_desc:'Métricas de conversão e horas.',
+    analytics_dist:'Distribuição por processo SAP',
+    th_process:'Processo', th_proposals:'Propostas', th_avg_hours:'Horas médias', th_avg_value:'Valor médio',
+    no_data:'Sem dados ainda.',
+    // Settings
+    settings_key_title:'Chave OpenAI (opcional)', settings_key_sub:'Para geração com IA real via GPT-4o-mini',
+    settings_key_ph:'sk-... (salva no browser, não no servidor)',
+    settings_key_hint:'Salva apenas no seu browser. O servidor usa a chave configurada no Railway.',
+    btn_save:'✓ Salvar', settings_saved:'Configurações salvas!',
+    // Draft sections
+    sec_scope:'Escopo e módulos', sec_deliverables:'Entregáveis', sec_team:'Equipe e WP',
+    sec_premises:'Premissas gerais', sec_investment:'Investimento e condições',
+    th_area:'Frente', th_level:'Nível', th_days:'Dias', th_hours:'Horas', th_actions:'Ações',
+    total:'Total', detail_btn:'Detalhar',
+    commercial_model:'Modelo', commercial_fixed:'Valor fechado',
+    billing:'Faturamento', billing_terms:'50% aprovação + 50% go-live',
+    warranty:'Garantia', validity:'Validade', days_30:'30 dias',
+    cpi_required:'CPI Obrigatório', cpi_desc:'Evento ECONF sem nota SAP nativa — integração via SAP CPI',
+    // Viz
+    btn_back:'← Voltar', viz_ready:'Sistema pronto', viz_simulate:'▶ Simular',
+    // Confidence tooltips
+    conf_escopo:'Grau de confiança de que todos os módulos, processos e integrações SAP foram mapeados corretamente no escopo da proposta.',
+    conf_horas:'Confiança na estimativa de horas do projeto. Valores menores indicam que a estimativa pode precisar de revisão manual.',
+    conf_legislacao:'Cobertura da análise fiscal e tributária (municipal, estadual e federal), incluindo obrigações acessórias e reformas vigentes.',
+    conf_comercial:'Confiança nos valores comerciais, precificação, margens e condições de pagamento da proposta.',
+    // Toasts
+    toast_fill_fields:'Preencha todos os campos obrigatórios',
+    toast_gen_error:'Erro ao gerar proposta: ',
+    toast_no_proposal:'Nenhuma proposta ativa para aprovar',
+    toast_approved:'Proposta aprovada e salva!',
+    toast_approve_error:'Erro ao aprovar: ',
+    toast_gen_first:'Gere uma proposta primeiro',
+    toast_load_error:'Erro ao carregar propostas',
+    toast_open_error:'Erro ao abrir proposta: ',
+    // Agent names
+    ag_orchestrator:'Orquestrador', ag_sap_version:'Versão SAP', ag_sd:'Agente SD', ag_fi:'Agente FI',
+    ag_abap:'ABAP Estrutural', ag_drc:'Agente DRC', ag_fiscal_est:'Fiscal Estadual',
+    ag_fiscal_fed:'Fiscal Federal', ag_team:'Equipe e GP', ag_commercial:'Comercial',
+    ag_mm:'Agente MM', ag_fmun:'Fiscal Municipal', ag_rtrib:'Reforma Tributária', ag_migr:'Migração/Dados', ag_basis:'Basis/Infra', ag_pp:'Agente PP', ag_hr:'Agente HR',
+    // Detail
+    detail_activities:'Atividades detalhadas', detail_transactions:'Transações SAP',
+    detail_code:'Código ABAP a ser desenvolvido', detail_parallel:'Paralelo',
+    card_client_name:'Nome do cliente', card_client_sub:'Identificação da empresa',
+    fl_client_name:'Nome do cliente', ph_client_name:'Ex: ARMAC, Votorantim, Grupo Ultra...',
+    btn_approve_arch:'Aprovação Arquiteto', btn_approve_client:'Aprovação Cliente', btn_gen_project:'Gerar Projeto', btn_version:'Versão', status_arch_approved:'Aprov. Arquiteto', status_client_approved:'Aprov. Cliente', nav_dashboard:'Dashboard', dash_title:'Dashboard', dash_desc:'Visão geral das propostas e métricas.', dash_total:'Total propostas', dash_conversion:'Taxa de conversão', dash_avg_hours:'Horas médias', dash_avg_value:'Valor médio', dash_funnel:'Funil de propostas', dash_status_draft:'Rascunho', dash_status_arch:'Aprov. Arquiteto', dash_status_client:'Aprov. Cliente',
+  },
+  en: {
+    nav_new:'New proposal', nav_proposals:'Proposals', nav_viz:'Visualization', nav_legislacao:'Legislation',
+    btn_new:'+ New proposal', connecting:'connecting...',
+    sb_new:'New', sb_new_request:'New request', sb_history:'History',
+    sb_system:'System', sb_settings:'Settings',
+    intake_eye:'New request', intake_title:'Create SAP proposal',
+    intake_desc:'Fill in the fields. The specialist agents will analyze the scope and generate draft v1 of the DAM.',
+    card_project_type:'Project type', card_project_sub:'Defines team, assumptions and AMS KT',
+    required:'Required', optional:'Optional',
+    fl_contract_model:'Contract model',
+    opt_ams:'AMS / Support', opt_new_project:'New project',
+    opt_migration:'Migration ECC → S/4HANA', opt_support:'Emergency support',
+    card_sap_env:'SAP Environment', card_sap_sub:'Version and localization',
+    fl_sap_version:'SAP Version', fl_client_states:'Client state(s)', opt_other:'Other',
+    card_commercial:'Commercial model', card_commercial_sub:'Pricing and conditions',
+    opt_fixed:'Fixed price',
+    card_rfp:'Client request (RFP)', card_rfp_sub:'Main input for agents',
+    fl_describe:'Describe the demand',
+    ph_rfp:'Ex: The client needs to implement the MM procurement process in SAP ECC 6.05, including requisition, quotation, purchase order and goods receipt...',
+    card_optional:'Optional information', card_optional_sub:'Enrich the result',
+    fl_new_law:'New law / event without native SAP support?',
+    yes:'Yes', no:'No',
+    fh_drc:'If Yes: DRC agent triggers flow via SAP CPI.',
+    fl_obs:'Architect notes',
+    ph_obs:'Ex: client has CPI contracted, urgent deadline...',
+    btn_clear:'Clear', btn_generate:'▶ Generate draft v1',
+    fields_of:'of', mandatory_fields:'mandatory fields',
+    gen_analyzing:'Analyzing your request...', gen_agents_working:'Specialist agents are working',
+    draft_eye:'Draft v1', btn_edit:'← Edit', btn_download_dam:'⬇ DAM Word', btn_approve:'Approve v2 →',
+    proposals_eye:'History', proposals_title:'Your proposals',
+    proposals_desc:'All proposals saved on the server.',
+    proposals_label:'Proposals', approved_label:'Approved', pipeline_label:'Total pipeline',
+    total_generated:'Total generated', conversion:'conversion', accumulated:'Accumulated value',
+    no_proposals:'No proposals yet. Create the first one above.',
+    loading:'Loading...', see_details:'See details →',
+    status_approved:'Approved', status_draft:'Draft', status_pending:'Pending',
+    analytics_title:'Performance', analytics_desc:'Conversion and hours metrics.',
+    analytics_dist:'Distribution by SAP process',
+    th_process:'Process', th_proposals:'Proposals', th_avg_hours:'Avg hours', th_avg_value:'Avg value',
+    no_data:'No data yet.',
+    settings_key_title:'OpenAI Key (optional)', settings_key_sub:'For real AI generation via GPT-4o-mini',
+    settings_key_ph:'sk-... (saved in browser, not on server)',
+    settings_key_hint:'Saved only in your browser. The server uses the key configured on Railway.',
+    btn_save:'✓ Save', settings_saved:'Settings saved!',
+    sec_scope:'Scope and modules', sec_deliverables:'Deliverables', sec_team:'Team and WP',
+    sec_premises:'General assumptions', sec_investment:'Investment and conditions',
+    th_area:'Area', th_level:'Level', th_days:'Days', th_hours:'Hours', th_actions:'Actions',
+    total:'Total', detail_btn:'Detail',
+    commercial_model:'Model', commercial_fixed:'Fixed price',
+    billing:'Billing', billing_terms:'50% approval + 50% go-live',
+    warranty:'Warranty', validity:'Validity', days_30:'30 days',
+    cpi_required:'CPI Required', cpi_desc:'ECONF event without native SAP note — integration via SAP CPI',
+    btn_back:'← Back', viz_ready:'System ready', viz_simulate:'▶ Simulate',
+    conf_escopo:'Confidence that all SAP modules, processes and integrations were correctly mapped in the proposal scope.',
+    conf_horas:'Confidence in the project hours estimate. Lower values indicate the estimate may need manual review.',
+    conf_legislacao:'Coverage of tax and fiscal analysis (municipal, state and federal), including ancillary obligations and current reforms.',
+    conf_comercial:'Confidence in commercial values, pricing, margins and payment conditions of the proposal.',
+    toast_fill_fields:'Please fill all mandatory fields',
+    toast_gen_error:'Error generating proposal: ',
+    toast_no_proposal:'No active proposal to approve',
+    toast_approved:'Proposal approved and saved!',
+    toast_approve_error:'Error approving: ',
+    toast_gen_first:'Generate a proposal first',
+    toast_load_error:'Error loading proposals',
+    toast_open_error:'Error opening proposal: ',
+    ag_orchestrator:'Orchestrator', ag_sap_version:'SAP Version', ag_sd:'SD Agent', ag_fi:'FI Agent',
+    ag_abap:'ABAP Structural', ag_drc:'DRC Agent', ag_fiscal_est:'State Tax',
+    ag_fiscal_fed:'Federal Tax', ag_team:'Team & PM', ag_commercial:'Commercial',
+    ag_mm:'MM Agent', ag_fmun:'Municipal Tax', ag_rtrib:'Tax Reform', ag_migr:'Migration/Data', ag_basis:'Basis/Infra', ag_pp:'PP Agent', ag_hr:'HR Agent',
+    detail_activities:'Detailed activities', detail_transactions:'SAP Transactions',
+    detail_code:'ABAP code to be developed', detail_parallel:'Parallel',
+    card_client_name:'Client name', card_client_sub:'Company identification',
+    fl_client_name:'Client name', ph_client_name:'Ex: ARMAC, Votorantim, Grupo Ultra...',
+    btn_approve_arch:'Architect Approval', btn_approve_client:'Client Approval', btn_gen_project:'Generate Project', btn_version:'Version', status_arch_approved:'Arch. Approved', status_client_approved:'Client Approved', nav_dashboard:'Dashboard', dash_title:'Dashboard', dash_desc:'Proposals overview and metrics.', dash_total:'Total proposals', dash_conversion:'Conversion rate', dash_avg_hours:'Avg hours', dash_avg_value:'Avg value', dash_funnel:'Proposals funnel', dash_status_draft:'Draft', dash_status_arch:'Arch. Approved', dash_status_client:'Client Approved',
+  },
+  es: {
+    nav_new:'Nueva propuesta', nav_proposals:'Propuestas', nav_viz:'Visualización', nav_legislacao:'Legislación',
+    btn_new:'+ Nueva propuesta', connecting:'conectando...',
+    sb_new:'Nuevo', sb_new_request:'Nueva solicitud', sb_history:'Historial',
+    sb_system:'Sistema', sb_settings:'Configuración',
+    intake_eye:'Nueva solicitud', intake_title:'Crear propuesta SAP',
+    intake_desc:'Complete los campos. Los agentes especialistas analizarán el alcance y generarán el borrador v1 del DAM.',
+    card_project_type:'Tipo de proyecto', card_project_sub:'Define equipo, premisas y KT AMS',
+    required:'Obligatorio', optional:'Opcional',
+    fl_contract_model:'Modelo de contratación',
+    opt_ams:'AMS / Soporte', opt_new_project:'Proyecto nuevo',
+    opt_migration:'Migración ECC → S/4HANA', opt_support:'Soporte de emergencia',
+    card_sap_env:'Ambiente SAP', card_sap_sub:'Versión y localización',
+    fl_sap_version:'Versión SAP', fl_client_states:'Estado(s) del cliente', opt_other:'Otro',
+    card_commercial:'Modelo comercial', card_commercial_sub:'Precios y condiciones',
+    opt_fixed:'Precio fijo',
+    card_rfp:'Solicitud del cliente (RFP)', card_rfp_sub:'Base principal para los agentes',
+    fl_describe:'Describa la demanda',
+    ph_rfp:'Ej: El cliente necesita implementar el proceso de compras MM en SAP ECC 6.05, incluyendo requisición, cotización, orden de compra y recepción de mercancía...',
+    card_optional:'Información opcional', card_optional_sub:'Enriquecen el resultado',
+    fl_new_law:'¿Nueva ley / evento sin soporte SAP nativo?',
+    yes:'Sí', no:'No',
+    fh_drc:'Si Sí: el agente DRC activa flujo vía SAP CPI.',
+    fl_obs:'Observaciones del arquitecto',
+    ph_obs:'Ej: cliente tiene CPI contratado, plazo urgente...',
+    btn_clear:'Limpiar', btn_generate:'▶ Generar borrador v1',
+    fields_of:'de', mandatory_fields:'campos obligatorios',
+    gen_analyzing:'Analizando su solicitud...', gen_agents_working:'Los agentes especialistas están trabajando',
+    draft_eye:'Borrador v1', btn_edit:'← Editar', btn_download_dam:'⬇ DAM Word', btn_approve:'Aprobar v2 →',
+    proposals_eye:'Historial', proposals_title:'Sus propuestas',
+    proposals_desc:'Todas las propuestas guardadas en el servidor.',
+    proposals_label:'Propuestas', approved_label:'Aprobadas', pipeline_label:'Pipeline total',
+    total_generated:'Total generadas', conversion:'conversión', accumulated:'Valor acumulado',
+    no_proposals:'Sin propuestas aún. Cree la primera arriba.',
+    loading:'Cargando...', see_details:'Ver detalles →',
+    status_approved:'Aprobada', status_draft:'Borrador', status_pending:'Pendiente',
+    analytics_title:'Rendimiento', analytics_desc:'Métricas de conversión y horas.',
+    analytics_dist:'Distribución por proceso SAP',
+    th_process:'Proceso', th_proposals:'Propuestas', th_avg_hours:'Horas promedio', th_avg_value:'Valor promedio',
+    no_data:'Sin datos aún.',
+    settings_key_title:'Clave OpenAI (opcional)', settings_key_sub:'Para generación con IA real vía GPT-4o-mini',
+    settings_key_ph:'sk-... (guardada en el navegador, no en el servidor)',
+    settings_key_hint:'Guardada solo en su navegador. El servidor usa la clave configurada en Railway.',
+    btn_save:'✓ Guardar', settings_saved:'¡Configuración guardada!',
+    sec_scope:'Alcance y módulos', sec_deliverables:'Entregables', sec_team:'Equipo y WP',
+    sec_premises:'Premisas generales', sec_investment:'Inversión y condiciones',
+    th_area:'Frente', th_level:'Nivel', th_days:'Días', th_hours:'Horas', th_actions:'Acciones',
+    total:'Total', detail_btn:'Detallar',
+    commercial_model:'Modelo', commercial_fixed:'Precio fijo',
+    billing:'Facturación', billing_terms:'50% aprobación + 50% go-live',
+    warranty:'Garantía', validity:'Validez', days_30:'30 días',
+    cpi_required:'CPI Obligatorio', cpi_desc:'Evento ECONF sin nota SAP nativa — integración vía SAP CPI',
+    btn_back:'← Volver', viz_ready:'Sistema listo', viz_simulate:'▶ Simular',
+    conf_escopo:'Grado de confianza de que todos los módulos, procesos e integraciones SAP fueron mapeados correctamente en el alcance de la propuesta.',
+    conf_horas:'Confianza en la estimación de horas del proyecto. Valores menores indican que la estimación puede necesitar revisión manual.',
+    conf_legislacao:'Cobertura del análisis fiscal y tributario (municipal, estatal y federal), incluyendo obligaciones accesorias y reformas vigentes.',
+    conf_comercial:'Confianza en los valores comerciales, precios, márgenes y condiciones de pago de la propuesta.',
+    toast_fill_fields:'Complete todos los campos obligatorios',
+    toast_gen_error:'Error al generar propuesta: ',
+    toast_no_proposal:'Ninguna propuesta activa para aprobar',
+    toast_approved:'¡Propuesta aprobada y guardada!',
+    toast_approve_error:'Error al aprobar: ',
+    toast_gen_first:'Genere una propuesta primero',
+    toast_load_error:'Error al cargar propuestas',
+    toast_open_error:'Error al abrir propuesta: ',
+    ag_orchestrator:'Orquestador', ag_sap_version:'Versión SAP', ag_sd:'Agente SD', ag_fi:'Agente FI',
+    ag_abap:'ABAP Estructural', ag_drc:'Agente DRC', ag_fiscal_est:'Fiscal Estatal',
+    ag_fiscal_fed:'Fiscal Federal', ag_team:'Equipo y GP', ag_commercial:'Comercial',
+    ag_mm:'Agente MM', ag_fmun:'Fiscal Municipal', ag_rtrib:'Reforma Tributaria', ag_migr:'Migración/Datos', ag_basis:'Basis/Infra', ag_pp:'Agente PP', ag_hr:'Agente HR',
+    detail_activities:'Actividades detalladas', detail_transactions:'Transacciones SAP',
+    detail_code:'Código ABAP a desarrollar', detail_parallel:'Paralelo',
+    card_client_name:'Nombre del cliente', card_client_sub:'Identificación de la empresa',
+    fl_client_name:'Nombre del cliente', ph_client_name:'Ej: ARMAC, Votorantim, Grupo Ultra...',
+    btn_approve_arch:'Aprobación Arquitecto', btn_approve_client:'Aprobación Cliente', btn_gen_project:'Generar Proyecto', btn_version:'Versión', status_arch_approved:'Aprob. Arquitecto', status_client_approved:'Aprob. Cliente', nav_dashboard:'Dashboard', dash_title:'Dashboard', dash_desc:'Visión general de propuestas y métricas.', dash_total:'Total propuestas', dash_conversion:'Tasa de conversión', dash_avg_hours:'Horas promedio', dash_avg_value:'Valor promedio', dash_funnel:'Embudo de propuestas', dash_status_draft:'Borrador', dash_status_arch:'Aprob. Arquitecto', dash_status_client:'Aprob. Cliente',
+  },
+};
+
+function t(key) { return (I18N[currentLang] || I18N.pt)[key] || (I18N.pt)[key] || key; }
+
+function getLangLocale() {
+  return {pt:'pt-BR', en:'en-US', es:'es-ES'}[currentLang] || 'pt-BR';
+}
+
+function getLangCurrency() {
+  return {pt:'BRL', en:'USD', es:'USD'}[currentLang] || 'BRL';
+}
+
+function formatCurrency(val) {
+  return (val||0).toLocaleString(getLangLocale(), {style:'currency', currency:getLangCurrency()});
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const txt = t(key);
+    if (txt) el.textContent = txt;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    const txt = t(key);
+    if (txt) el.placeholder = txt;
+  });
+  document.getElementById('html-root').setAttribute('lang', getLangLocale());
+  // Update progress bar text
+  updateProgress();
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('sp_lang', lang);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  applyI18n();
+  // Re-render dynamic pages if visible
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    if (activePage.id === 'pg-proposals') loadProposals();
+    if (activePage.id === 'pg-analytics') loadAnalytics();
+    if (activePage.id === 'pg-settings') renderSettings();
+    if (activePage.id === 'pg-draft' && currentResult) renderDraft(currentResult);
+  }
+}
+
 // Estado do formulário — SEMPRE recomeça zerado
 let form = {type:null, ver:null, uf:[], model:null, lei:null, rfp:''};
 let currentDraftId = null;
-let currentResult = null; // resultado completo da última geração // ID da proposta salva no servidor
+let currentResult = null;
+let editingProposalId = null;
 
 // ════════════════════════════════════════════════════════
 // HEALTH CHECK
@@ -456,7 +879,7 @@ async function checkHealth() {
     const d = await r.json();
     const el = document.getElementById('api-status');
     if (el) {
-      el.textContent = d.api_key === 'configured' ? '● API conectada' : '● Demo mode';
+      el.textContent = d.api_key === 'configured' ? '● API' : '● Demo mode';
       el.style.color = d.api_key === 'configured' ? 'var(--green)' : 'var(--amber)';
     }
   } catch(e) {
@@ -476,7 +899,7 @@ function showPage(page) {
   const pg = document.getElementById('pg-' + page);
   if (pg) pg.classList.add('active');
 
-  const btnMap = {intake:0, proposals:1, analytics:2};
+  const btnMap = {intake:0, proposals:1, analytics:2, dashboard:4, legislacao:5};
   if (btnMap[page] !== undefined) {
     document.querySelectorAll('.nav-btn')[btnMap[page]]?.classList.add('active');
   }
@@ -487,6 +910,8 @@ function showPage(page) {
   if (page === 'proposals') loadProposals();
   if (page === 'analytics') loadAnalytics();
   if (page === 'settings')  renderSettings();
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'legislacao') loadLegislacao();
   if (page === 'viz') {
     vizRenderGrid();
     if (currentResult && !vizRunning) setTimeout(vizStart, 300);
@@ -499,9 +924,12 @@ function showPage(page) {
 function resetForm() {
   form = {type:null, ver:null, uf:[], model:null, lei:null, rfp:''};
   currentDraftId = null;
+  currentResult = null;
+  editingProposalId = null;
   document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('sel'));
   const rfp = document.getElementById('rfp-txt'); if(rfp) rfp.value = '';
   const obs = document.getElementById('obs-txt'); if(obs) obs.value = '';
+  const cn = document.getElementById('client-name'); if(cn) cn.value = '';
   ['lei-yes','lei-no'].forEach(id => {
     const el = document.getElementById(id); if(el) el.classList.remove('sel');
   });
@@ -536,14 +964,15 @@ function countFilled() {
     document.querySelectorAll('#o-uf .sel').length > 0,
     !!document.querySelector('#o-model .sel'),
     (document.getElementById('rfp-txt')?.value || '').trim().length > 10,
+    (document.getElementById('client-name')?.value || '').trim().length > 1,
   ].filter(Boolean).length;
 }
 
 function updateProgress() {
   const c = countFilled();
-  const total = 5;
+  const total = 6;
   const el = document.getElementById('sub-info');
-  if (el) el.innerHTML = `<strong>${c} de ${total}</strong> campos obrigatórios`;
+  if (el) el.innerHTML = `<strong>${c} ${t('fields_of')} ${total}</strong> ${t('mandatory_fields')}`;
   const btn = document.getElementById('btn-gen');
   if (btn) btn.disabled = c < total;
   const pf = document.getElementById('prog');
@@ -551,6 +980,7 @@ function updateProgress() {
 }
 
 document.getElementById('rfp-txt').addEventListener('input', updateProgress);
+document.getElementById('client-name').addEventListener('input', updateProgress);
 
 // ════════════════════════════════════════════════════════
 // GERAR — chama o backend
@@ -563,87 +993,116 @@ async function gerar() {
   const model = document.querySelector('#o-model .sel')?.dataset.v;
   const rfp   = (document.getElementById('rfp-txt')?.value || '').trim();
   const obs   = (document.getElementById('obs-txt')?.value || '').trim();
+  const clientName = (document.getElementById('client-name')?.value || '').trim();
   const lei   = form.lei;
 
   if (!type || !ver || !uf.length || !model || rfp.length < 10) {
-    toast('Preencha todos os campos obrigatórios', 'error');
+    toast(t('toast_fill_fields'), 'error');
     return;
   }
-
-  // Mostrar tela de geração
-  document.getElementById('pg-intake').classList.remove('active');
-  document.getElementById('pg-gen').classList.add('active');
-
-  const agentNames = ['Orquestrador','Versão SAP','Agente SD','Agente FI',
-                      'ABAP Estrutural','Agente DRC','Fiscal Estadual',
-                      'Fiscal Federal','Equipe e GP','Comercial'];
-  const container = document.getElementById('gen-agents');
-  container.innerHTML = '';
-  agentNames.forEach((a, i) => {
-    const el = document.createElement('div');
-    el.className = 'ga';
-    el.textContent = a;
-    el.id = 'ga' + i;
-    container.appendChild(el);
-  });
 
   const payload = {
     project_type:  type,
     sap_version:   ver,
     states:        uf,
     commercial:    model,
+    client_name:   clientName,
     rfp_text:      rfp + (obs ? '\n\nObs: ' + obs : ''),
     new_law:       lei === true,
     hours_presale: 0,
-    lang:          'pt',
+    lang:          currentLang,
   };
 
-  try {
-    // Usar stream para animar agentes
-    const es = new EventSource(API + '/api/generate/stream?' + new URLSearchParams({
-      // Não dá para mandar payload via GET/EventSource — vamos usar fetch normal
-    }));
-    es.close(); // fecha imediatamente, usar fetch POST abaixo
+  // Abrir popup de visualização dos agentes
+  const vizW = Math.min(1280, screen.width - 100);
+  const vizH = Math.min(780, screen.height - 100);
+  const vizLeft = Math.round((screen.width - vizW) / 2);
+  const vizTop = Math.round((screen.height - vizH) / 2);
+  const vizPopup = window.open(
+    'agents-viz.html#live',
+    'sil-agents-viz',
+    `width=${vizW},height=${vizH},left=${vizLeft},top=${vizTop},resizable=yes,scrollbars=no`
+  );
 
-    // Simular animação enquanto chama a API
-    let i = 0;
-    const anim = setInterval(() => {
-      if (i > 0) {
-        const prev = document.getElementById('ga' + (i-1));
-        if (prev) { prev.classList.remove('run'); prev.classList.add('done'); }
+  // Choose endpoint: regenerate (editing) or stream (new)
+  const isEdit = !!editingProposalId;
+
+  if (isEdit) {
+    // Regenerate usa endpoint direto (não streaming)
+    try {
+      const r = await fetch(API + '/api/proposals/' + editingProposalId + '/regenerate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(`Erro ${r.status}: ${await r.text()}`);
+      const result = await r.json();
+      editingProposalId = null;
+      currentDraftId = result.proposal_id;
+      if (vizPopup && !vizPopup.closed) {
+        try { vizPopup.postMessage({type:'sil-gen-done', proposalId: result.proposal_id, result: result}, '*'); } catch(e) {}
       }
-      const cur = document.getElementById('ga' + i);
-      if (cur) cur.classList.add('run');
-      i++;
-      if (i > agentNames.length) clearInterval(anim);
-    }, 600);
+      currentResult = result;
+      renderDraft(result);
+      showPageDirect('draft');
+    } catch(ex) {
+      toast(t('toast_gen_error') + ex.message, 'error');
+      if (vizPopup && !vizPopup.closed) vizPopup.close();
+      showPage('intake');
+      editingProposalId = null;
+    }
+  } else {
+    // Nova proposta usa streaming para visualização em tempo real dos agentes
+    try {
+      const r = await fetch(API + '/api/generate/stream', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(`Erro ${r.status}: ${await r.text()}`);
 
-    const r = await fetch(API + '/api/generate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    });
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result = null;
 
-    clearInterval(anim);
-    // Marcar todos como done
-    agentNames.forEach((_, idx) => {
-      const el = document.getElementById('ga' + idx);
-      if (el) { el.classList.remove('run'); el.classList.add('done'); }
-    });
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream: true});
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            // Enviar evento para o popup de visualização
+            if (vizPopup && !vizPopup.closed) {
+              try { vizPopup.postMessage({type:'sil-agent-event', event: event}, '*'); } catch(e) {}
+            }
+            if (event.type === 'complete' && event.result) {
+              result = event.result;
+            }
+          } catch(e) {}
+        }
+      }
 
-    if (!r.ok) throw new Error(`Erro ${r.status}: ${await r.text()}`);
+      if (!result) throw new Error('Nenhum resultado recebido do servidor');
 
-    const result = await r.json();
-    currentDraftId = result.proposal_id;
-
-    await new Promise(res => setTimeout(res, 500));
-    currentResult = result;
-    renderDraft(result);
-    showPageDirect('draft');
-
-  } catch(ex) {
-    toast('Erro ao gerar proposta: ' + ex.message, 'error');
-    showPage('intake');
+      editingProposalId = null;
+      currentDraftId = result.proposal_id;
+      if (vizPopup && !vizPopup.closed) {
+        try { vizPopup.postMessage({type:'sil-gen-done', proposalId: result.proposal_id, result: result}, '*'); } catch(e) {}
+      }
+      currentResult = result;
+      renderDraft(result);
+      showPageDirect('draft');
+    } catch(ex) {
+      toast(t('toast_gen_error') + ex.message, 'error');
+      if (vizPopup && !vizPopup.closed) vizPopup.close();
+      showPage('intake');
+      editingProposalId = null;
+    }
   }
 }
 
@@ -663,13 +1122,50 @@ function renderDraft(result) {
   const mainProc = result.main_proc || 'SD';
   const mainProcLabel = {MM:'Compras (MM)',SD:'Vendas (SD)',FI:'Financeiro (FI)',PP:'Produção (PP)',HR:'RH/HCM',PM:'Manutenção (PM)',FISCAL:'Fiscal',MIGR:'Migração'}[mainProc] || mainProc;
 
-  // Título
-  document.getElementById('draft-title').textContent = dam.titulo || 'DAM — Proposta SAP';
+  // Título — nome limpo (sem "DAM — ") + versão
+  const ver = result.version || 1;
+  const rawTitle = (result.title || dam.titulo || 'Proposta SAP').replace(/^DAM\s*[—–-]\s*/i, '');
+  document.getElementById('draft-title').textContent = rawTitle + ' V' + ver;
+
+  // Version badge
+  const vLabel = document.getElementById('draft-version-label');
+  if (vLabel) vLabel.textContent = 'V' + ver;
+
+  // Show/hide approval buttons based on status
+  const status = result.status || 'draft';
+  const archBtn = document.getElementById('btn-approve-arch');
+  const clientBtn = document.getElementById('btn-approve-client');
+  if (archBtn) {
+    const canApproveArch = (status === 'draft');
+    archBtn.disabled = !canApproveArch;
+    archBtn.style.opacity = canApproveArch ? '1' : '.5';
+  }
+  if (clientBtn) {
+    const canApproveClient = (status === 'architect_approved');
+    clientBtn.style.display = (status === 'architect_approved' || status === 'client_approved') ? '' : 'none';
+    clientBtn.disabled = !canApproveClient;
+    clientBtn.style.opacity = canApproveClient ? '1' : '.5';
+  }
+  const projBtn = document.getElementById('btn-gen-project');
+  if (projBtn) {
+    projBtn.style.display = (status === 'client_approved') ? '' : 'none';
+  }
+  const viewProjBtn = document.getElementById('btn-view-project');
+  if (viewProjBtn) {
+    viewProjBtn.style.display = projectData ? '' : 'none';
+  }
 
   // Confiança
   const confGrid = document.getElementById('conf-grid');
+  const confTooltips = {
+    escopo: t('conf_escopo'),
+    horas: t('conf_horas'),
+    legislacao: t('conf_legislacao'),
+    comercial: t('conf_comercial'),
+  };
   confGrid.innerHTML = ['escopo','horas','legislacao','comercial'].map(k => `
     <div class="conf-card">
+      <div class="conf-tooltip">${confTooltips[k]}</div>
       <div class="conf-val">${Math.round((conf[k]||0)*100)}%</div>
       <div class="conf-lbl">${k.charAt(0).toUpperCase()+k.slice(1)}</div>
       <div class="conf-bar-wrap"><div class="conf-bar-fill" style="width:${Math.round((conf[k]||0)*100)}%"></div></div>
@@ -677,7 +1173,7 @@ function renderDraft(result) {
 
   // Body
   const body = document.getElementById('draft-body');
-  const valor = (dam.comercial?.valor_referencia || 0).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
+  const valor = formatCurrency(dam.comercial?.valor_referencia || 0);
   const equipe = (dam.equipe || result.wp_resources || []).map(r=>`<strong>${r.frente}</strong> ${r.dias}d`).join(' · ');
   const totalH = result.total_hours || 0;
   const needsCPI = dam.plano?.needs_cpi;
@@ -715,9 +1211,11 @@ function renderDraft(result) {
         <span style="font-size:12px;color:var(--text2)">${desc}</span>
       </div>
       <div class="mod-items" style="border-color:${color}30">
-        ${items.map((e,i)=>`<div class="mod-item">
-          <span class="mod-num" style="color:${color}">${i+1}.</span>
-          <span>${e.item}</span>
+        ${items.map((e,i)=>`<div class="mod-item" style="display:flex;align-items:flex-start;gap:6px">
+          <span class="mod-num" style="color:${color};flex-shrink:0">${i+1}.</span>
+          <span style="flex:1">${e.item}</span>
+          ${e.horas ? '<span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">' + e.horas + 'h</span>' : ''}
+          ${e.fase ? '<span style="font-size:9px;color:var(--accent);background:var(--accent-bg);padding:1px 6px;border-radius:8px;white-space:nowrap;flex-shrink:0">' + e.fase + '</span>' : ''}
         </div>`).join('')}
       </div></div>`;
   }).join('');
@@ -727,7 +1225,7 @@ function renderDraft(result) {
 
   // Work Package
   const resources = dam.equipe || result.wp_resources || [];
-  const wpRows = resources.map(r=>`<tr><td>${r.frente}</td><td>${r.nivel}</td><td style="text-align:center">${r.dias}</td><td style="text-align:center">${r.dias*8}h</td></tr>`).join('');
+  const wpRows = resources.map((r,idx)=>`<tr><td>${r.frente}</td><td>${r.nivel}</td><td style="text-align:center">${r.dias}</td><td style="text-align:center">${r.dias*8}h</td><td style="text-align:center"><button class="btn-detail" onclick="showDetail('${r.frente.replace(/'/g,"\\'")}',${idx})">${t('detail_btn')}</button></td></tr>`).join('');
   const totalDias = resources.reduce((s,r)=>s+r.dias,0);
 
   // Premissas
@@ -737,7 +1235,7 @@ function renderDraft(result) {
     <!-- Resumo -->
     <div class="section">
       <div class="section-header">
-        <div class="section-title">Resumo da solução</div>
+        <div class="section-title">${t('sec_scope')}</div>
         <span class="tag teal">IA · ${mainProcLabel}</span>
       </div>
       <div style="background:var(--bg3);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.8">
@@ -760,21 +1258,21 @@ function renderDraft(result) {
     <!-- Work Package -->
     <div class="section">
       <div class="section-header">
-        <div class="section-title">Work Package (WP)</div>
+        <div class="section-title">${t('sec_team')}</div>
         <span class="tag amber">${totalH}h</span>
       </div>
       <table class="wp">
-        <thead><tr><th>Frente</th><th>Nível</th><th style="text-align:center">Dias</th><th style="text-align:center">Horas</th></tr></thead>
+        <thead><tr><th>${t('th_area')}</th><th>${t('th_level')}</th><th style="text-align:center">${t('th_days')}</th><th style="text-align:center">${t('th_hours')}</th><th style="text-align:center">${t('th_actions')}</th></tr></thead>
         <tbody>
           ${wpRows}
-          <tr><td colspan="2">Total</td><td style="text-align:center">${totalDias}</td><td style="text-align:center">${totalH}h</td></tr>
+          <tr><td colspan="2">${t('total')}</td><td style="text-align:center">${totalDias}</td><td style="text-align:center">${totalH}h</td><td></td></tr>
         </tbody>
       </table>
     </div>
 
     <!-- Premissas -->
     <div class="section">
-      <div class="section-header"><div class="section-title">Premissas gerais</div></div>
+      <div class="section-header"><div class="section-title">${t('sec_premises')}</div></div>
       <div style="font-size:13px;color:var(--text2)">
         <ol style="padding-left:18px;line-height:1.9">
           ${prems.map(p=>`<li style="margin-bottom:4px">${p}</li>`).join('')}
@@ -785,12 +1283,12 @@ function renderDraft(result) {
     <!-- Comercial -->
     <div class="section">
       <div class="section-header">
-        <div class="section-title">Investimento e condições</div>
+        <div class="section-title">${t('sec_investment')}</div>
         <span class="tag teal">${valor}</span>
       </div>
       <div style="font-size:13px;color:var(--text2);line-height:1.8">
-        Modelo: <strong>Valor fechado</strong> · Faturamento: <strong>50% aprovação + 50% go-live</strong><br>
-        Garantia: <strong>30 dias</strong> · Validade: <strong>30 dias</strong> · Total: <strong>${totalH}h</strong>
+        ${t('commercial_model')}: <strong>${t('commercial_fixed')}</strong> · ${t('billing')}: <strong>${t('billing_terms')}</strong><br>
+        ${t('warranty')}: <strong>${t('days_30')}</strong> · ${t('validity')}: <strong>${t('days_30')}</strong> · ${t('total')}: <strong>${totalH}h</strong>
       </div>
     </div>`;
 }
@@ -800,7 +1298,7 @@ function renderDraft(result) {
 // ════════════════════════════════════════════════════════
 async function aprovar() {
   if (!currentDraftId) {
-    toast('Nenhuma proposta ativa para aprovar', 'error');
+    toast(t('toast_no_proposal'), 'error');
     return;
   }
   try {
@@ -808,11 +1306,11 @@ async function aprovar() {
       method: 'PATCH',
     });
     if (!r.ok) throw new Error(await r.text());
-    toast('Proposta aprovada e salva!', 'success');
+    toast(t('toast_approved'), 'success');
     currentDraftId = null;
     showPage('proposals');
   } catch(ex) {
-    toast('Erro ao aprovar: ' + ex.message, 'error');
+    toast(t('toast_approve_error') + ex.message, 'error');
   }
 }
 
@@ -821,7 +1319,7 @@ async function aprovar() {
 // ════════════════════════════════════════════════════════
 async function downloadDAM() {
   if (!currentDraftId) {
-    toast('Gere uma proposta primeiro', 'error');
+    toast(t('toast_gen_first'), 'error');
     return;
   }
   window.open(API + '/api/proposals/' + currentDraftId + '/download/dam', '_blank');
@@ -833,7 +1331,7 @@ async function downloadDAM() {
 async function loadProposals() {
   const list = document.getElementById('proposals-list');
   const metrics = document.getElementById('proposals-metrics');
-  if (list) list.innerHTML = '<div class="empty">Carregando...</div>';
+  if (list) list.innerHTML = '<div class="empty">' + t('loading') + '</div>';
 
   try {
     const r = await fetch(API + '/api/proposals');
@@ -846,7 +1344,7 @@ async function loadProposals() {
       sb.innerHTML = proposals.slice(0, 5).map(p => `
         <div class="sb-item" onclick="viewProposal('${p.id}')">
           <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.title||'').slice(0,22)}</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.client_name||'').slice(0,15) || (p.title||'').slice(0,15)} <span style="color:var(--text3);font-size:10px">${p.proposal_number||''}</span></span>
           <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
         </div>`).join('');
     }
@@ -856,14 +1354,14 @@ async function loadProposals() {
     const approved = proposals.filter(p=>p.status==='approved').length;
     const totalValue = proposals.reduce((s,p)=>s+(p.valor||0), 0);
     if (metrics) metrics.innerHTML = [
-      {v:total, l:'Propostas', s:'Total geradas'},
-      {v:approved, l:'Aprovadas', s:`${total?Math.round(approved/total*100):0}% conversão`},
-      {v:totalValue.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}), l:'Pipeline total', s:'Valor acumulado'},
+      {v:total, l:t('proposals_label'), s:t('total_generated')},
+      {v:approved, l:t('approved_label'), s:`${total?Math.round(approved/total*100):0}% ${t('conversion')}`},
+      {v:formatCurrency(totalValue), l:t('pipeline_label'), s:t('accumulated')},
     ].map(m=>`<div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--text)">${m.v}</div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${m.l}</div><div style="font-size:11px;color:var(--teal);margin-top:2px">${m.s}</div></div>`).join('');
 
     // List
     if (!proposals.length) {
-      if(list) list.innerHTML = '<div class="empty">Nenhuma proposta ainda. Crie a primeira acima.</div>';
+      if(list) list.innerHTML = '<div class="empty">' + t('no_proposals') + '</div>';
       return;
     }
 
@@ -871,7 +1369,7 @@ async function loadProposals() {
     const procLabels = {MM:'Compras',SD:'Vendas',FI:'Financeiro',FISCAL:'Fiscal',MIGR:'Migração',PP:'Produção',HR:'RH',PM:'Manutenção'};
 
     if(list) list.innerHTML = proposals.map(p => {
-      const v = (p.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      const v = formatCurrency(p.valor||0);
       const proc = p.main_proc || 'SD';
       const color = procColors[proc] || '#94A3B8';
       const states = Array.isArray(p.states) ? p.states.join(', ') : (p.states||'');
@@ -885,26 +1383,41 @@ async function loadProposals() {
             <div style="font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title||''}</div>
             ${p.rfp_text ? `<div style="font-size:12px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.rfp_text.slice(0,100)}</div>` : ''}
           </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:16px">
-            <div style="font-size:18px;font-weight:700;color:var(--teal)">${v}</div>
-            <span class="status-badge ${p.status||'draft'}" style="margin-top:4px;display:inline-flex">
-              <span style="width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:4px"></span>
-              ${p.status==='approved'?'Aprovada':p.status==='draft'?'Rascunho':'Pendente'}
-            </span>
+          <div style="display:flex;align-items:flex-start;gap:10px;flex-shrink:0;margin-left:16px">
+            <div style="text-align:right">
+              <div style="font-size:18px;font-weight:700;color:var(--teal)">${v}</div>
+              <span class="status-badge ${p.status||'draft'}" style="margin-top:4px;display:inline-flex">
+                <span style="width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:4px"></span>
+                ${p.status==='architect_approved'?t('status_arch_approved'):p.status==='client_approved'?t('status_client_approved'):p.status==='approved'?t('status_approved'):p.status==='draft'?t('status_draft'):t('status_pending')}
+              </span>
+            </div>
+            <button onclick="event.stopPropagation();deleteProposal('${p.id}','${(p.title||'').replace(/'/g,"\\'").slice(0,40)}')" title="Excluir proposta" style="background:none;border:1px solid var(--red);color:var(--red);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;line-height:1;opacity:.6;transition:opacity .2s" onmouseover="this.style.opacity=1;this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.opacity=.6;this.style.background='none';this.style.color='var(--red)'">🗑</button>
           </div>
         </div>
         <div class="prop-foot">
           <span>SAP: <strong>${p.sap_version||''}</strong></span>
           <span>Tipo: <strong>${p.project_type||''}</strong></span>
           <span>Canal: <strong>${p.needs_cpi?'CPI':'DRC'}</strong></span>
-          <span style="margin-left:auto;color:var(--accent);font-weight:600;font-size:11px">Ver detalhes →</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:600;font-size:11px">${t('see_details')}</span>
         </div>
       </div>`;
     }).join('');
 
   } catch(ex) {
-    if(list) list.innerHTML = `<div class="empty">Erro ao carregar propostas: ${ex.message}</div>`;
-    toast('Erro ao carregar propostas', 'error');
+    if(list) list.innerHTML = `<div class="empty">${t('toast_load_error')}: ${ex.message}</div>`;
+    toast(t('toast_load_error'), 'error');
+  }
+}
+
+async function deleteProposal(id, title) {
+  if (!confirm('Excluir proposta "' + title + '"?\n\nEsta ação não pode ser desfeita.')) return;
+  try {
+    const r = await fetch(API + '/api/proposals/' + id, {method:'DELETE'});
+    if (!r.ok) throw new Error('Erro ' + r.status);
+    toast('Proposta excluída', 'success');
+    loadProposals();
+  } catch(ex) {
+    toast('Erro ao excluir: ' + ex.message, 'error');
   }
 }
 
@@ -918,12 +1431,19 @@ async function viewProposal(id) {
     const dam = p.dam || (p.dam_json ? (typeof p.dam_json==='string'?JSON.parse(p.dam_json):p.dam_json) : {});
     const result = {
       proposal_id:  p.id,
+      title:        p.title || '',
+      status:       p.status || 'draft',
+      version:      p.version || 1,
+      client_name:  p.client_name || '',
+      proposal_number: p.proposal_number || '',
+      commercial:   p.commercial || '',
       main_proc:    p.main_proc || 'SD',
       total_hours:  p.total_hours || 0,
       wp_resources: p.resources || [],
       confidence:   p.confidence || {escopo:.88,horas:.82,legislacao:.78,comercial:.95},
       dam: {
         titulo:       p.title || '',
+        cliente:      p.client_name || dam.cliente || '',
         tipo_projeto: p.project_type || '',
         versao_sap:   p.sap_version || '',
         ufs:          Array.isArray(p.states) ? p.states : [p.states||''],
@@ -942,7 +1462,7 @@ async function viewProposal(id) {
     renderDraft(result);
     showPageDirect('draft');
   } catch(ex) {
-    toast('Erro ao abrir proposta: ' + ex.message, 'error');
+    toast(t('toast_open_error') + ex.message, 'error');
   }
 }
 
@@ -956,7 +1476,7 @@ async function loadAnalytics() {
     const r = await fetch(API + '/api/proposals');
     const d = await r.json();
     const props = d.proposals || [];
-    if (!props.length) { body.innerHTML = '<div class="empty">Sem dados ainda.</div>'; return; }
+    if (!props.length) { body.innerHTML = '<div class="empty">' + t('no_data') + '</div>'; return; }
 
     const byProc = {};
     props.forEach(p => {
@@ -973,14 +1493,14 @@ async function loadAnalytics() {
         <td><span style="background:${(procColors[proc]||'#94A3B8')}18;color:${(procColors[proc]||'#94A3B8')};font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid ${(procColors[proc]||'#94A3B8')}30">${proc}</span></td>
         <td style="text-align:center">${data.count}</td>
         <td style="text-align:center">${Math.round(data.hours/data.count)}h</td>
-        <td style="text-align:right">${(data.value/data.count).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+        <td style="text-align:right">${formatCurrency(data.value/data.count)}</td>
       </tr>`).join('');
 
     body.innerHTML = `
       <div class="section">
-        <div class="section-header"><div class="section-title">Distribuição por processo SAP</div></div>
+        <div class="section-header"><div class="section-title">${t('analytics_dist')}</div></div>
         <table class="wp">
-          <thead><tr><th>Processo</th><th style="text-align:center">Propostas</th><th style="text-align:center">Horas médias</th><th style="text-align:right">Valor médio</th></tr></thead>
+          <thead><tr><th>${t('th_process')}</th><th style="text-align:center">${t('th_proposals')}</th><th style="text-align:center">${t('th_avg_hours')}</th><th style="text-align:right">${t('th_avg_value')}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -999,13 +1519,13 @@ function renderSettings() {
     <div class="card opt" style="border-left-color:var(--accent)">
       <div class="card-header">
         <div class="card-icon blue">🔑</div>
-        <div><div class="card-title">Chave OpenAI (opcional)</div><div class="card-sub">Para geração com IA real via GPT-4o-mini</div></div>
+        <div><div class="card-title">${t('settings_key_title')}</div><div class="card-sub">${t('settings_key_sub')}</div></div>
       </div>
-      <input type="password" id="cfg-key" value="${openaiKey}" placeholder="sk-... (salva no browser, não no servidor)">
-      <div class="fh" style="margin-top:6px">Salva apenas no seu browser. O servidor usa a chave configurada no Railway.</div>
+      <input type="password" id="cfg-key" value="${openaiKey}" placeholder="${t('settings_key_ph')}">
+      <div class="fh" style="margin-top:6px">${t('settings_key_hint')}</div>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-top:8px">
-      <button class="btn-pri" onclick="saveSettings()">✓ Salvar</button>
+      <button class="btn-pri" onclick="saveSettings()">${t('btn_save')}</button>
     </div>
     <div class="card opt" style="margin-top:16px">
       <div class="card-header"><div class="card-icon teal">🔗</div><div><div class="card-title">API URL</div></div></div>
@@ -1016,7 +1536,7 @@ function renderSettings() {
 function saveSettings() {
   const k = document.getElementById('cfg-key')?.value;
   if (k !== undefined) { openaiKey = k; localStorage.setItem('sp_apiKey', k); }
-  toast('Configurações salvas!', 'success');
+  toast(t('settings_saved'), 'success');
 }
 
 // ════════════════════════════════════════════════════════
@@ -1033,9 +1553,1214 @@ function toast(msg, type='info') {
 }
 
 // ════════════════════════════════════════════════════════
+// APPROVAL WORKFLOW
+// ════════════════════════════════════════════════════════
+async function approveArchitect() {
+  if (!currentDraftId) { toast(t('toast_no_proposal'), 'error'); return; }
+  try {
+    const r = await fetch(API + '/api/proposals/' + currentDraftId + '/approve-architect', {method:'PATCH'});
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Erro');
+    toast(t('btn_approve_arch') + ' ✓', 'success');
+    // Update local state and re-render buttons
+    if (currentResult) currentResult.status = 'architect_approved';
+    const archBtn = document.getElementById('btn-approve-arch');
+    if (archBtn) { archBtn.disabled = true; archBtn.style.opacity = '.5'; }
+    const clientBtn = document.getElementById('btn-approve-client');
+    if (clientBtn) { clientBtn.style.display = ''; clientBtn.disabled = false; clientBtn.style.opacity = '1'; }
+  } catch(ex) { toast(t('toast_approve_error') + ex.message, 'error'); }
+}
+
+async function approveClient() {
+  if (!currentDraftId) { toast(t('toast_no_proposal'), 'error'); return; }
+  try {
+    const r = await fetch(API + '/api/proposals/' + currentDraftId + '/approve-client', {method:'PATCH'});
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Erro');
+    toast(t('btn_approve_client') + ' ✓', 'success');
+    // Update local state
+    if (currentResult) currentResult.status = 'client_approved';
+    const clientBtn = document.getElementById('btn-approve-client');
+    if (clientBtn) { clientBtn.disabled = true; clientBtn.style.opacity = '.5'; }
+    // Show generate project button
+    const projBtn = document.getElementById('btn-gen-project');
+    if (projBtn) projBtn.style.display = '';
+  } catch(ex) { toast(t('toast_approve_error') + ex.message, 'error'); }
+}
+
+function editProposal() {
+  if (!currentResult) return;
+  const dam = currentResult.dam || {};
+  editingProposalId = currentDraftId;
+  // Pre-fill intake form (without resetting)
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('pg-intake').classList.add('active');
+  // Client name
+  const cn = document.getElementById('client-name');
+  if (cn) cn.value = dam.cliente || '';
+  // RFP text
+  const rfpEl = document.getElementById('rfp-txt');
+  if (rfpEl) rfpEl.value = dam.necessidade || '';
+  // Select type
+  const typeMap = {ams:'ams', support:'support', migration:'migration', new:'new'};
+  const typeVal = typeMap[dam.tipo_projeto] || dam.tipo_projeto || '';
+  if (typeVal) { const btn = document.querySelector('#o-type .opt-btn[data-v="'+typeVal+'"]'); if(btn) sel(btn,'type'); }
+  // Select SAP version
+  const verMap = {'ECC ≤ 6.04':'ecc604','ECC 6.05+':'ecc605','S/4HANA On-premise':'s4op','S/4HANA Cloud':'s4cloud',ecc604:'ecc604',ecc605:'ecc605',s4op:'s4op',s4cloud:'s4cloud'};
+  const verVal = verMap[dam.versao_sap] || dam.versao_sap || '';
+  if (verVal) { const btn = document.querySelector('#o-ver .opt-btn[data-v="'+verVal+'"]'); if(btn) sel(btn,'ver'); }
+  // Select UFs
+  const ufs = dam.ufs || [];
+  document.querySelectorAll('#o-uf .opt-btn').forEach(b => b.classList.remove('sel'));
+  form.uf = [];
+  ufs.forEach(uf => { const btn = document.querySelector('#o-uf .opt-btn[data-v="'+uf+'"]'); if(btn) ms(btn); });
+  // Select commercial model
+  const modelVal = currentResult.commercial || '';
+  if (modelVal) { const btn = document.querySelector('#o-model .opt-btn[data-v="'+modelVal+'"]'); if(btn) sel(btn,'model'); }
+  // Update progress
+  setTimeout(updateProgress, 100);
+  toast('Edite e clique em Gerar para criar nova versão', 'info');
+}
+
+// ════════════════════════════════════════════════════════
+// PROJECT GENERATION
+// ════════════════════════════════════════════════════════
+let projectData = null;
+
+function generateProject() {
+  if (!currentResult) { toast(t('toast_no_proposal'),'error'); return; }
+  // Ask for start date
+  const today = new Date().toISOString().slice(0,10);
+  const overlay = document.createElement('div');
+  overlay.id = 'proj-date-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px 32px;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Gerar Projeto</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Informe a data de início do projeto. Se não informar, será usado hoje.</div>
+    <input type="date" id="proj-start-date" value="${today}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font);font-size:13px;background:var(--bg3);color:var(--text);margin-bottom:16px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-sec" id="proj-cancel-btn">Cancelar</button>
+      <button class="btn-pri" id="proj-confirm-btn">Gerar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('proj-cancel-btn').addEventListener('click', function(){ overlay.remove(); });
+  document.getElementById('proj-confirm-btn').addEventListener('click', function(){ doGenerateProject(); });
+}
+
+function doGenerateProject() {
+  const dateInput = document.getElementById('proj-start-date');
+  const startStr = dateInput ? dateInput.value : '';
+  const startDate = startStr ? new Date(startStr + 'T00:00:00') : new Date();
+  // Remove overlay
+  const ov = document.getElementById('proj-date-overlay');
+  if (ov) ov.remove();
+
+  const dam = currentResult.dam || {};
+  const resources = dam.equipe || currentResult.wp_resources || [];
+  const title = (currentResult.title || '').replace(/^DAM\s*[—–-]\s*/i, '');
+
+  // Separate GP from specialist frentes
+  const specialists = resources.filter(r => r.frente !== 'GP' && r.frente !== 'Comercial');
+  const allTasks = []; // flat list: {task, frente, days, startDay, parallel}
+
+  let dayOffset = 0;
+
+  // ── Phase 1: Prepare (sequential) ──
+  const prepareTasks = [
+    {task:'Kick-off e planejamento', frente:'GP', days:3},
+    {task:'Levantamento AS-IS / entendimento do cenário', frente:'GP', days:5},
+  ];
+  prepareTasks.forEach(tk => { tk.startDay = dayOffset; tk.phase = 'Prepare'; allTasks.push(tk); dayOffset += tk.days; });
+
+  // ── Phase 2: Explore — blueprints em PARALELO por frente ──
+  const exploreStart = dayOffset;
+  let exploreMaxEnd = dayOffset;
+  if (specialists.length > 0) {
+    specialists.forEach(r => {
+      const days = Math.max(3, Math.round((r.dias||5) * 0.3));
+      const tk = {task:'Blueprint / especificação funcional — ' + r.frente, frente:r.frente, days, startDay:exploreStart, phase:'Explore', parallel:true};
+      allTasks.push(tk);
+      exploreMaxEnd = Math.max(exploreMaxEnd, exploreStart + days);
+    });
+  } else {
+    allTasks.push({task:'Blueprint geral', frente:'GP', days:5, startDay:exploreStart, phase:'Explore'});
+    exploreMaxEnd = exploreStart + 5;
+  }
+  dayOffset = exploreMaxEnd;
+
+  // ── Phase 3: Realize — configurações em PARALELO por frente ──
+  const realizeStart = dayOffset;
+  let realizeMaxEnd = dayOffset;
+  if (specialists.length > 0) {
+    specialists.forEach(r => {
+      const days = Math.max(3, Math.round((r.dias||5) * 0.5));
+      const tk = {task:'Configuração / desenvolvimento — ' + r.frente, frente:r.frente, days, startDay:realizeStart, phase:'Realize', parallel:true};
+      allTasks.push(tk);
+      realizeMaxEnd = Math.max(realizeMaxEnd, realizeStart + days);
+    });
+  } else {
+    allTasks.push({task:'Configuração geral', frente:'GP', days:10, startDay:realizeStart, phase:'Realize'});
+    realizeMaxEnd = realizeStart + 10;
+  }
+  dayOffset = realizeMaxEnd;
+
+  // ── Phase 4: Deploy (sequential) ──
+  const deployTasks = [
+    {task:'Testes integrados end-to-end', frente:'GP', days:5},
+    {task:'Treinamento key users', frente:'GP', days:3},
+    {task:'Cutover e Go-Live', frente:'GP', days:2},
+  ];
+  deployTasks.forEach(tk => { tk.startDay = dayOffset; tk.phase = 'Deploy'; allTasks.push(tk); dayOffset += tk.days; });
+
+  // ── Phase 5: Run (sequential) ──
+  const runTasks = [
+    {task:'Hypercare / suporte pós go-live', frente:'GP', days:10},
+  ];
+  runTasks.forEach(tk => { tk.startDay = dayOffset; tk.phase = 'Run'; allTasks.push(tk); dayOffset += tk.days; });
+
+  // Calculate dates for all tasks
+  allTasks.forEach(tk => {
+    tk.startDate = addBusinessDays(startDate, tk.startDay);
+    tk.endDate = addBusinessDays(startDate, tk.startDay + tk.days - 1);
+  });
+
+  // Group into phases for rendering
+  const phaseOrder = ['Prepare','Explore','Realize','Deploy','Run'];
+  const phases = phaseOrder.map(name => {
+    const tasks = allTasks.filter(tk => tk.phase === name);
+    if (!tasks.length) return null;
+    const minStart = Math.min(...tasks.map(t=>t.startDay));
+    const maxEnd = Math.max(...tasks.map(t=>t.startDay + t.days));
+    return {phase:name, tasks, startDay:minStart, endDay:maxEnd-1, days:maxEnd-minStart};
+  }).filter(Boolean);
+
+  const totalDays = dayOffset;
+  projectData = {title, phases, totalDays, startDate, resources, allTasks};
+
+  renderProject();
+  showPageDirect('project');
+  toast('Projeto gerado com sucesso!','success');
+
+  const viewBtn = document.getElementById('btn-view-project');
+  if (viewBtn) viewBtn.style.display = '';
+}
+
+function addBusinessDays(start, days) {
+  const d = new Date(start);
+  if (days === 0) return d;
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
+  return d;
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString(getLangLocale(), {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+function viewProject() {
+  if (!projectData) { toast('Gere o projeto primeiro','error'); return; }
+  renderProject();
+  showPageDirect('project');
+}
+
+function renderProject() {
+  if (!projectData) return;
+  const {title, phases, totalDays, allTasks} = projectData;
+  const body = document.getElementById('project-body');
+  const titleEl = document.getElementById('project-title');
+  if (titleEl) titleEl.textContent = 'Projeto — ' + title;
+
+  const phaseColors = {Prepare:'#3B82F6',Explore:'#8B5CF6',Realize:'#F59E0B',Deploy:'#059669',Run:'#06B6D4'};
+  const frenteColors = {SD:'#3B7BF8',FI:'#0D9488',MM:'#7C3AED',ABAP:'#D97706','ABAP 1':'#D97706','ABAP 2':'#E8A317','ABAP 3':'#F0C040',DRC:'#22D3EE',GP:'#818CF8',PP:'#DC2626',HR:'#0D9488',PM:'#D97706'};
+
+  let html = '';
+
+  // ── Gantt Chart ──
+  const {startDate: projStart} = projectData;
+  const projEnd = addBusinessDays(projStart, totalDays - 1);
+  html += '<div class="section"><div class="section-header"><div class="section-title">Cronograma Gantt — Waterfall</div><span class="tag amber">' + totalDays + ' dias úteis · ' + formatDate(projStart) + ' a ' + formatDate(projEnd) + '</span></div>';
+  html += '<div style="overflow-x:auto"><div style="min-width:750px">';
+
+  // Week ruler header
+  html += '<div style="display:flex;align-items:center;margin-bottom:8px;height:20px">';
+  html += '<div style="width:220px;flex-shrink:0"></div>';
+  html += '<div style="flex:1;position:relative;height:20px;border-bottom:1px solid var(--border)">';
+  const weeksCount = Math.ceil(totalDays / 5);
+  for (let w = 0; w < weeksCount; w++) {
+    const wStart = addBusinessDays(projStart, w * 5);
+    const leftPct = (w * 5 / totalDays * 100).toFixed(1);
+    const dd = String(wStart.getDate()).padStart(2,'0');
+    const mm = String(wStart.getMonth()+1).padStart(2,'0');
+    html += '<div style="position:absolute;left:' + leftPct + '%;font-size:9px;font-weight:600;color:var(--text3);font-family:var(--mono);white-space:nowrap;border-left:1px solid var(--border);padding-left:3px;height:100%;display:flex;align-items:center">S' + (w+1) + ' ' + dd + '/' + mm + '</div>';
+  }
+  html += '</div></div>';
+
+  // Render each task as a bar
+  allTasks.forEach(tk => {
+    const color = tk.parallel ? (frenteColors[tk.frente] || '#94A3B8') : (phaseColors[tk.phase] || '#94A3B8');
+    const leftPct = (tk.startDay / totalDays * 100).toFixed(1);
+    const widthPct = (tk.days / totalDays * 100).toFixed(1);
+    const label = tk.frente + ' · ' + tk.days + 'd';
+
+    html += '<div style="display:flex;align-items:center;margin-bottom:3px;height:24px">';
+    html += '<div style="width:220px;font-size:10px;color:var(--text2);flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">';
+    html += '<span style="color:' + (phaseColors[tk.phase]||'#94A3B8') + ';font-weight:700;font-size:9px">' + tk.phase + '</span> ' + tk.task.replace(tk.phase + ' — ','');
+    html += '</div>';
+    html += '<div style="flex:1;height:20px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden">';
+    html += '<div style="position:absolute;left:' + leftPct + '%;width:' + widthPct + '%;height:100%;background:' + color + ';border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden">' + label + '</div>';
+    html += '</div></div>';
+  });
+
+  html += '</div></div></div>';
+
+  // ── Phase summary bars ──
+  html += '<div class="section" style="margin-top:16px"><div class="section-header"><div class="section-title">Fases SAP Activate</div></div>';
+  phases.forEach(ph => {
+    const color = phaseColors[ph.phase] || '#94A3B8';
+    const leftPct = (ph.startDay / totalDays * 100).toFixed(1);
+    const widthPct = (ph.days / totalDays * 100).toFixed(1);
+    const hasParallel = ph.tasks.some(t=>t.parallel);
+    html += '<div style="display:flex;align-items:center;margin-bottom:5px">';
+    html += '<div style="width:80px;font-size:11px;font-weight:700;color:var(--text);flex-shrink:0">' + ph.phase + '</div>';
+    html += '<div style="flex:1;height:28px;background:var(--bg3);border-radius:6px;position:relative;overflow:hidden">';
+    html += '<div style="position:absolute;left:' + leftPct + '%;width:' + widthPct + '%;height:100%;background:' + color + ';border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff">';
+    html += ph.days + 'd' + (hasParallel ? ' (paralelo)' : '');
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+
+  // ── Detail table ──
+  html += '<div class="section" style="margin-top:20px"><div class="section-header"><div class="section-title">Detalhamento de atividades</div></div>';
+  html += '<table class="wp"><thead><tr><th>Fase</th><th>Atividade</th><th>Frente</th><th style="text-align:center">Dias</th><th>Início</th><th>Fim</th><th>Tipo</th></tr></thead><tbody>';
+
+  phases.forEach(ph => {
+    const color = phaseColors[ph.phase] || '#94A3B8';
+    ph.tasks.forEach((tk, i) => {
+      html += '<tr>';
+      if (i === 0) html += '<td rowspan="' + ph.tasks.length + '"><span style="background:' + color + '18;color:' + color + ';font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px">' + ph.phase + '</span></td>';
+      html += '<td>' + tk.task + '</td>';
+      html += '<td><span style="background:' + (frenteColors[tk.frente]||'#94A3B8') + '18;color:' + (frenteColors[tk.frente]||'#94A3B8') + ';font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px">' + tk.frente + '</span></td>';
+      html += '<td style="text-align:center;font-weight:600">' + tk.days + '</td>';
+      html += '<td style="font-size:11px;font-family:var(--mono)">' + formatDate(tk.startDate) + '</td>';
+      html += '<td style="font-size:11px;font-family:var(--mono)">' + formatDate(tk.endDate) + '</td>';
+      html += '<td style="font-size:10px;color:var(--text3)">' + (tk.parallel ? '⇄ Paralelo' : '→ Sequencial') + '</td>';
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+}
+
+function downloadProjectExcel() {
+  if (!projectData) return;
+  let csv = 'Fase;Atividade;Frente;Dias;Inicio;Fim;Tipo\n';
+  projectData.allTasks.forEach(tk => {
+    csv += tk.phase + ';' + tk.task + ';' + tk.frente + ';' + tk.days + ';' + formatDate(tk.startDate) + ';' + formatDate(tk.endDate) + ';' + (tk.parallel?'Paralelo':'Sequencial') + '\n';
+  });
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Projeto_' + (projectData.title||'SAP').replace(/[^a-zA-Z0-9]/g,'_') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Excel (CSV) baixado!','success');
+}
+
+function downloadProjectPDF() {
+  const body = document.getElementById('project-body');
+  if (!body) return;
+  const win = window.open('','','width=1000,height=750');
+  win.document.write('<html><head><title>Projeto — ' + (projectData?.title||'') + '</title>');
+  win.document.write('<style>body{font-family:Segoe UI,sans-serif;padding:30px;color:#1a1a2e}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:left}th{background:#f0f0f5;font-weight:700}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h2 style="margin-bottom:4px">Projeto — ' + (projectData?.title||'') + '</h2>');
+  win.document.write('<p style="color:#666;font-size:12px;margin-bottom:20px">Gerado em ' + formatDate(new Date()) + ' · ' + (projectData?.totalDays||0) + ' dias úteis</p>');
+  win.document.write(body.innerHTML);
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 500);
+}
+
+// ════════════════════════════════════════════════════════
+// LEGISLAÇÃO
+// ════════════════════════════════════════════════════════
+function formatLegDate(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric'});
+  } catch(e) { return dateStr; }
+}
+
+async function loadLegislacao() {
+  const types = ['municipal','estadual','federal'];
+  try {
+    const r = await fetch(API + '/api/legislacao');
+    const d = await r.json();
+    const items = d.items || [];
+    types.forEach(tipo => {
+      const el = document.getElementById('leg-' + tipo);
+      if (!el) return;
+      const filtered = items.filter(i => i.tipo === tipo);
+      if (!filtered.length) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:16px;text-align:center;background:var(--bg3);border-radius:8px">Nenhuma legislação encontrada</div>';
+        return;
+      }
+      el.innerHTML = filtered.map(item => {
+        const setores = Array.isArray(item.setores) ? item.setores.join(', ') : (item.setores || '');
+        const ufs = Array.isArray(item.ufs_afetadas) ? item.ufs_afetadas.join(', ') : (item.ufs_afetadas || '');
+        const impacto = Array.isArray(item.impacto_sap) ? item.impacto_sap : [];
+        const statusColor = item.status === 'nova' ? 'var(--amber)' : item.status === 'analisando' ? 'var(--accent)' : 'var(--green)';
+        return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+          + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">'
+          + '<div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.4">' + (item.nome || '') + '</div>'
+          + '<span style="font-size:9px;font-weight:600;color:' + statusColor + ';white-space:nowrap;padding:2px 6px;border-radius:8px;border:1px solid ' + statusColor + '30;background:' + statusColor + '10">' + (item.status || 'nova') + '</span>'
+          + '</div>'
+          + '<div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:8px">' + (item.descricao || '').slice(0, 150) + '</div>'
+          + (item.data_limite_prod ? '<div style="font-size:10px;color:var(--red);font-weight:600;margin-bottom:4px">📅 Prazo limite: ' + formatLegDate(item.data_limite_prod) + '</div>' : '')
+          + (item.data_limite_homo ? '<div style="font-size:10px;color:var(--amber);font-weight:600;margin-bottom:4px">🧪 Homologação: ' + formatLegDate(item.data_limite_homo) + '</div>' : '')
+          + (ufs ? '<div style="font-size:10px;color:var(--text3);margin-bottom:4px">📍 ' + ufs + '</div>' : '')
+          + (setores ? '<div style="font-size:10px;color:var(--text3);margin-bottom:6px">🏭 ' + setores + '</div>' : '')
+          + '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">'
+          + impacto.map(i => '<span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:6px;background:var(--accent-bg);color:var(--accent)">' + i + '</span>').join('')
+          + '</div>'
+          + (item.fonte && item.fonte.includes(',') ? '<div style="font-size:9px;color:var(--accent2);margin-bottom:6px;font-style:italic">📡 Fontes: ' + item.fonte + '</div>' : '')
+          + '<div style="display:flex;gap:6px">'
+          + '<button class="btn-pri" style="font-size:10px;padding:4px 10px" onclick="legGerarProposta(\'' + (item.nome||'').replace(/'/g,"\\'") + '\',\'' + (item.descricao||'').replace(/'/g,"\\'").slice(0,200) + '\')">Gerar Proposta</button>'
+          + (item.url_fonte ? '<a href="' + item.url_fonte + '" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;align-self:center">🔗 Fonte</a>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('');
+    });
+  } catch(ex) {
+    types.forEach(tipo => {
+      const el = document.getElementById('leg-' + tipo);
+      if (el) el.innerHTML = '<div style="color:var(--red);font-size:11px">Erro: ' + ex.message + '</div>';
+    });
+  }
+}
+
+async function scrapeLegs() {
+  const st = document.getElementById('leg-status');
+  if (st) st.textContent = 'Buscando leis em 31 portais do governo...';
+  try {
+    const r = await fetch(API + '/api/legislacao/scrape', {method:'POST'});
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error('Servidor retornou ' + r.status + ': ' + err.slice(0, 200));
+    }
+    const d = await r.json();
+    const scraped = d.scraped || 0;
+    const saved = d.saved || 0;
+    if (st) st.textContent = scraped + ' leis encontradas, ' + saved + ' salvas';
+    toast('Scraping concluído: ' + saved + ' novas leis de ' + scraped + ' encontradas', 'success');
+    loadLegislacao();
+  } catch(ex) {
+    if (st) st.textContent = 'Erro no scraping';
+    toast('Erro ao buscar leis: ' + ex.message, 'error');
+    console.error('scrapeLegs error:', ex);
+  }
+}
+
+async function clearAllLeg() {
+  if (!confirm('Tem certeza que deseja apagar TODAS as legislações cadastradas?')) return;
+  try {
+    const r = await fetch(API + '/api/legislacao', {method:'DELETE'});
+    const d = await r.json();
+    toast(d.deleted + ' legislações removidas', 'success');
+    loadLegislacao();
+  } catch(ex) {
+    toast('Erro ao limpar: ' + ex.message, 'error');
+  }
+}
+
+function addLegManual() {
+  const overlay = document.createElement('div');
+  overlay.id = 'leg-manual-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;max-width:460px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2)">'
+    + '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">Cadastrar legislação</div>'
+    + '<div class="field"><div class="fl">Nome da lei</div><input type="text" id="leg-nome" placeholder="Ex: NT 2019.001 v1.70"></div>'
+    + '<div class="field"><div class="fl">Tipo</div><select id="leg-tipo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)"><option value="federal">Federal</option><option value="estadual">Estadual</option><option value="municipal">Municipal</option></select></div>'
+    + '<div class="field"><div class="fl">Descrição</div><textarea id="leg-desc" rows="3" placeholder="Impacto e mudanças..."></textarea></div>'
+    + '<div style="display:flex;gap:8px"><div class="field" style="flex:1"><div class="fl">Homologação</div><input type="date" id="leg-homo"></div><div class="field" style="flex:1"><div class="fl">Produção</div><input type="date" id="leg-prod"></div></div>'
+    + '<div class="field"><div class="fl">UFs afetadas</div><input type="text" id="leg-ufs" placeholder="SP, GO ou TODAS"></div>'
+    + '<div class="field"><div class="fl">Setores</div><input type="text" id="leg-setores" placeholder="Comércio, Indústria, Serviços"></div>'
+    + '<div class="field"><div class="fl">URL fonte (opcional)</div><input type="text" id="leg-url" placeholder="https://..."></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">'
+    + '<button class="btn-sec" id="leg-cancel-btn">Cancelar</button>'
+    + '<button class="btn-pri" id="leg-save-btn">Salvar</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('leg-cancel-btn').addEventListener('click', function(){ overlay.remove(); });
+  document.getElementById('leg-save-btn').addEventListener('click', async function(){
+    const data = {
+      nome: document.getElementById('leg-nome').value,
+      tipo: document.getElementById('leg-tipo').value,
+      descricao: document.getElementById('leg-desc').value,
+      data_limite_homo: document.getElementById('leg-homo').value || '',
+      data_limite_prod: document.getElementById('leg-prod').value || '',
+      ufs_afetadas: document.getElementById('leg-ufs').value.split(',').map(s=>s.trim()).filter(Boolean),
+      setores: document.getElementById('leg-setores').value.split(',').map(s=>s.trim()).filter(Boolean),
+      url_fonte: document.getElementById('leg-url').value,
+      impacto_sap: ['Config'],
+    };
+    if (!data.nome) { toast('Informe o nome da lei','error'); return; }
+    try {
+      await fetch(API + '/api/legislacao', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+      overlay.remove();
+      toast('Legislação cadastrada!','success');
+      loadLegislacao();
+    } catch(ex) { toast('Erro: ' + ex.message,'error'); }
+  });
+}
+
+function legGerarProposta(nome, desc) {
+  showPage('intake');
+  const rfp = document.getElementById('rfp-txt');
+  if (rfp) rfp.value = 'Adequação SAP à ' + nome + '.\n\n' + desc;
+  const leiBtn = document.getElementById('lei-yes');
+  if (leiBtn) { leiBtn.classList.add('sel'); document.getElementById('lei-no').classList.remove('sel'); form.lei = true; }
+  setTimeout(updateProgress, 100);
+  toast('RFP preenchida com base na legislação — complete os demais campos','info');
+}
+
+function scrapeByUrl() {
+  const overlay = document.createElement('div');
+  overlay.id = 'leg-url-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;max-width:520px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2)">'
+    + '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Buscar Lei por URL</div>'
+    + '<div style="font-size:12px;color:var(--text3);margin-bottom:14px">Cole uma ou mais URLs de legislação (uma por linha). O sistema vai extrair o conteúdo e classificar automaticamente com IA.</div>'
+    + '<textarea id="leg-urls-input" rows="5" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:12px;background:var(--bg3);color:var(--text);resize:vertical" placeholder="https://www.nfe.fazenda.gov.br/portal/...\nhttps://www.in.gov.br/web/dou/-/...\nhttps://www.planalto.gov.br/..."></textarea>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+    + '<button class="btn-sec" id="leg-url-cancel">Cancelar</button>'
+    + '<button class="btn-pri" id="leg-url-go">🔍 Buscar e classificar</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  document.getElementById('leg-url-cancel').addEventListener('click', function(){ overlay.remove(); });
+  document.getElementById('leg-url-go').addEventListener('click', async function(){
+    const txt = document.getElementById('leg-urls-input').value.trim();
+    if (!txt) { toast('Cole pelo menos uma URL','error'); return; }
+    const urls = txt.split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+    if (!urls.length) { toast('Nenhuma URL válida encontrada','error'); return; }
+    const btn = document.getElementById('leg-url-go');
+    btn.textContent = 'Buscando...'; btn.disabled = true;
+    try {
+      const r = await fetch(API + '/api/legislacao/scrape-url', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({urls})
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Erro');
+      overlay.remove();
+      toast(d.saved + ' lei(s) importada(s) com sucesso!','success');
+      loadLegislacao();
+    } catch(ex) {
+      btn.textContent = '🔍 Buscar e classificar'; btn.disabled = false;
+      toast('Erro: ' + ex.message,'error');
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════
+async function loadDashboard() {
+  const body = document.getElementById('dashboard-body');
+  if (!body) return;
+  try {
+    const [statsR, propsR] = await Promise.all([
+      fetch(API + '/api/dashboard'),
+      fetch(API + '/api/proposals'),
+    ]);
+    const stats = await statsR.json();
+    const propsData = await propsR.json();
+    const proposals = propsData.proposals || [];
+    const total = stats.total || 0;
+    const byStatus = stats.by_status || {};
+    const approved = (byStatus.architect_approved||0) + (byStatus.client_approved||0) + (byStatus.approved||0);
+    const convRate = total ? Math.round(approved / total * 100) : 0;
+
+    body.innerHTML = `
+      <div class="metric-grid" style="margin-bottom:24px">
+        ${[
+          {v: total, l: t('dash_total'), s: ''},
+          {v: convRate + '%', l: t('dash_conversion'), s: approved + '/' + total},
+          {v: (stats.avg_hours||0) + 'h', l: t('dash_avg_hours'), s: ''},
+          {v: formatCurrency(stats.avg_value||0), l: t('dash_avg_value'), s: ''},
+        ].map(m => `<div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--text)">${m.v}</div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${m.l}</div>${m.s?`<div style="font-size:11px;color:var(--teal);margin-top:2px">${m.s}</div>`:''}</div>`).join('')}
+      </div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">${t('dash_funnel')}</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[
+            {key:'draft', label:t('dash_status_draft'), color:'#F59E0B'},
+            {key:'architect_approved', label:t('dash_status_arch'), color:'#3B82F6'},
+            {key:'client_approved', label:t('dash_status_client'), color:'#059669'},
+            {key:'approved', label:t('status_approved'), color:'#10B981'},
+          ].map(s => {
+            const count = byStatus[s.key] || 0;
+            const pct = total ? Math.round(count / total * 100) : 0;
+            return `<div style="display:flex;align-items:center;gap:12px">
+              <div style="width:140px;font-size:12px;font-weight:600;color:var(--text2)">${s.label}</div>
+              <div style="flex:1;height:28px;background:var(--bg3);border-radius:6px;overflow:hidden;position:relative">
+                <div style="height:100%;width:${pct}%;background:${s.color};border-radius:6px;transition:width .5s;min-width:${count?'2px':'0'}"></div>
+              </div>
+              <div style="width:50px;text-align:right;font-size:13px;font-weight:700;color:var(--text)">${count}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="section" style="margin-top:20px">
+        <div class="section-header"><div class="section-title">${t('proposals_title')}</div></div>
+        <table class="wp">
+          <thead><tr><th>Cliente</th><th>Nº</th><th>Processo</th><th style="text-align:center">${t('th_hours')}</th><th>Status</th></tr></thead>
+          <tbody>
+            ${proposals.slice(0,10).map(p => {
+              const statusColors = {draft:'var(--amber)',architect_approved:'var(--accent)',client_approved:'var(--green)',approved:'var(--green)'};
+              const statusLabels = {draft:t('dash_status_draft'),architect_approved:t('dash_status_arch'),client_approved:t('dash_status_client'),approved:t('status_approved')};
+              return `<tr style="cursor:pointer" onclick="viewProposal('${p.id}')">
+                <td style="font-weight:600">${p.client_name||p.title||''}</td>
+                <td style="font-family:var(--mono);font-size:11px;color:var(--text3)">${p.proposal_number||''}</td>
+                <td><span style="background:var(--accent-bg);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px">${p.main_proc||''}</span></td>
+                <td style="text-align:center">${p.total_hours||0}h</td>
+                <td><span style="color:${statusColors[p.status]||'var(--text3)'};font-size:11px;font-weight:600">${statusLabels[p.status]||p.status||''}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(ex) {
+    body.innerHTML = '<div class="empty">Erro: ' + ex.message + '</div>';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// DETALHAMENTO DE PROFISSIONAIS
+// ════════════════════════════════════════════════════════
+const DETAIL_DATA = {
+  SD: {
+    icon:'📦', color:'#3B7BF8', label:'Consultor SD — Sales & Distribution',
+    transactions:[
+      {code:'VA01',desc:'Criar pedido de venda'},{code:'VA02',desc:'Modificar pedido de venda'},{code:'VA03',desc:'Exibir pedido de venda'},
+      {code:'VL01N',desc:'Criar remessa/entrega'},{code:'VL02N',desc:'Modificar remessa'},{code:'VF01',desc:'Criar fatura'},
+      {code:'VF02',desc:'Modificar fatura'},{code:'VF03',desc:'Exibir fatura'},{code:'VF11',desc:'Cancelar fatura'},
+      {code:'J1BNFE',desc:'Monitor NF-e'},{code:'J1B3N',desc:'NF-e saída manual'},{code:'VOFM',desc:'Configurar fórmulas de cópia'},
+      {code:'VOV8',desc:'Categorias de item'},{code:'VTFL',desc:'Cópia pedido → fatura'},{code:'VK11',desc:'Criar condição de preço'},
+    ],
+    activities:[
+      {title:'Configurar tipo de documento de venda (ZOR, ZRE, ZDV)', details:'Transação: SPRO → IMG → Vendas → Documentos de venda → Cabeçalho → Definir tipos de documento de venda\nParâmetros: Tipo doc (ZOR=Ordem padrão, ZRE=Devolução, ZDV=Venda direta), Grupo de remessa, Faixa de numeração\nComo fazer: 1) Acessar SPRO 2) Copiar tipo OR padrão 3) Renomear para ZOR 4) Ajustar controles (verificação de crédito, determinação de preço, parceiro) 5) Repetir para ZRE e ZDV'},
+      {title:'Mapear e configurar categorias de item (TAN, TANN)', details:'Transação: VOV7 — Definir categorias de item\nParâmetros: Categoria (TAN=Item padrão, TANN=Item gratuito), Relevância para faturamento, Relevância para remessa, Determinação de preço\nComo fazer: 1) Acessar VOV7 2) Definir TAN com faturamento ativo e pricing ativo 3) Definir TANN sem pricing (item bonificação) 4) Atribuir ao tipo de documento via VOV4'},
+      {title:'Configurar sequências de acesso e esquema de preços (pricing)', details:'Transação: V/08 — Definir esquema de cálculo de preços | V/07 — Sequências de acesso\nParâmetros: Esquema de cálculo (ZPRICE), Tipos de condição (PR00=Preço base, ZK07=Desconto, MWST=Imposto), Sequência de acesso\nComo fazer: 1) Criar esquema ZPRICE em V/08 2) Adicionar tipos de condição na ordem correta 3) Configurar sequências de acesso em V/07 por material/cliente 4) Atribuir esquema ao tipo de documento via VOV8'},
+      {title:'Configurar determinação de impostos — Grupo YA / cBenef', details:'Transação: FTXP — Códigos de imposto | J1BTAX — Determinação de impostos Brasil\nParâmetros: Tax code (YA=ICMS padrão), cBenef (código benefício fiscal por UF), Grupo de exceção, CST (Código de Situação Tributária)\nComo fazer: 1) Criar tax code YA em FTXP com alíquotas ICMS/PIS/COFINS 2) Configurar tabela J_1BTAX com NCM e exceções por UF 3) Cadastrar cBenef na tabela Z por UF+NCM 4) Testar via J1BTAX simulação'},
+      {title:'Configurar BAdI para NF-e de saída (LE_SHP_DELIVERY_PROC)', details:'Transação: SE18/SE19 — BAdI Definition/Implementation\nParâmetros: BAdI LE_SHP_DELIVERY_PROC, Classe de implementação ZCL_IM_NFE_OUT, Filtro por Org. Vendas\nComo fazer: 1) Acessar SE18 e localizar BAdI LE_SHP_DELIVERY_PROC 2) Criar implementação via SE19 3) Implementar método para injetar dados fiscais (cBenef, tpIntegra) no XML 4) Ativar e testar com VL01N'},
+      {title:'Configurar fluxo de faturamento e cópia de documentos', details:'Transação: VTFL — Cópia remessa → fatura | VTFA — Cópia pedido → fatura\nParâmetros: Regra de cópia (tipo de documento origem → destino), Requisitos de cópia, Tipo de fatura (ZF2)\nComo fazer: 1) Em VTFL definir cópia de ZLF (remessa) para ZF2 (fatura) 2) Configurar requisitos (ex: só faturar se entrega completa) 3) Em VTFA configurar cópia direta pedido→fatura 4) Testar fluxo end-to-end'},
+      {title:'Integrar com módulo FI — lançamento contábil automático', details:'Transação: VKOA — Determinação de conta receita SD→FI\nParâmetros: Tabela de determinação (Org.vendas + Canal + Divisão + Grupo de contas + Grupo de materiais → Conta do razão)\nComo fazer: 1) Definir grupos de contas de clientes e materiais 2) Em VKOA mapear combinações para contas do razão 3) Configurar lançamento automático de impostos via OB40 4) Testar: criar fatura VF01 e verificar documento FI gerado (VF03 → Contabilidade)'},
+      {title:'Configurar Nota Fiscal eletrônica (J1BNFE) e XMLs', details:'Transação: J1BNFE — Monitor NF-e | SPRO → Nota Fiscal Eletrônica\nParâmetros: Certificado digital A1, URL SEFAZ (homologação/produção), Versão layout NF-e 4.0, Série NF-e\nComo fazer: 1) Instalar certificado digital via STRUST 2) Configurar destino RFC para SEFAZ 3) Configurar parâmetros NF-e em SPRO (versão, série, ambiente) 4) Testar emissão via J1BNFE → autorizar → verificar XML gerado'},
+      {title:'Testes integrados: pedido → entrega → NF-e → faturamento → contabilização', details:'Transações: VA01 → VL01N → J1BNFE → VF01 → FB03\nParâmetros: Material de teste, Cliente de teste, Centro/Depósito, Condições de preço\nComo fazer: 1) VA01: criar pedido com material e pricing 2) VL01N: criar entrega e fazer picking (VL02N) 3) J1BNFE: gerar NF-e e autorizar na SEFAZ 4) VF01: gerar fatura 5) FB03: verificar documento contábil FI 6) Validar impostos, valores e XML da NF-e'},
+      {title:'Documentação funcional e transferência de conhecimento (KT)', details:'Artefatos: Documento de especificação funcional (BBP), Manual do usuário, Scripts de teste\nParâmetros: Template Cast Group padrão, Seções obrigatórias (escopo, configuração, testes, cutover)\nComo fazer: 1) Documentar cada configuração realizada com prints de tela 2) Criar manual passo a passo para usuários-chave 3) Preparar scripts de teste para validação do cliente 4) Conduzir sessão de KT com equipe do cliente (2-4h)'},
+    ],
+  },
+  MM: {
+    icon:'📦', color:'#7C3AED', label:'Consultor MM — Materials Management',
+    transactions:[
+      {code:'ME21N',desc:'Criar pedido de compra'},{code:'ME22N',desc:'Modificar pedido'},{code:'ME23N',desc:'Exibir pedido'},
+      {code:'ME51N',desc:'Criar requisição de compra'},{code:'ME41',desc:'Criar cotação (RFQ)'},
+      {code:'ME49',desc:'Comparação de preços'},{code:'MIGO',desc:'Entrada de mercadorias'},
+      {code:'MIRO',desc:'Verificação de fatura'},{code:'MB51',desc:'Lista de documentos de material'},
+      {code:'MB52',desc:'Estoque por depósito'},{code:'MMBE',desc:'Visão geral de estoque'},
+      {code:'MI01',desc:'Criar inventário físico'},{code:'MI04',desc:'Registrar contagem'},{code:'MI07',desc:'Lançar diferenças'},
+      {code:'MK01',desc:'Criar fornecedor'},{code:'MM01',desc:'Criar material'},
+    ],
+    activities:[
+      {title:'Configurar organização de compras, grupos de compradores e centros', details:'Transação: SPRO — IMG Compras\nParâmetros: Organização de compras, Grupo de compradores, Centro, Depósito\nComo fazer: 1) Definir organização de compras vinculada à empresa 2) Criar grupos de compradores por categoria 3) Configurar centros e depósitos 4) Definir estratégias de liberação'},
+      {title:'Parametrizar tipos de documento de compra (NB, FO, UB) e contratos', details:'Transação: SPRO — Tipos de documento de compra\nParâmetros: NB (standard), FO (framework), UB (transferência), Contratos ME31K\nComo fazer: 1) Definir tipos de documento e numeração 2) Configurar categorias de item 3) Parametrizar contratos e scheduling agreements 4) Definir limites de valor e aprovação'},
+      {title:'Configurar processo de recebimento e entrada de mercadorias (MIGO)', details:'Transação: MIGO — Movimentações 101/103/105\nParâmetros: Tipos de movimento, Tolerâncias, Avaliação automática\nComo fazer: 1) Configurar tipos de movimento de entrada 2) Definir tolerâncias de quantidade e preço 3) Parametrizar avaliação de estoque (preço médio/standard) 4) Integrar com NF-e entrada (J1B1N)'},
+      {title:'Configurar verificação de fatura e integração MM/FI (MIRO)', details:'Transação: MIRO — Verificação de fatura logística\nParâmetros: Tolerâncias, Bloqueio por diferença, Conta de compensação GR/IR\nComo fazer: 1) Definir tolerâncias de verificação 2) Configurar conta GR/IR (OBYC/WRX) 3) Parametrizar bloqueio automático por diferença 4) Testar fluxo MIGO→MIRO→F110'},
+      {title:'Configurar MRP e planejamento de necessidades', details:'Transação: MD01/MD02/MD04 — MRP\nParâmetros: Estratégia MRP, Tamanho de lote, Lead time, Estoque de segurança\nComo fazer: 1) Definir tipo MRP por material (PD, VB, ND) 2) Configurar tamanho de lote e arredondamento 3) Definir lead time de fornecedor 4) Parametrizar estoque de segurança e ponto de pedido'},
+      {title:'Configurar inventário físico e contagem cíclica', details:'Transação: MI01/MI04/MI07/MI20\nParâmetros: Tipo de inventário, Tolerâncias, Frequência de contagem cíclica\nComo fazer: 1) MI01: criar documento de inventário 2) MI04: registrar contagem 3) MI07: lançar diferenças 4) MI20: configurar contagem cíclica por ABC'},
+      {title:'Testes integrados: requisição → pedido → MIGO → MIRO → F110', details:'Transações: ME51N → ME21N → MIGO → MIRO → F110\nComo fazer: 1) ME51N: criar requisição 2) ME21N: converter em pedido 3) MIGO: entrada de mercadoria 101 4) MIRO: verificar fatura 5) F110: pagamento automático 6) Validar contabilização FI'},
+      {title:'Documentação funcional e KT para equipe do cliente', details:'Artefatos: Especificação funcional MM, Manual do usuário, Scripts de teste\nComo fazer: 1) Documentar configurações com screenshots 2) Criar scripts de teste por cenário 3) Conduzir KT com key users de compras (4h)'},
+    ],
+  },
+  CO: {
+    icon:'📊', color:'#0D9488', label:'Consultor CO — Controlling',
+    transactions:[
+      {code:'KS01',desc:'Criar centro de custo'},{code:'KS02',desc:'Modificar centro de custo'},
+      {code:'KO01',desc:'Criar ordem interna'},{code:'KP06',desc:'Planejamento de custos'},
+      {code:'KB21N',desc:'Lançamento de repostagem'},{code:'KE51',desc:'Resultado por centro de lucro'},
+      {code:'S_ALR_87013611',desc:'Relatório de centros de custo'},
+    ],
+    activities:[
+      {title:'Configurar hierarquia de centros de custo e grupos', details:'Transação: KS01/OKEON\nComo fazer: 1) Definir hierarquia padrão 2) Criar centros de custo por área 3) Configurar grupos para relatórios'},
+      {title:'Parametrizar ordens internas e elementos de custo', details:'Transação: KO01/KA01\nComo fazer: 1) Criar tipos de ordem 2) Definir elementos de custo primários e secundários 3) Configurar regras de liquidação'},
+      {title:'Configurar rateio, distribuição e alocação de custos', details:'Transação: KSV5/KSU5\nComo fazer: 1) Criar ciclos de rateio 2) Definir critérios de distribuição 3) Parametrizar alocação por chave'},
+      {title:'Testes de fechamento CO e reconciliação FI/CO', details:'Transação: FAGLB03/S_ALR_87013611\nComo fazer: 1) Executar rateios 2) Verificar reconciliação FI/CO 3) Validar relatórios gerenciais'},
+    ],
+  },
+  PP: {
+    icon:'🏭', color:'#DC2626', label:'Consultor PP — Production Planning',
+    transactions:[
+      {code:'CO01',desc:'Criar ordem de produção'},{code:'CO02',desc:'Modificar ordem'},{code:'CO15',desc:'Confirmar ordem'},
+      {code:'CS01',desc:'Criar BOM'},{code:'CA01',desc:'Criar roteiro'},{code:'CR01',desc:'Criar centro de trabalho'},
+      {code:'MD01',desc:'Executar MRP'},{code:'MD04',desc:'Lista de estoque/necessidades'},
+    ],
+    activities:[
+      {title:'Configurar lista técnica (BOM) e roteiros de produção', details:'Transação: CS01/CA01\nComo fazer: 1) Criar BOMs multinível 2) Definir roteiros com operações e tempos 3) Configurar centros de trabalho (CR01)'},
+      {title:'Parametrizar MRP e planejamento de produção', details:'Transação: MD01/SPRO\nComo fazer: 1) Definir estratégia MRP por material 2) Configurar parâmetros de lote e lead time 3) Executar MRP e validar resultados'},
+      {title:'Configurar tipos de ordem de produção e confirmação', details:'Transação: CO01/CO15\nComo fazer: 1) Definir tipos de ordem 2) Configurar confirmação de operações 3) Parametrizar movimentações de material (261/262)'},
+      {title:'Testes integrados: planejamento → ordem → confirmação → estoque', details:'Transações: MD01 → CO01 → CO15 → MIGO\nComo fazer: 1) Executar MRP 2) Converter planejada em ordem 3) Confirmar produção 4) Validar movimentações de estoque'},
+    ],
+  },
+  PM: {
+    icon:'🔧', color:'#B45309', label:'Consultor PM — Plant Maintenance',
+    transactions:[
+      {code:'IW31',desc:'Criar ordem de manutenção'},{code:'IW32',desc:'Modificar ordem'},
+      {code:'IP01',desc:'Criar plano de manutenção'},{code:'IP10',desc:'Programar planos'},
+      {code:'IE01',desc:'Criar equipamento'},{code:'IL01',desc:'Criar local de instalação'},
+      {code:'IW21',desc:'Criar nota de manutenção'},
+    ],
+    activities:[
+      {title:'Configurar estrutura técnica: equipamentos e locais de instalação', details:'Transação: IE01/IL01\nComo fazer: 1) Criar hierarquia de locais 2) Cadastrar equipamentos 3) Vincular equipamentos aos locais'},
+      {title:'Parametrizar tipos de ordem e planos de manutenção preventiva', details:'Transação: IW31/IP01\nComo fazer: 1) Definir tipos de ordem 2) Criar planos preventivos baseados em tempo/contador 3) Configurar ciclos e estratégias'},
+      {title:'Configurar catálogos de defeitos e notificações', details:'Transação: QS21/IW21\nComo fazer: 1) Criar catálogos de defeitos 2) Parametrizar tipos de notificação 3) Definir fluxo de aprovação'},
+      {title:'Testes: notificação → ordem → execução → encerramento', details:'Transações: IW21 → IW31 → IW32 → IW38\nComo fazer: 1) Criar notificação 2) Gerar ordem de manutenção 3) Executar e confirmar 4) Encerrar e liquidar'},
+    ],
+  },
+  HR: {
+    icon:'👥', color:'#7C3AED', label:'Consultor HR/HCM — Human Capital Management',
+    transactions:[
+      {code:'PA20',desc:'Exibir dados de pessoal'},{code:'PA30',desc:'Manter dados de pessoal'},
+      {code:'PC00_M99',desc:'Folha de pagamento Brasil'},{code:'PA61',desc:'Manter tempos'},
+      {code:'PPOME',desc:'Estrutura organizacional'},{code:'PU22',desc:'eSocial — transmissão'},
+    ],
+    activities:[
+      {title:'Configurar estrutura organizacional HCM', details:'Transação: PPOME\nComo fazer: 1) Criar unidades organizacionais 2) Definir posições e cargos 3) Vincular funcionários'},
+      {title:'Parametrizar administração de pessoal e infotipos Brasil', details:'Transação: PA30\nComo fazer: 1) Configurar infotipos 0001-0008 2) Parametrizar infotipos brasileiros (0014, 0015) 3) Definir medidas de pessoal'},
+      {title:'Configurar folha de pagamento Brasil', details:'Transação: PC00_M99_CALC\nComo fazer: 1) Configurar rubricas 2) Parametrizar cálculos legais (INSS, IRRF, FGTS) 3) Testar simulação de folha'},
+      {title:'Configurar eSocial e obrigações trabalhistas', details:'Transação: PU22\nComo fazer: 1) Parametrizar eventos eSocial S-1000 a S-5000 2) Configurar transmissão 3) Validar com ambiente de teste'},
+    ],
+  },
+  QM: {
+    icon:'✅', color:'#059669', label:'Consultor QM — Quality Management',
+    transactions:[
+      {code:'QA01',desc:'Criar lote de inspeção'},{code:'QE01',desc:'Registrar resultados'},
+      {code:'QP01',desc:'Criar plano de inspeção'},{code:'QA11',desc:'Decisão de utilização'},
+      {code:'QM01',desc:'Criar notificação de qualidade'},
+    ],
+    activities:[
+      {title:'Configurar planos de inspeção e características', details:'Transação: QP01\nComo fazer: 1) Definir características de inspeção 2) Criar planos por material/tipo 3) Configurar amostragem'},
+      {title:'Parametrizar tipos de inspeção e integração QM/MM/PP', details:'Transação: SPRO QM\nComo fazer: 1) Ativar inspeção no recebimento (tipo 01) 2) Configurar inspeção em processo (tipo 03) 3) Parametrizar decisão de utilização'},
+      {title:'Testes: recebimento → inspeção → decisão → liberação', details:'Transações: MIGO → QA01 → QE01 → QA11\nComo fazer: 1) Receber material 2) Criar lote de inspeção 3) Registrar resultados 4) Tomar decisão de utilização'},
+    ],
+  },
+  WM: {
+    icon:'🏪', color:'#2563EB', label:'Consultor WM/EWM — Warehouse Management',
+    transactions:[
+      {code:'LT01',desc:'Criar ordem de transferência'},{code:'LT02',desc:'Confirmar OT'},
+      {code:'LS01N',desc:'Entrada de mercadorias WM'},{code:'LS03N',desc:'Expedição WM'},
+      {code:'LI01N',desc:'Inventário WM'},{code:'LX01',desc:'Lista de posições no depósito'},
+    ],
+    activities:[
+      {title:'Configurar estrutura de depósito: tipos, posições e áreas', details:'Transação: SPRO WM\nComo fazer: 1) Definir número do depósito 2) Criar tipos de depósito (recebimento, expedição, picking) 3) Configurar posições e bins'},
+      {title:'Parametrizar estratégias de armazenamento e retirada', details:'Transação: SPRO WM\nComo fazer: 1) Definir estratégia de put-away (próximo vazio, adição) 2) Configurar estratégia de picking (FIFO, FEFO) 3) Parametrizar cross-docking'},
+      {title:'Configurar integração WM/MM e WM/SD', details:'Transação: SPRO\nComo fazer: 1) Vincular movimentos MM a necessidades de transferência 2) Configurar remessa SD → necessidade de transferência → picking 3) Testar fluxo completo'},
+      {title:'Testes: recebimento → armazenamento → picking → expedição', details:'Transações: LS01N → LT01 → LT02 → LS03N\nComo fazer: 1) Receber mercadoria 2) Criar e confirmar ordem de transferência 3) Executar picking 4) Expedir e confirmar'},
+    ],
+  },
+  BASIS: {
+    icon:'🖥️', color:'#475569', label:'Consultor Basis/Infra',
+    transactions:[
+      {code:'STMS',desc:'Transport Management'},{code:'SE09',desc:'Workbench Organizer'},
+      {code:'SM37',desc:'Monitor de jobs'},{code:'SM36',desc:'Agendar jobs'},
+      {code:'PFCG',desc:'Manutenção de roles'},{code:'SU01',desc:'Manutenção de usuários'},
+      {code:'STRUST',desc:'Certificados digitais'},{code:'ST22',desc:'Dumps ABAP'},
+    ],
+    activities:[
+      {title:'Configurar landscape e rotas de transporte (DEV→QAS→PRD)', details:'Transação: STMS\nComo fazer: 1) Configurar domínio de transporte 2) Definir rotas DEV→QAS→PRD 3) Configurar import queues'},
+      {title:'Gerenciar certificados digitais para SEFAZ', details:'Transação: STRUST\nComo fazer: 1) Importar certificado A1/A3 2) Configurar cadeia de certificação 3) Validar conexão com SEFAZ'},
+      {title:'Configurar roles e perfis de segurança', details:'Transação: PFCG/SU01\nComo fazer: 1) Criar roles por função 2) Atribuir transações e autorizações 3) Gerar perfis e atribuir a usuários'},
+      {title:'Monitorar performance e agendamento de jobs', details:'Transação: SM37/ST05/ST12\nComo fazer: 1) Configurar jobs batch 2) Monitorar performance com traces 3) Analisar dumps (ST22)'},
+    ],
+  },
+  FI: {
+    icon:'💰', color:'#0D9488', label:'Consultor FI — Financial Accounting',
+    transactions:[
+      {code:'FB01',desc:'Lançamento contábil'},{code:'FB02',desc:'Modificar documento'},{code:'FB03',desc:'Exibir documento'},
+      {code:'F110',desc:'Pagamento automático'},{code:'F-28',desc:'Entrada de pagamento (AR)'},{code:'F-53',desc:'Saída de pagamento (AP)'},
+      {code:'FBL1N',desc:'Razão de fornecedores'},{code:'FBL5N',desc:'Razão de clientes'},{code:'FBRA',desc:'Estornar compensação'},
+      {code:'FF67',desc:'Extrato bancário eletrônico'},{code:'FEBAN',desc:'Monitor extrato bancário'},{code:'FS00',desc:'Plano de contas'},
+      {code:'OB52',desc:'Períodos contábeis'},{code:'FBCJ',desc:'Lançamento caixa'},{code:'FAGL_FC_VAL',desc:'Reavaliação cambial'},
+    ],
+    activities:[
+      {title:'Configurar contas do razão (FS00) e plano de contas', details:'Transação: FS00 — Criar/modificar contas do razão | OB13 — Plano de contas\nParâmetros: Plano de contas (PCBR), Grupo de contas, Moeda, Tipo de conta (balanço/resultado)\nComo fazer: 1) Definir plano de contas em OB13 2) Criar contas via FS00 com grupo e texto 3) Configurar intervalo de numeração 4) Atribuir contas ao grupo de empresas'},
+      {title:'Configurar chaves de lançamento e tipos de documento', details:'Transação: OBA7 — Chaves de lançamento | OBA7 — Tipos de documento\nParâmetros: Chaves (40=Débito, 50=Crédito), Tipo doc (SA=Ajuste, KR=Fatura fornecedor, DR=Fatura cliente)\nComo fazer: 1) Revisar chaves padrão 40/50 2) Criar tipos de documento Z se necessário 3) Definir faixa de numeração por tipo 4) Configurar controles de lançamento'},
+      {title:'Configurar pagamento automático (F110) — bancos, formas pgto', details:'Transação: F110 — Pagamento automático | FBZP — Config. pgto automático\nParâmetros: Empresa pagadora, Formas de pagamento (B=Boleto, T=Transferência), Banco principal, Banco secundário\nComo fazer: 1) Em FBZP configurar: empresa pagadora, formas de pgto, bancos 2) Definir agrupamento de contas de pagamento 3) Em F110: inserir empresa, data, formas de pgto 4) Executar proposta → verificar log → executar pagamento'},
+      {title:'Configurar conciliação bancária eletrônica (FF67/FEBAN)', details:'Transação: FF67 — Importar extrato bancário | FEBAN — Monitor de conciliação\nParâmetros: Formato do arquivo (CNAB 240/400, OFX), Banco, Conta, Regras de interpretação\nComo fazer: 1) Configurar formato de importação no SPRO 2) Definir regras de interpretação automática 3) Importar extrato via FF67 4) Em FEBAN: conciliar lançamentos automaticamente e tratar exceções manualmente'},
+      {title:'Configurar baixa automática de títulos — contas a receber/pagar', details:'Transação: F-28 — Entrada de pagamento (AR) | F-53 — Saída de pagamento (AP) | OB74 — Compensação automática\nParâmetros: Critérios de compensação (referência, valor, data de vencimento)\nComo fazer: 1) Configurar regras de compensação em OB74 2) Definir tolerâncias de diferença 3) Configurar jobs de compensação automática periódica (F.13) 4) Testar com cenários de pagamento parcial e total'},
+      {title:'Configurar trigger ECONF (evento 110750 / 110751)', details:'Transação: SPRO → Eventos contábeis | SM62 — Definir eventos\nParâmetros: Evento 110750 (autorização de pagamento), Evento 110751 (cancelamento), RFC destino para CPI\nComo fazer: 1) Ativar eventos 110750/110751 no SPRO 2) Configurar destino RFC para SAP CPI 3) Implementar FM de callback para capturar dados do documento FI 4) Testar disparando lançamentos que acionem os eventos'},
+      {title:'Mapear impostos retidos na fonte (IRRF, PIS, COFINS, CSLL)', details:'Transação: FTXP — Códigos de imposto retido | WT — Configuração withholding tax\nParâmetros: Tipo de imposto retido (IR, PI, CO, CS), Alíquotas por faixa, Códigos DARF\nComo fazer: 1) Criar tipos de imposto retido no SPRO (IRRF 1.5%, PIS 0.65%, COFINS 3%, CSLL 1%) 2) Configurar tabela de base de cálculo e alíquota 3) Atribuir aos cadastros de fornecedores 4) Testar via MIRO e verificar retenção automática'},
+      {title:'Configurar lançamentos automáticos de impostos', details:'Transação: OB40 — Lançamentos automáticos\nParâmetros: Chave de transação (MWS=ICMS, ZPX=PIS, ZCX=COFINS), Contas contábeis de débito/crédito\nComo fazer: 1) Em OB40 mapear cada chave de transação fiscal para contas do razão 2) Configurar contas transitórias de impostos 3) Definir regras por tax code 4) Testar: lançar documento com imposto e verificar partidas geradas automaticamente'},
+      {title:'Integrar com SD (faturamento → contabilização) e MM (MIRO → AP)', details:'Transação: VKOA — Determinação de conta SD→FI | OBYC — Determinação de conta MM→FI\nParâmetros: Grupos de contas, Tabelas de determinação, Contas de receita/custo/estoque\nComo fazer: 1) Em VKOA configurar receita de vendas por org/canal/divisão 2) Em OBYC configurar contas de estoque (BSX), diferença de preço (PRD), custo de mercadoria (GBB) 3) Testar fatura SD e MIRO verificando documentos FI gerados'},
+      {title:'Testes de ciclo: lançamento → compensação → pagamento → extrato bancário', details:'Transações: FB01 → F-28/F-53 → F110 → FF67 → FEBAN\nParâmetros: Dados de teste (fornecedor, cliente, banco, valores)\nComo fazer: 1) FB01: lançar fatura de fornecedor 2) F110: executar pagamento automático 3) FF67: importar extrato bancário 4) FEBAN: conciliar pagamento com extrato 5) Verificar saldos em FBL1N/FBL5N 6) Validar relatórios contábeis'},
+      {title:'Documentação funcional e KT ao time do cliente', details:'Artefatos: BBP (Business Blueprint), Manual de configuração, Scripts de teste, Runbook operacional\nParâmetros: Template Cast Group padrão, Público-alvo (key users financeiro)\nComo fazer: 1) Documentar cada configuração com screenshots 2) Criar manual de operação diária (F110, FF67, fechamento) 3) Preparar scripts de teste por cenário 4) Conduzir treinamento presencial/remoto com key users (4-8h)'},
+    ],
+  },
+  GP: {
+    icon:'📋', color:'#818CF8', label:'Gerente de Projetos',
+    transactions:[
+      {code:'SOLAR01',desc:'Solution Manager — Blueprint'},{code:'SOLAR02',desc:'Solution Manager — Config'},
+      {code:'SOLMAN',desc:'Gestão de transporte e testes'},{code:'SE09',desc:'Transportes (workbench)'},
+      {code:'STMS',desc:'Sistema de transporte'},
+    ],
+    activities:[
+      {title:'Elaborar e manter o cronograma detalhado do projeto', details:'Ferramenta: MS Project / Jira / Solution Manager\nParâmetros: Fases SAP Activate (Discover, Prepare, Explore, Realize, Deploy, Run), Marcos de entrega, Dependências entre frentes\nComo fazer: 1) Criar WBS por fase e frente (SD, FI, ABAP) 2) Definir marcos (Blueprint, Config, Teste Integrado, Go-Live) 3) Atribuir recursos e estimar duração 4) Atualizar semanalmente com progresso real vs. planejado'},
+      {title:'Conduzir reuniões de status semanais com o cliente e equipe Cast Group', details:'Artefatos: Ata de reunião, Status report, RAID log\nParâmetros: Pauta fixa (progresso, riscos, impedimentos, próximos passos), Frequência semanal, Duração 1h\nComo fazer: 1) Preparar status report com % avanço por frente 2) Revisar RAID log (Riscos, Ações, Issues, Decisões) 3) Coletar feedback do cliente 4) Distribuir ata em até 24h'},
+      {title:'Gerenciar escopo, riscos, issues e change requests', details:'Ferramenta: Jira / Solution Manager / Planilha RAID\nParâmetros: Classificação de severidade (Alta/Média/Baixa), SLA de resposta, Formulário de change request\nComo fazer: 1) Manter backlog de escopo atualizado 2) Classificar riscos por probabilidade × impacto 3) Para change requests: avaliar impacto em horas/custo → aprovar com sponsor 4) Escalar issues críticas em até 4h'},
+      {title:'Coordenar a alocação dos 3 ABAPers em paralelo', details:'Ferramenta: Quadro Kanban / Jira\nParâmetros: ABAPer #1 (BAPI Z + RFC), ABAPer #2 (BAdI NF-e + tabelas Z), ABAPer #3 (iFlow CPI + Monitor Z)\nComo fazer: 1) Dividir os objetos ABAP entre os 3 desenvolvedores sem dependência circular 2) Definir sprint de 2 semanas por entrega 3) Daily standup de 15min para sincronizar 4) Code review cruzado entre ABAPers antes de transportar'},
+      {title:'Acompanhar deploys, transportes e promoção entre ambientes (DEV/QAS/PRD)', details:'Transação: STMS — Transport Management System | SE09 — Workbench Organizer\nParâmetros: Rota de transporte (DEV→QAS→PRD), Janela de deploy, Aprovação de transporte\nComo fazer: 1) Coletar requests de transporte dos desenvolvedores (SE09) 2) Agrupar por sprint/entrega 3) Importar em QAS via STMS 4) Após validação do teste, importar em PRD em janela acordada'},
+      {title:'Garantir qualidade das entregas via checklists de revisão', details:'Artefatos: Checklist de revisão por frente, Critérios de aceitação, Definition of Done\nParâmetros: Cobertura de testes (mín. 80%), Documentação obrigatória, Code review aprovado\nComo fazer: 1) Definir Definition of Done por tipo de entrega (config, ABAP, integração) 2) Revisar cada entrega contra checklist antes de promover para QAS 3) Registrar defeitos encontrados 4) Aprovar apenas quando 100% dos critérios atendidos'},
+      {title:'Preparar relatórios de progresso e apresentações executivas', details:'Artefatos: Dashboard de projeto, Apresentação executiva mensal, Relatório de horas\nParâmetros: KPIs (% conclusão, burndown, desvio de horas, issues abertas)\nComo fazer: 1) Consolidar progresso semanal por frente 2) Gerar dashboard com KPIs visuais 3) Preparar apresentação executiva mensal (2-3 slides) 4) Destacar riscos, desvios e ações corretivas'},
+      {title:'Conduzir reunião de go-live readiness e handover para AMS', details:'Artefatos: Go-Live Checklist, Plano de cutover, Runbook operacional\nParâmetros: Critérios de go-live (testes OK, treinamento OK, dados migrados, infra validada)\nComo fazer: 1) Revisar checklist de go-live com todas as frentes 2) Validar plano de cutover hora a hora 3) Confirmar rollback plan 4) Obter sign-off do sponsor 5) Executar cutover 6) Handover para equipe AMS com runbook'},
+      {title:'Gerenciar comunicação entre equipes SD, FI, ABAP e Fiscal', details:'Ferramenta: Teams / Slack + Jira\nParâmetros: Canal por frente, Matriz RACI, Escalation path\nComo fazer: 1) Criar canais dedicados por frente e um canal geral do projeto 2) Definir matriz RACI para decisões cross-module 3) Facilitar alinhamentos entre SD↔FI (pricing/contabilização) e ABAP↔Fiscal (BAdI/NF-e) 4) Escalar bloqueios cross-team em até 2h'},
+    ],
+  },
+  'ABAP': {
+    icon:'⌨️', color:'#D97706', label:'Desenvolvedor ABAP',
+    transactions:[
+      {code:'SE38',desc:'Editor ABAP'},{code:'SE24',desc:'Class Builder'},{code:'SE37',desc:'Function Builder'},
+      {code:'SE80',desc:'Object Navigator'},{code:'SE11',desc:'Dicionário de dados'},{code:'SE18',desc:'BAdI Definition'},
+      {code:'SE19',desc:'BAdI Implementation'},{code:'SM30',desc:'Manutenção de tabelas'},{code:'SM37',desc:'Monitor de jobs'},
+      {code:'SICF',desc:'Serviços HTTP/ICF'},{code:'SLG1',desc:'Log de aplicação'},{code:'ST22',desc:'Dumps ABAP'},
+    ],
+    abapParallel: {
+      1: {
+        role: 'ABAPer #1 — BAPI Z + RFC + User-Exits',
+        activities: [
+          {title:'Desenvolver BAPI Z customizada para integração TEF/POS', details:'Transação: SE37 — Function Builder\nObjeto: ZBAPI_TEF_PAYMENT (Function Module)\nParâmetros: IV_BUKRS (empresa), IV_AMOUNT (valor), IV_CARD_TYPE (CRED/DEBT), IV_TERMINAL (ID POS)\nComo fazer: 1) SE37: criar grupo de funções ZTEF 2) Criar FM ZBAPI_TEF_PAYMENT com interface IMPORTING/EXPORTING 3) Implementar chamada HTTP ao terminal TEF via CL_HTTP_CLIENT 4) Gravar log em tabela ZTEF_TRANS 5) Testar via SE37 com dados mock'},
+          {title:'Desenvolver RFC Z para comunicação SAP ↔ sistemas externos', details:'Transação: SE37 — Function Builder (RFC-enabled)\nObjeto: ZRFC_SYNC_EXTERNAL (Remote Function Module)\nParâmetros: Destino RFC (SM59), Estrutura de dados de entrada/saída, Timeout\nComo fazer: 1) Criar destino RFC em SM59 (tipo G=HTTP ou tipo 3=ABAP) 2) SE37: criar FM com flag "Remote-Enabled" 3) Implementar serialização JSON via /UI2/CL_JSON 4) Tratar erros de comunicação e retry 5) Testar via SE37 chamada remota'},
+          {title:'Desenvolver user-exits e enhancements para processos SD/FI', details:'Transação: SE18/SE19 — BAdI | SMOD/CMOD — User Exits\nObjetos: Enhancement spots em processos de venda (USEREXIT_PRICING_PREPARE_TKOMK) e contábeis\nParâmetros: Enhancement spot, Classe de implementação, Filtros\nComo fazer: 1) Identificar enhancement spots com transação SE18 2) Criar implementação em SE19 3) Codificar lógica customizada 4) Ativar e testar no fluxo end-to-end'},
+          {title:'Testes unitários dos objetos ABAP (BAPI, RFC, exits)', details:'Transação: SE38 — ABAP Unit | SE37 — Test Function\nObjetos: Todos os FMs e classes do ABAPer #1\nComo fazer: 1) Criar classe de teste ABAP Unit para cada FM 2) Cobrir cenários: sucesso, erro de comunicação, dados inválidos 3) Executar via SE38 ou ATC (ABAP Test Cockpit) 4) Documentar resultados e corrigir defeitos'},
+        ]
+      },
+      2: {
+        role: 'ABAPer #2 — BAdI NF-e + Tabelas Z + Parametrização',
+        activities: [
+          {title:'Implementar BAdI de NF-e para extensão do XML fiscal (cBenef, tpIntegra)', details:'Transação: SE19 — BAdI Implementation\nObjeto: ZCL_IM_NFE_CBENEF (Classe de implementação)\nParâmetros: BAdI IF_EX_BADI_NFE_OUT, Filtro por Org.Vendas, Tabela ZCBENEF_UF\nComo fazer: 1) SE19: criar implementação do BAdI de NF-e saída 2) Implementar método CHANGE_NFE_DATA 3) Buscar cBenef na tabela Z por UF+NCM 4) Para GO: forçar tpIntegra=1 (IN 1.608/2025) 5) Gravar log via ZCL_NFE_LOGGER 6) Testar com J1BNFE'},
+          {title:'Criar tabelas Z de parametrização (benefícios fiscais, regras por UF)', details:'Transação: SE11 — Dicionário de dados | SM30 — Manutenção de tabelas\nObjetos: ZCBENEF_UF (UF+NCM→cBenef), ZFISCAL_RULES (regras por UF), ZTEF_TRANS (log TEF)\nComo fazer: 1) SE11: criar tabela transparente com campos e domínios 2) Criar elemento de dados e domínios customizados 3) Gerar view de manutenção (SE11 → Utilitários → Gerador de manutenção) 4) SM30: popular dados iniciais (27 UFs) 5) Transportar estrutura e dados'},
+          {title:'Desenvolver enhancements para processos fiscais', details:'Transação: SE18/SE19 — BAdI para processos fiscais\nObjetos: Extensões em J1BTAX (determinação de impostos), NF-e saída/entrada\nParâmetros: Enhancement spots fiscais, Regras por UF e NCM\nComo fazer: 1) Identificar pontos de extensão em J_1B* 2) Implementar lógica de exceção fiscal por UF 3) Integrar com tabelas Z de parametrização 4) Testar com cenários multi-UF'},
+          {title:'Testes unitários dos objetos ABAP (BAdI, tabelas Z)', details:'Transação: SE38 — ABAP Unit | J1BNFE — Teste NF-e\nObjetos: Todos os BAdIs e tabelas do ABAPer #2\nComo fazer: 1) Testar BAdI via emissão de NF-e em J1BNFE (ambiente QAS) 2) Verificar XML gerado contém cBenef e tpIntegra 3) Testar com diferentes UFs (SP, GO, MG) 4) Validar manutenção de tabelas Z via SM30'},
+        ]
+      },
+      3: {
+        role: 'ABAPer #3 — iFlow CPI + Monitor Z + Jobs Batch',
+        activities: [
+          {title:'Criar iFlow CPI para eventos ECONF 110750/110751', details:'Transação: SE37 + SAP CPI Web IDE\nObjeto: ZRFC_CPI_ECONF (RFC) + iFlow no CPI\nParâmetros: Evento 110750 (autorização), 110751 (cancelamento), Destino RFC ZCPI_ECONF\nComo fazer: 1) SE37: criar RFC ZRFC_CPI_ECONF para disparar chamada CPI 2) No CPI Web IDE: criar iFlow com endpoint HTTP 3) Mapear payload JSON (event, belnr, bukrs) 4) Configurar rota para SEFAZ 5) Gravar resposta em ZCPI_MONITOR 6) Testar ida e volta com SEFAZ homologação'},
+          {title:'Desenvolver programa Monitor Z para acompanhamento de integrações', details:'Transação: SE38 — Editor ABAP\nObjeto: ZMONITOR_INTEGRACOES (Report)\nParâmetros: Tela de seleção (data, evento, status), ALV Grid com semáforo, Drill-down para detalhes\nComo fazer: 1) SE38: criar report com SELECT-OPTIONS (data, evento, status) 2) Consultar tabelas ZCPI_MONITOR e ZTEF_TRANS 3) Exibir em ALV Grid com ícones de semáforo (verde=OK, amarelo=pendente, vermelho=erro) 4) Implementar drill-down duplo clique para ver payload JSON 5) Adicionar botão de reprocessamento'},
+          {title:'Implementar jobs de carga/conciliação em batch (SM37)', details:'Transação: SE38 + SM36/SM37 — Job scheduling\nObjetos: ZJOB_CONCILIA_TEF (conciliação TEF), ZJOB_RETRY_CPI (retry integrações CPI com erro)\nParâmetros: Frequência (diário 23h para conciliação, a cada 30min para retry), Variante de seleção\nComo fazer: 1) SE38: criar reports de batch com lógica de conciliação 2) SM36: agendar jobs com variante e periodicidade 3) Implementar alertas por email/SLG1 em caso de falha 4) SM37: monitorar execuções e logs'},
+          {title:'Testes unitários e deploy dos objetos ABAP (CPI, Monitor, Jobs)', details:'Transação: SE38 — ABAP Unit | SM37 — Monitor de jobs | STMS — Transportes\nObjetos: Todos os objetos do ABAPer #3\nComo fazer: 1) Testar RFC CPI com SEFAZ homologação 2) Validar Monitor Z com dados reais de integração 3) Executar jobs manualmente e verificar logs (SLG1) 4) Agrupar requests de transporte em SE09 5) Deploy DEV→QAS→PRD via STMS'},
+        ]
+      }
+    },
+    activities:[
+      {title:'Desenvolver BAPI Z customizada para integração TEF/POS', details:'ABAPer #1 — Transação SE37. Criar FM ZBAPI_TEF_PAYMENT com chamada HTTP ao terminal TEF via CL_HTTP_CLIENT. Gravar log em ZTEF_TRANS.'},
+      {title:'Implementar BAdI de NF-e para extensão do XML fiscal (cBenef, tpIntegra)', details:'ABAPer #2 — Transação SE19. Implementar IF_EX_BADI_NFE_OUT~CHANGE_NFE_DATA. Buscar cBenef na tabela Z por UF+NCM. GO: tpIntegra=1.'},
+      {title:'Desenvolver RFC Z para comunicação SAP ↔ sistemas externos', details:'ABAPer #1 — Transação SE37 (Remote-Enabled). Destino RFC em SM59. Serialização JSON via /UI2/CL_JSON.'},
+      {title:'Criar iFlow CPI para eventos ECONF 110750/110751', details:'ABAPer #3 — SE37 + CPI Web IDE. RFC ZRFC_CPI_ECONF dispara iFlow. Rota para SEFAZ. Log em ZCPI_MONITOR.'},
+      {title:'Desenvolver programa Monitor Z para acompanhamento de integrações', details:'ABAPer #3 — Transação SE38. Report ZMONITOR_INTEGRACOES com ALV Grid, semáforo e drill-down.'},
+      {title:'Criar tabelas Z de parametrização (benefícios fiscais, regras por UF)', details:'ABAPer #2 — Transação SE11/SM30. Tabelas ZCBENEF_UF, ZFISCAL_RULES, ZTEF_TRANS com view de manutenção.'},
+      {title:'Desenvolver user-exits e enhancements para processos SD/FI', details:'ABAPer #1 — Transação SE18/SE19. Enhancement spots em pricing e lançamentos contábeis.'},
+      {title:'Implementar jobs de carga/conciliação em batch (SM37)', details:'ABAPer #3 — Transação SE38 + SM36. Jobs ZJOB_CONCILIA_TEF (diário) e ZJOB_RETRY_CPI (30min).'},
+      {title:'Testes unitários e de integração de todos os objetos ABAP', details:'Todos ABAPers — ABAP Unit (SE38), teste funcional end-to-end, code review cruzado entre ABAPers.'},
+      {title:'Deploy via transportes (SE09/STMS) em DEV → QAS → PRD', details:'Todos ABAPers — Agrupar requests em SE09. Importar via STMS. Janela de deploy acordada com GP.'},
+    ],
+    codeExamples: [
+      {
+        title:'BAPI Z — Integração TEF/Maquininha',
+        lang:'ABAP',
+        code:`<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="cm">*& ZBAPI_TEF_PAYMENT — Integração com terminal TEF/POS</span>
+<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="kw">FUNCTION</span> <span class="fn">ZBAPI_TEF_PAYMENT</span>.
+  <span class="kw">IMPORTING</span>
+    <span class="vr">IV_BUKRS</span>      <span class="kw">TYPE</span> <span class="tp">BUKRS</span>        <span class="cm">" Empresa</span>
+    <span class="vr">IV_AMOUNT</span>     <span class="kw">TYPE</span> <span class="tp">WRBTR</span>        <span class="cm">" Valor</span>
+    <span class="vr">IV_CARD_TYPE</span>  <span class="kw">TYPE</span> <span class="tp">CHAR4</span>        <span class="cm">" Tipo cartão (CRED/DEBT)</span>
+    <span class="vr">IV_TERMINAL</span>   <span class="kw">TYPE</span> <span class="tp">CHAR20</span>       <span class="cm">" ID terminal POS</span>
+  <span class="kw">EXPORTING</span>
+    <span class="vr">EV_AUTH_CODE</span>  <span class="kw">TYPE</span> <span class="tp">CHAR10</span>       <span class="cm">" Código autorização</span>
+    <span class="vr">EV_NSU</span>        <span class="kw">TYPE</span> <span class="tp">CHAR20</span>       <span class="cm">" NSU transação</span>
+    <span class="vr">ES_RETURN</span>     <span class="kw">TYPE</span> <span class="tp">BAPIRET2</span>     <span class="cm">" Retorno</span>
+  <span class="kw">TABLES</span>
+    <span class="vr">ET_LOG</span>        <span class="kw">TYPE</span> <span class="tp">ZTEF_LOG_T</span>.  <span class="cm">" Log operação</span>
+
+  <span class="kw">DATA</span>: <span class="vr">ls_tef</span>    <span class="kw">TYPE</span> <span class="tp">ZTEF_TRANS</span>,
+        <span class="vr">lv_json</span>   <span class="kw">TYPE</span> <span class="tp">STRING</span>,
+        <span class="vr">lo_http</span>   <span class="kw">TYPE REF TO</span> <span class="tp">IF_HTTP_CLIENT</span>.
+
+  <span class="cm">* Montar payload JSON para terminal</span>
+  <span class="vr">lv_json</span> = <span class="fn">ZCL_TEF_HELPER</span>=><span class="fn">BUILD_PAYLOAD</span>(
+    <span class="vr">iv_amount</span>    = <span class="vr">IV_AMOUNT</span>
+    <span class="vr">iv_card_type</span> = <span class="vr">IV_CARD_TYPE</span>
+    <span class="vr">iv_terminal</span>  = <span class="vr">IV_TERMINAL</span> ).
+
+  <span class="cm">* Chamar serviço TEF via HTTP</span>
+  <span class="kw">CALL METHOD</span> <span class="tp">CL_HTTP_CLIENT</span>=><span class="fn">CREATE_BY_DESTINATION</span>
+    <span class="kw">EXPORTING</span> <span class="vr">destination</span> = <span class="str">'ZTEF_RFC_DEST'</span>
+    <span class="kw">IMPORTING</span> <span class="vr">client</span>      = <span class="vr">lo_http</span>.
+
+  <span class="vr">lo_http</span>-><span class="fn">request</span>-><span class="fn">set_cdata</span>( <span class="vr">lv_json</span> ).
+  <span class="vr">lo_http</span>-><span class="fn">send</span>( ). <span class="vr">lo_http</span>-><span class="fn">receive</span>( ).
+
+  <span class="cm">* Processar resposta e gravar log</span>
+  <span class="vr">ls_tef</span>-<span class="vr">auth_code</span> = <span class="vr">EV_AUTH_CODE</span>.
+  <span class="vr">ls_tef</span>-<span class="vr">nsu</span>       = <span class="vr">EV_NSU</span>.
+  <span class="vr">ls_tef</span>-<span class="vr">timestamp</span> = <span class="fn">SY</span>-<span class="vr">DATUM</span> && <span class="fn">SY</span>-<span class="vr">UZEIT</span>.
+  <span class="kw">INSERT</span> <span class="tp">ZTEF_TRANS</span> <span class="kw">FROM</span> <span class="vr">ls_tef</span>.
+<span class="kw">ENDFUNCTION</span>.`
+      },
+      {
+        title:'BAdI NF-e — Extensão XML cBenef / tpIntegra',
+        lang:'ABAP',
+        code:`<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="cm">*& ZCL_IM_NFE_CBENEF — Implementação BAdI NF-e Saída</span>
+<span class="cm">*& Adiciona campos cBenef e tpIntegra ao XML da NF-e</span>
+<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="kw">CLASS</span> <span class="fn">ZCL_IM_NFE_CBENEF</span> <span class="kw">IMPLEMENTATION</span>.
+
+  <span class="kw">METHOD</span> <span class="fn">IF_EX_BADI_NFE_OUT~CHANGE_NFE_DATA</span>.
+    <span class="kw">DATA</span>: <span class="vr">ls_cbenef</span>  <span class="kw">TYPE</span> <span class="tp">ZCBENEF_UF</span>,
+          <span class="vr">lv_uf</span>      <span class="kw">TYPE</span> <span class="tp">REGIO</span>,
+          <span class="vr">lv_integra</span> <span class="kw">TYPE</span> <span class="tp">CHAR1</span>.
+
+    <span class="cm">* Obter UF do emitente</span>
+    <span class="vr">lv_uf</span> = <span class="vr">is_nfe_header</span>-<span class="vr">emit_uf</span>.
+
+    <span class="cm">* Buscar código cBenef na tabela Z por UF + NCM</span>
+    <span class="kw">SELECT SINGLE</span> <span class="vr">cbenef tpintegra</span>
+      <span class="kw">FROM</span> <span class="tp">ZCBENEF_UF</span>
+      <span class="kw">INTO</span> <span class="vr">ls_cbenef</span>
+      <span class="kw">WHERE</span> <span class="vr">uf</span>  = <span class="vr">lv_uf</span>
+        <span class="kw">AND</span> <span class="vr">ncm</span> = <span class="vr">is_nfe_item</span>-<span class="vr">ncm</span>.
+
+    <span class="kw">IF</span> <span class="vr">sy</span>-<span class="vr">subrc</span> = 0.
+      <span class="cm">* Injetar cBenef no XML do item</span>
+      <span class="vr">cs_nfe_item</span>-<span class="vr">cbenef</span> = <span class="vr">ls_cbenef</span>-<span class="vr">cbenef</span>.
+
+      <span class="cm">* GO: IN 1.608/2025 exige tpIntegra = 1</span>
+      <span class="kw">IF</span> <span class="vr">lv_uf</span> = <span class="str">'GO'</span>.
+        <span class="vr">cs_nfe_item</span>-<span class="vr">tpintegra</span> = <span class="str">'1'</span>.
+      <span class="kw">ENDIF</span>.
+
+      <span class="cm">* Log de rastreabilidade</span>
+      <span class="kw">CALL METHOD</span> <span class="fn">ZCL_NFE_LOGGER</span>=><span class="fn">LOG</span>
+        <span class="kw">EXPORTING</span>
+          <span class="vr">iv_nfe</span>    = <span class="vr">is_nfe_header</span>-<span class="vr">nfe_key</span>
+          <span class="vr">iv_action</span> = <span class="str">'CBENEF_INJECT'</span>
+          <span class="vr">iv_value</span>  = <span class="vr">ls_cbenef</span>-<span class="vr">cbenef</span>.
+    <span class="kw">ENDIF</span>.
+  <span class="kw">ENDMETHOD</span>.
+
+<span class="kw">ENDCLASS</span>.`
+      },
+      {
+        title:'iFlow CPI — ECONF 110750/110751',
+        lang:'ABAP',
+        code:`<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="cm">*& ZRFC_CPI_ECONF — RFC para disparar iFlow CPI</span>
+<span class="cm">*& Evento ECONF sem nota SAP nativa → CPI obrigatório</span>
+<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="kw">FUNCTION</span> <span class="fn">ZRFC_CPI_ECONF</span>.
+  <span class="kw">IMPORTING</span>
+    <span class="vr">IV_EVENT_CODE</span>  <span class="kw">TYPE</span> <span class="tp">CHAR6</span>   <span class="cm">" 110750 ou 110751</span>
+    <span class="vr">IV_BELNR</span>       <span class="kw">TYPE</span> <span class="tp">BELNR_D</span> <span class="cm">" Nr documento FI</span>
+    <span class="vr">IV_BUKRS</span>       <span class="kw">TYPE</span> <span class="tp">BUKRS</span>   <span class="cm">" Empresa</span>
+  <span class="kw">EXPORTING</span>
+    <span class="vr">EV_CPI_ID</span>      <span class="kw">TYPE</span> <span class="tp">CHAR36</span>  <span class="cm">" Message ID CPI</span>
+    <span class="vr">ES_RETURN</span>      <span class="kw">TYPE</span> <span class="tp">BAPIRET2</span>.
+
+  <span class="kw">DATA</span>: <span class="vr">lv_url</span>    <span class="kw">TYPE</span> <span class="tp">STRING</span>,
+        <span class="vr">lv_payload</span> <span class="kw">TYPE</span> <span class="tp">STRING</span>,
+        <span class="vr">lo_http</span>    <span class="kw">TYPE REF TO</span> <span class="tp">IF_HTTP_CLIENT</span>,
+        <span class="vr">lv_resp</span>    <span class="kw">TYPE</span> <span class="tp">STRING</span>.
+
+  <span class="cm">* Montar URL do iFlow CPI</span>
+  <span class="vr">lv_url</span> = <span class="str">'/http/econf/'</span> && <span class="vr">IV_EVENT_CODE</span>.
+
+  <span class="cm">* Payload com dados do documento FI</span>
+  <span class="kw">CONCATENATE</span>
+    <span class="str">'{"event":"'</span> <span class="vr">IV_EVENT_CODE</span>
+    <span class="str">'","belnr":"'</span> <span class="vr">IV_BELNR</span>
+    <span class="str">'","bukrs":"'</span> <span class="vr">IV_BUKRS</span> <span class="str">'"}'</span>
+    <span class="kw">INTO</span> <span class="vr">lv_payload</span>.
+
+  <span class="cm">* Enviar para SAP CPI</span>
+  <span class="kw">CALL METHOD</span> <span class="tp">CL_HTTP_CLIENT</span>=><span class="fn">CREATE_BY_DESTINATION</span>
+    <span class="kw">EXPORTING</span> <span class="vr">destination</span> = <span class="str">'ZCPI_ECONF'</span>
+    <span class="kw">IMPORTING</span> <span class="vr">client</span>      = <span class="vr">lo_http</span>.
+
+  <span class="vr">lo_http</span>-><span class="fn">request</span>-><span class="fn">set_method</span>( <span class="str">'POST'</span> ).
+  <span class="vr">lo_http</span>-><span class="fn">request</span>-><span class="fn">set_cdata</span>( <span class="vr">lv_payload</span> ).
+  <span class="vr">lo_http</span>-><span class="fn">send</span>( ). <span class="vr">lo_http</span>-><span class="fn">receive</span>( ).
+  <span class="vr">lv_resp</span> = <span class="vr">lo_http</span>-><span class="fn">response</span>-><span class="fn">get_cdata</span>( ).
+
+  <span class="cm">* Extrair CPI Message ID da resposta</span>
+  <span class="vr">EV_CPI_ID</span> = <span class="fn">ZCL_JSON_UTIL</span>=><span class="fn">GET_VALUE</span>( <span class="vr">iv_json</span> = <span class="vr">lv_resp</span> <span class="vr">iv_key</span> = <span class="str">'messageId'</span> ).
+
+  <span class="cm">* Gravar log no Monitor Z</span>
+  <span class="kw">INSERT INTO</span> <span class="tp">ZCPI_MONITOR</span> <span class="kw">VALUES</span>
+    @( <span class="kw">VALUE</span> #( <span class="vr">event</span> = <span class="vr">IV_EVENT_CODE</span>  <span class="vr">belnr</span> = <span class="vr">IV_BELNR</span>
+               <span class="vr">cpi_id</span> = <span class="vr">EV_CPI_ID</span>  <span class="vr">status</span> = <span class="str">'SENT'</span>
+               <span class="vr">erdat</span> = <span class="fn">SY</span>-<span class="vr">DATUM</span>  <span class="vr">erzet</span> = <span class="fn">SY</span>-<span class="vr">UZEIT</span> ) ).
+<span class="kw">ENDFUNCTION</span>.`
+      },
+      {
+        title:'Monitor Z — Dashboard de Integrações',
+        lang:'ABAP',
+        code:`<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="cm">*& ZMONITOR_INTEGRACOES — Programa de monitoramento</span>
+<span class="cm">*&---------------------------------------------------------------------*</span>
+<span class="kw">REPORT</span> <span class="fn">ZMONITOR_INTEGRACOES</span>.
+
+<span class="kw">TABLES</span>: <span class="tp">ZCPI_MONITOR</span>, <span class="tp">ZTEF_TRANS</span>.
+
+<span class="kw">SELECT-OPTIONS</span>:
+  <span class="vr">s_date</span>  <span class="kw">FOR</span> <span class="tp">ZCPI_MONITOR</span>-<span class="vr">erdat</span> <span class="kw">DEFAULT</span> <span class="fn">SY</span>-<span class="vr">DATUM</span>,
+  <span class="vr">s_event</span> <span class="kw">FOR</span> <span class="tp">ZCPI_MONITOR</span>-<span class="vr">event</span>,
+  <span class="vr">s_stat</span>  <span class="kw">FOR</span> <span class="tp">ZCPI_MONITOR</span>-<span class="vr">status</span>.
+
+<span class="kw">START-OF-SELECTION</span>.
+  <span class="kw">DATA</span>: <span class="vr">lt_mon</span> <span class="kw">TYPE TABLE OF</span> <span class="tp">ZCPI_MONITOR</span>,
+        <span class="vr">lt_tef</span> <span class="kw">TYPE TABLE OF</span> <span class="tp">ZTEF_TRANS</span>.
+
+  <span class="cm">* CPI/ECONF</span>
+  <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tp">ZCPI_MONITOR</span>
+    <span class="kw">INTO TABLE</span> <span class="vr">lt_mon</span>
+    <span class="kw">WHERE</span> <span class="vr">erdat</span> <span class="kw">IN</span> <span class="vr">s_date</span>
+      <span class="kw">AND</span> <span class="vr">event</span> <span class="kw">IN</span> <span class="vr">s_event</span>
+      <span class="kw">AND</span> <span class="vr">status</span> <span class="kw">IN</span> <span class="vr">s_stat</span>.
+
+  <span class="cm">* TEF/Maquininha</span>
+  <span class="kw">SELECT</span> * <span class="kw">FROM</span> <span class="tp">ZTEF_TRANS</span>
+    <span class="kw">INTO TABLE</span> <span class="vr">lt_tef</span>
+    <span class="kw">WHERE</span> <span class="vr">erdat</span> <span class="kw">IN</span> <span class="vr">s_date</span>.
+
+  <span class="cm">* Exibir ALV com status semáforo</span>
+  <span class="kw">CALL METHOD</span> <span class="fn">ZCL_MONITOR_ALV</span>=><span class="fn">DISPLAY</span>
+    <span class="kw">EXPORTING</span>
+      <span class="vr">it_cpi</span> = <span class="vr">lt_mon</span>
+      <span class="vr">it_tef</span> = <span class="vr">lt_tef</span>.
+<span class="kw">ENDREPORT</span>.`
+      }
+    ],
+  },
+  'ABAP 1': null, // referencia ABAP
+  'ABAP 2': null,
+  'ABAP 3': null,
+  FISCAL: {
+    icon:'📜', color:'#FB923C', label:'Consultor Fiscal — Estadual/Federal',
+    transactions:[
+      {code:'J1BTAX',desc:'Manutenção impostos Brasil'},{code:'J1BTAX1',desc:'Condições de imposto'},
+      {code:'J1BNFE',desc:'Monitor NF-e'},{code:'SPRO',desc:'Customizing fiscal'},{code:'FTXP',desc:'Manutenção de códigos de imposto'},
+      {code:'J1B3N',desc:'NF-e saída manual'},{code:'SM30',desc:'Tabela Z de cBenef por UF'},
+    ],
+    activities:[
+      {title:'Mapear legislação fiscal por UF (ICMS, RICMS, cBenef)', details:'Transação: J1BTAX — Manutenção impostos Brasil\nParâmetros: Tabela de alíquotas ICMS por UF (27 estados), RICMS vigente, Convênios CONFAZ\nComo fazer: 1) Levantar alíquotas ICMS interna e interestadual por UF 2) Mapear exceções e reduções de base de cálculo 3) Identificar convênios CONFAZ aplicáveis 4) Documentar em planilha de referência fiscal'},
+      {title:'Configurar IN 1.608/2025-GO — campo tpIntegra=1 obrigatório', details:'Transação: SPRO → Nota Fiscal Eletrônica → Configurar campos adicionais\nParâmetros: UF=GO, tpIntegra=1 (obrigatório para operações interestaduais GO)\nComo fazer: 1) Verificar versão do layout NF-e (4.0+) 2) Configurar regra na tabela Z: se UF emitente=GO → tpIntegra=1 3) Validar com BAdI de NF-e (ABAPer #2) 4) Testar emissão NF-e com destino GO em homologação'},
+      {title:'Mapear benefícios fiscais (cBenef) por NCM e UF', details:'Transação: SM30 — Tabela ZCBENEF_UF\nParâmetros: UF + NCM → Código cBenef (ex: SP090001 para isenção ICMS SP)\nComo fazer: 1) Consultar portais SEFAZ de cada UF para códigos cBenef vigentes 2) Cruzar com NCMs dos materiais do cliente 3) Popular tabela ZCBENEF_UF com combinações válidas 4) Validar com contabilidade do cliente'},
+      {title:'Configurar tabela Z de parametrização de benefícios fiscais', details:'Transação: SE11 + SM30\nObjeto: ZCBENEF_UF (tabela Z), View de manutenção\nParâmetros: Campos — UF (REGIO), NCM (J_1BNCM), cBenef (CHAR10), tpIntegra (CHAR1), Vigência\nComo fazer: 1) Validar estrutura criada pelo ABAPer #2 em SE11 2) Popular dados via SM30 3) Testar lookup na BAdI de NF-e 4) Documentar procedimento de atualização para o cliente'},
+      {title:'Validar NT 2024.002 — novos campos obrigatórios NF-e', details:'Referência: Nota Técnica 2024.002 da SEFAZ\nParâmetros: Novos campos obrigatórios no XML da NF-e, Prazo de entrada em vigor\nComo fazer: 1) Analisar NT 2024.002 e identificar campos novos 2) Verificar se a versão SAP suporta nativamente 3) Se não suporta: solicitar desenvolvimento BAdI ao ABAPer #2 4) Testar em ambiente de homologação SEFAZ'},
+      {title:'Analisar impactos da Reforma Tributária (IBS/CBS) — LC 214', details:'Referência: Lei Complementar 214 — Reforma Tributária\nParâmetros: Cronograma de transição (2026-2033), IBS (estadual/municipal) substituindo ICMS/ISS, CBS substituindo PIS/COFINS\nComo fazer: 1) Mapear timeline: 2026=teste, 2027-2028=transição, 2033=extinção ICMS 2) Avaliar impacto no schema de pricing SAP 3) Planejar adaptações futuras (fazer/planejar/monitorar) 4) Documentar roadmap fiscal para o cliente'},
+      {title:'Configurar apuração fiscal (IPI, PIS/COFINS, ICMS)', details:'Transação: J1BTAX — Apuração | FTXP — Tax codes | S_ALR_87012357 — Livros fiscais\nParâmetros: Período de apuração (mensal), Regimes (Lucro Real/Presumido), Alíquotas por operação\nComo fazer: 1) Configurar tax codes por tipo de operação (entrada/saída) em FTXP 2) Configurar determinação automática em J1BTAX 3) Testar apuração mensal com cenários de crédito/débito 4) Validar livros fiscais (entrada, saída, apuração ICMS)'},
+      {title:'Testes de emissão NF-e com cenários fiscais completos', details:'Transação: J1BNFE — Monitor NF-e | VA01 → VL01N → VF01\nParâmetros: Cenários — venda interna, interestadual, exportação, devolução, bonificação, com/sem cBenef\nComo fazer: 1) Criar pedidos de teste para cada cenário fiscal 2) Emitir NF-e em ambiente de homologação SEFAZ 3) Validar XML: impostos, cBenef, tpIntegra, CST 4) Testar rejeição e correção 5) Documentar resultado de cada cenário'},
+    ],
+  },
+  DRC: {
+    icon:'🔗', color:'#22D3EE', label:'Consultor DRC / CPI',
+    transactions:[
+      {code:'EDOC_COCKPIT',desc:'Cockpit e-Document'},{code:'/UI2/FLP',desc:'Fiori Launchpad'},
+      {code:'SPRO',desc:'Customizing DRC/CPI'},{code:'SLG1',desc:'Log de aplicação'},
+    ],
+    activities:[
+      {title:'Avaliar viabilidade DRC nativo vs. CPI por evento fiscal', details:'Referência: SAP Note 2904195 — DRC (Document Reporting Compliance)\nParâmetros: Versão SAP (S/4HANA 2020+), Eventos fiscais com nota SAP nativa vs. sem nota nativa\nComo fazer: 1) Listar todos os eventos fiscais do escopo 2) Verificar quais têm suporte DRC nativo (NF-e, NFS-e, CT-e) 3) Identificar eventos sem suporte nativo (ECONF 110750/110751) → CPI obrigatório 4) Documentar decisão e justificativa'},
+      {title:'Configurar canais CPI para ECONF (evento sem nota SAP nativa)', details:'Ferramenta: SAP CPI (Cloud Platform Integration) Web IDE\nParâmetros: Tenant CPI, Credenciais SEFAZ, Certificado digital A1, Endpoints de homologação/produção\nComo fazer: 1) Acessar CPI Web IDE 2) Criar Integration Package "ZECONF_FISCAL" 3) Configurar credenciais SEFAZ (Security Material) 4) Configurar destino RFC no SAP (SM59) apontando para CPI 5) Testar conectividade'},
+      {title:'Criar iFlow CPI para ECONF 110750 (autorização)', details:'Ferramenta: SAP CPI Web IDE — Integration Flow Designer\nParâmetros: Endpoint HTTP (trigger), Mapeamento JSON→XML SEFAZ, Rota de resposta\nComo fazer: 1) Criar iFlow "ZECONF_110750_AUTH" 2) Configurar sender HTTP adapter (recebe RFC do SAP) 3) Mapear payload JSON para XML SEFAZ padrão 4) Configurar receiver HTTPS adapter para SEFAZ 5) Tratar resposta (autorizado/rejeitado) 6) Retornar messageId ao SAP'},
+      {title:'Criar iFlow CPI para ECONF 110751 (cancelamento)', details:'Ferramenta: SAP CPI Web IDE — Integration Flow Designer\nParâmetros: Endpoint HTTP, Protocolo de cancelamento SEFAZ, Prazo (24h para cancelar)\nComo fazer: 1) Criar iFlow "ZECONF_110751_CANCEL" 2) Reutilizar adapter de comunicação SEFAZ do iFlow 110750 3) Mapear payload de cancelamento (chave original + justificativa) 4) Validar prazo de cancelamento (máx 24h) 5) Atualizar status em ZCPI_MONITOR'},
+      {title:'Configurar comunicação SAP ↔ SEFAZ via CPI', details:'Ferramenta: SM59 (SAP) + CPI Security Material\nParâmetros: Certificado digital A1 (e-CNPJ), URL SEFAZ por UF, Timeout de conexão\nComo fazer: 1) Instalar certificado A1 no CPI (Security Material → Keystore) 2) Configurar destino RFC tipo G em SM59 apontando para CPI 3) Testar ping de conectividade 4) Configurar retry automático para timeout 5) Monitorar via CPI Monitor dashboard'},
+      {title:'Testes de ida e volta com SEFAZ (homologação)', details:'Ferramenta: CPI Monitor + J1BNFE + SEFAZ Homologação\nParâmetros: Ambiente SEFAZ homologação (URL específica por UF), Dados de teste, Cenários de sucesso e rejeição\nComo fazer: 1) Configurar CPI para apontar para SEFAZ homologação 2) Disparar evento 110750 via RFC de teste 3) Verificar resposta no CPI Monitor 4) Validar log em ZCPI_MONITOR (Monitor Z) 5) Testar cenário de rejeição e retry 6) Testar cancelamento (110751) dentro do prazo'},
+    ],
+  },
+};
+
+// Map frente names que vem do WP para as chaves de DETAIL_DATA
+function getDetailKey(frente) {
+  const f = frente.toUpperCase().trim();
+  if (f.startsWith('ABAP'))   return 'ABAP';
+  if (f.startsWith('SD'))     return 'SD';
+  if (f.startsWith('FI'))     return 'FI';
+  if (f.startsWith('MM'))     return 'MM';
+  if (f.startsWith('CO'))     return 'CO';
+  if (f.startsWith('PP'))     return 'PP';
+  if (f.startsWith('PM'))     return 'PM';
+  if (f.startsWith('HR') || f.startsWith('HCM'))  return 'HR';
+  if (f.startsWith('QM'))     return 'QM';
+  if (f.startsWith('WM') || f.startsWith('EWM'))  return 'WM';
+  if (f.startsWith('BASIS'))  return 'BASIS';
+  if (f.startsWith('GP'))     return 'GP';
+  if (f.startsWith('FISCAL') || f.startsWith('FEST') || f.startsWith('FFED')) return 'FISCAL';
+  if (f.startsWith('DRC') || f.startsWith('CPI'))  return 'DRC';
+  if (f.startsWith('COMER'))  return 'GP';
+  if (f.startsWith('MIGR'))   return 'BASIS'; // migração usa detalhes Basis
+  return f;
+}
+
+function showDetail(frente, idx) {
+  const key = getDetailKey(frente);
+  // Se é ABAP 1/2/3, usa ABAP
+  let data = DETAIL_DATA[key] || DETAIL_DATA[frente];
+  if (!data && (frente.includes('ABAP'))) data = DETAIL_DATA['ABAP'];
+  if (!data) {
+    toast('Detalhamento para ' + frente + ' em construção', 'info');
+    return;
+  }
+
+  const isAbap = key === 'ABAP';
+  const abapNum = frente.match(/\d+/);
+  const subtitle = isAbap && abapNum
+    ? 'ABAPer #' + abapNum[0] + ' — Desenvolvimento paralelo'
+    : frente + ' · Senior';
+
+  // Build modal HTML
+  let html = '<div class="detail-overlay" onclick="if(event.target===this)closeDetail()">';
+  html += '<div class="detail-modal">';
+  html += '<div class="detail-hdr">';
+  html += '<div class="detail-hdr-left">';
+  html += '<div class="detail-icon" style="background:' + data.color + '">' + data.icon + '</div>';
+  html += '<div><div class="detail-title">' + data.label + '</div>';
+  html += '<div class="detail-sub">' + subtitle + '</div></div></div>';
+  html += '<button class="detail-close" onclick="closeDetail()">×</button>';
+  html += '</div>';
+  html += '<div class="detail-body">';
+
+  // Transactions
+  html += '<div class="detail-sect">';
+  html += '<div class="detail-sect-title">' + t('detail_transactions') + ' <span class="dtag" style="background:' + data.color + '22;color:' + data.color + '">' + data.transactions.length + '</span></div>';
+  html += '<div class="txn-grid">';
+  data.transactions.forEach(t => {
+    html += '<div class="txn-card"><div class="txn-code">' + t.code + '</div><div class="txn-desc">' + t.desc + '</div></div>';
+  });
+  html += '</div></div>';
+
+  // Activities
+  function renderActList(acts) {
+    let h = '<ul class="act-list">';
+    acts.forEach((a, i) => {
+      const isObj = typeof a === 'object';
+      const title = isObj ? a.title : a;
+      const details = isObj ? a.details : null;
+      h += '<li>';
+      if (details) {
+        const uid = 'act-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2,6);
+        h += '<div class="act-item-hdr" onclick="toggleActDetail(\'' + uid + '\',this)">';
+        h += '<span class="act-arrow">▸</span>';
+        h += '<span class="act-item-title">' + title + '</span></div>';
+        h += '<div class="act-details" id="' + uid + '">' + details.replace(/Transação:/g,'<strong>Transação:</strong>').replace(/Parâmetros:/g,'<strong>Parâmetros:</strong>').replace(/Como fazer:/g,'<strong>Como fazer:</strong>').replace(/Ferramenta:/g,'<strong>Ferramenta:</strong>').replace(/Objeto:/g,'<strong>Objeto:</strong>').replace(/Objetos:/g,'<strong>Objetos:</strong>').replace(/Artefatos:/g,'<strong>Artefatos:</strong>').replace(/Referência:/g,'<strong>Referência:</strong>') + '</div>';
+      } else {
+        h += '<div class="act-item-hdr" style="cursor:default"><span class="act-arrow">▸</span><span class="act-item-title">' + title + '</span></div>';
+      }
+      h += '</li>';
+    });
+    h += '</ul>';
+    return h;
+  }
+
+  // Check for ABAP parallel distribution
+  if (isAbap && data.abapParallel) {
+    const abapNum = frente.match(/\d+/);
+    const showNum = abapNum ? parseInt(abapNum[0]) : null;
+
+    if (showNum && data.abapParallel[showNum]) {
+      // Show specific ABAPer
+      const ap = data.abapParallel[showNum];
+      html += '<div class="detail-sect">';
+      html += '<div class="detail-sect-title">' + t('detail_activities') + ' — ' + ap.role + ' <span class="dtag" style="background:#D9770622;color:#D97706">' + ap.activities.length + '</span></div>';
+      html += renderActList(ap.activities);
+      html += '</div>';
+    } else {
+      // Show all ABAPers
+      Object.keys(data.abapParallel).forEach(num => {
+        const ap = data.abapParallel[num];
+        html += '<div class="abap-parallel-sect">';
+        html += '<div class="abap-parallel-title"><span class="abap-parallel-badge">' + t('detail_parallel') + '</span> ' + ap.role + '</div>';
+        html += renderActList(ap.activities);
+        html += '</div>';
+      });
+    }
+  } else {
+    html += '<div class="detail-sect">';
+    html += '<div class="detail-sect-title">' + t('detail_activities') + ' <span class="dtag" style="background:' + data.color + '22;color:' + data.color + '">' + data.activities.length + '</span></div>';
+    html += renderActList(data.activities);
+    html += '</div>';
+  }
+
+  // ABAP Code
+  if (isAbap && data.codeExamples) {
+    html += '<div class="detail-sect">';
+    html += '<div class="detail-sect-title">' + t('detail_code') + ' <span class="dtag" style="background:#D9770622;color:#D97706">' + data.codeExamples.length + '</span></div>';
+    data.codeExamples.forEach(ex => {
+      html += '<div style="margin-bottom:14px">';
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">' + ex.title + '</div>';
+      html += '<div class="code-block"><span class="code-lang">' + ex.lang + '</span>' + ex.code + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div></div></div>';
+
+  // Remove existing
+  const old = document.querySelector('.detail-overlay');
+  if (old) old.remove();
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleActDetail(id, hdr) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const arrow = hdr.querySelector('.act-arrow');
+  const isOpen = el.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open', isOpen);
+}
+
+function closeDetail() {
+  const el = document.querySelector('.detail-overlay');
+  if (el) {
+    el.style.transition = 'opacity .2s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 200);
+  }
+}
+
+// Close on Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+
+// ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
 window.addEventListener('load', () => {
+  // Apply saved language
+  setLang(currentLang);
   resetForm();
   checkHealth();
   // Carregar sidebar com propostas
@@ -1045,7 +2770,7 @@ window.addEventListener('load', () => {
     sb.innerHTML = d.proposals.slice(0,5).map(p=>`
       <div class="sb-item" onclick="viewProposal('${p.id}')">
         <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.title||'').replace(/^DAM — /,'').slice(0,22)}</span>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.client_name||'').slice(0,15) || (p.title||'').slice(0,15)} <span style="color:var(--text3);font-size:10px">${p.proposal_number||''}</span></span>
         <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
       </div>`).join('');
   }).catch(()=>{});
@@ -1059,23 +2784,26 @@ const VIZ_AGENTS = [
   {id:'sd',   name:'Sofia Duarte',   role:'Agente SD',        color:'#34D399'},
   {id:'fi',   name:'Felix Inácio',   role:'Agente FI',        color:'#4ADE80'},
   {id:'abap', name:'Axel Becker',    role:'ABAP Estrutural',  color:'#FBBF24'},
-  {id:'mm',   name:'Marco Motta',    role:'Agente MM',        color:'#A78BFA'},
-  {id:'pp',   name:'Petra Prado',    role:'Agente PP',        color:'#F87171'},
+  {id:'mm',   name:'Marina Costa',   role:'Agente MM',        color:'#7C3AED'},
+  {id:'pp',   name:'Paulo Ferreira', role:'Agente PP',        color:'#DC2626'},
   {id:'drc',  name:'Diana Rocha',    role:'DRC / CPI',        color:'#7DD3FC'},
   {id:'fest', name:'Estela Sousa',   role:'Fiscal Estadual',  color:'#5EEAD4'},
   {id:'ffed', name:'Fabio Faria',    role:'Fiscal Federal',   color:'#86EFAC'},
-  {id:'fmun', name:'Manuela Melo',   role:'Fiscal Municipal', color:'#FCD34D'},
-  {id:'ref',  name:'Rafael Ramos',   role:'Reforma Trib.',    color:'#C084FC'},
+  {id:'fmun', name:'Miguel Santos',  role:'Fiscal Municipal', color:'#EC4899'},
+  {id:'rtrib',name:'Rafael Lima',    role:'Reforma Tributária',color:'#EF4444'},
   {id:'cpi',  name:'Carlos Pinto',   role:'SAP CPI',          color:'#FDA4AF'},
   {id:'ver',  name:'Valeria Neves',  role:'Versão SAP',       color:'#67E8F9'},
   {id:'eq',   name:'Eduardo Queiroz',role:'Equipe & GP',      color:'#6EE7B7'},
   {id:'com',  name:'Camila Oliveira',role:'Comercial',        color:'#86EFAC'},
+  {id:'migr', name:'Marcos Dias',    role:'Migração/Dados',   color:'#6366F1'},
+  {id:'basis',name:'Beatriz Nunes',  role:'Basis/Infra',      color:'#14B8A6'},
+  {id:'hr',   name:'Helena Rocha',   role:'Agente HR',        color:'#F472B6'},
 ];
 
 const VIZ_GRID_POS = [
-  {id:'com',  row:0,col:0},{id:'drc',  row:0,col:1},{id:'orch', row:0,col:2},{id:'fest',row:0,col:3},{id:'ffed',row:0,col:4},
-  {id:'eq',   row:1,col:0},{id:'pp',   row:1,col:1},{id:'sd',   row:1,col:2},{id:'fi',  row:1,col:3},{id:'ver', row:1,col:4},
-  {id:'cpi',  row:2,col:0},{id:'mm',   row:2,col:1},{id:'abap', row:2,col:2},{id:'ref', row:2,col:3},{id:'fmun',row:2,col:4},
+  {id:'com',  row:0,col:0},{id:'drc',   row:0,col:1},{id:'orch',  row:0,col:2},{id:'fest', row:0,col:3},{id:'ffed', row:0,col:4},{id:'basis',row:0,col:5},
+  {id:'eq',   row:1,col:0},{id:'pp',    row:1,col:1},{id:'sd',    row:1,col:2},{id:'fi',   row:1,col:3},{id:'ver',  row:1,col:4},{id:'hr',   row:1,col:5},
+  {id:'cpi',  row:2,col:0},{id:'mm',    row:2,col:1},{id:'abap',  row:2,col:2},{id:'rtrib',row:2,col:3},{id:'fmun', row:2,col:4},{id:'migr', row:2,col:5},
 ];
 
 let vizStates = {};
@@ -1142,7 +2870,7 @@ function vizBuildFromDraft(draft) {
   const cpi = draft.dam?.plano?.needs_cpi;
   const ufs = (draft.dam?.ufs||[]).join(',').toUpperCase();
   const hasGO = ufs.includes('GO'), hasSP = ufs.includes('SP');
-  const valor = (draft.dam?.comercial?.valor_referencia||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const valor = formatCurrency(draft.dam?.comercial?.valor_referencia||0);
   const horas = draft.total_hours || 0;
 
   // Horas na topbar
@@ -1187,7 +2915,7 @@ function vizBuildFromDraft(draft) {
 
 function vizLog(msg) {
   const el = document.getElementById('viz-log-entries'); if(!el) return;
-  const ts = new Date().toLocaleTimeString('pt-BR',{hour12:false});
+  const ts = new Date().toLocaleTimeString(getLangLocale(),{hour12:false});
   const d  = document.createElement('div');
   d.className = 'log-entry';
   d.innerHTML = `<span class="log-ts">${ts}</span><span class="log-msg">${msg}</span>`;
