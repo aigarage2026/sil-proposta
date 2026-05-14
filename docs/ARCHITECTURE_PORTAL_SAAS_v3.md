@@ -1,26 +1,113 @@
-# Arquitetura: Portal SaaS v2 (Control Plane + Produtos Modulares)
+# Arquitetura: Portal SaaS v3 (Control Plane + Produtos Modulares · Guia de Refatoração)
 
-> **Versao:** 2.0
-> **Data:** 2026-04-08
-> **Status:** Proposta para retomada do estudo (apos planos HR Recruitment e ITSM)
-> **Predecessor:** [ARCHITECTURE_PORTAL_SAAS.md v1.0](ARCHITECTURE_PORTAL_SAAS.md) (mar/2026) — preservado como historico
+> **Versão:** 3.0
+> **Data:** 2026-05-13
+> **Status:** Guia operacional para refatoração de produtos novos e existentes do portal Agent-Hub
+> **Predecessor:** [ARCHITECTURE_PORTAL_SAAS_v2.md](ARCHITECTURE_PORTAL_SAAS_v2.md) (abr/2026) — preservado
 > **Documentos relacionados:**
-> - [ARCHITECTURE_HR_RECRUITMENT.md](ARCHITECTURE_HR_RECRUITMENT.md) — primeiro produto modular
-> - [ARCHITECTURE_ITSM.md](ARCHITECTURE_ITSM.md) — segundo produto modular
+> - [ARCHITECTURE_HR_RECRUITMENT.md](ARCHITECTURE_HR_RECRUITMENT.md) — produto modular
+> - [ARCHITECTURE_ITSM.md](ARCHITECTURE_ITSM.md) — produto modular
+> - [ARCHITECTURE_ATENDIMENTO.md](ARCHITECTURE_ATENDIMENTO.md) — produto modular
 
 ---
 
-## Sumario Executivo
+## Sumário Executivo
 
-Esta v2 evolui o estudo original do Portal SaaS, consolidando-o como **arquitetura-alvo** com:
+Esta v3 evolui a v2 endereçando lacunas identificadas durante o primeiro
+uso real do documento como guia de refatoração, mantendo a arquitetura-alvo
+intacta mas tornando o doc **flexível para diferentes apps** que farão parte
+do portal Agent-Hub.
 
-1. **Boas praticas pesquisadas (2025-2026):** AWS SaaS Lens (silo/pool/bridge), Control Plane / Application Plane separation, Cell-based architecture, JWT/JWKS para identidade federada, Stripe multi-product subscriptions, microfrontend trade-offs.
-2. **Modelo arquitetural-alvo** consolidado em 22 secoes com diagramas, contratos de API e decisao explicita sobre 10 perguntas que ficaram em aberto no v1.
-3. **10 ADRs** justificando trade-offs com referencia direta as fontes.
-4. **Plano de migracao em 10 fases** a partir do estado atual do `agent-hub`, com mapeamento concreto de paths reais (services, models, APIs, frontend pages) para cada repositorio destino. Estrategia escalonada: Timesheet (piloto) → HR → ITSM → Scheduling → Chatbot, preservando a aplicacao atual em operacao ate validacao completa.
-5. **Tabela antes vs depois** cobrindo performance, manutencao, escalabilidade, blast radius, isolamento, time-to-market, cross-sell e custo.
+**O que mudou em relação à v2:**
 
-A v2 NAO substitui a v1 — convivem no diretorio `pending/`. A v1 mantem-se como registro do raciocinio inicial; a v2 e o documento operacional para execucao.
+| Mudança | Motivação |
+|---|---|
+| Novo **§0 — Como usar este documento** com 3 personas (dev migrando app legada, arquiteto criando produto novo, gestor estimando) | A v2 entrava direto em princípios sem orientar quem lê |
+| Nova **§1.5 — Estado atual da plataforma** (matriz de maturidade) | A v2 listava componentes como se já existissem, sem dizer se estão prontos, em construção ou planejados; isso bloqueava decisões de cronograma |
+| Nova **§4.5 — Folha de decisões obrigatórias do produto** (template) + **§4.6 — Convenções de naming** | A v2 não tinha como produto preencher seus próprios trade-offs (frontend, embeddings, anonimização, etc.) |
+| Nova **§16.7 — Defaults de infraestrutura** com mandatório vs configurável | A v2 só dizia "GCP/Cloud Run" sem fixar o que é obrigatório |
+| Nova **§17.4 — Migração de frontends legados** com 3 cenários | A v2 prescrevia "produtos não têm frontend" como absoluto, sem caminho de migração |
+| Nova **§17.5 — Estratégia de split de repositório** | A v2 não dizia quando fazer split; novo critério permite monorepo-temporário |
+| Nova **§18.0 — Adaptando o plano à sua realidade** + checklist pra apps em prod externa | A v2 tinha plano fixo (X semanas) sem matriz de tamanho de time / escopo MVP |
+| **§21 — Riscos** enriquecida com 8 cenários práticos | Antes eram riscos genéricos; agora cada um tem fallback strategy concreta |
+| Novo **Apêndice D — Template de plano de migração por produto** | Cada produto pode gerar seu próprio plano detalhado a partir do template, sem reescrever do zero |
+
+A v3 NÃO substitui a v2 — convivem no diretório `pending/`. A v2 fica como
+registro do desenho original; a v3 é o documento operacional para execução
+de qualquer refatoração de produto.
+
+---
+
+## 0. Como usar este documento
+
+Este documento serve a **três personas distintas**. Cada uma deve entrar
+por uma porta diferente — não tente ler linearmente.
+
+### 0.1 Dev / arquiteto migrando uma aplicação existente para o portal
+
+**Você é:** um desenvolvedor (sozinho ou em time) que recebeu a missão de
+trazer uma app existente (interna ou externa) pro padrão do Agent-Hub.
+
+**Caminho de leitura:**
+
+1. **§0.4** (este bloco) — onde está o código de referência
+2. **§1.5** — o que da plataforma já existe e o que ainda é "a criar"
+3. **§4.5** — folha de decisões que você precisa fechar **antes de codar**
+4. **§17.4** — se a app tem frontend próprio, qual o caminho de migração
+5. **§18.0** — como adaptar o plano à sua realidade (time, prazo, escopo)
+6. **Apêndice D** — template de plano de migração para gerar o seu
+7. **§21** — riscos práticos e fallback strategies
+8. O resto do documento como referência ao surgir dúvida
+
+> Não comece a refatorar antes de completar a §4.5. Cada quadrado em
+> branco vai virar uma pergunta no meio do trabalho — e respondê-las
+> depois é caro.
+
+### 0.2 Arquiteto desenhando um produto novo
+
+**Você é:** alguém criando um produto que nascerá já no padrão.
+
+**Caminho de leitura:**
+
+1. **§1, §1.5, §2** — princípios e modelo-alvo
+2. **§3** — o que o Portal entrega de graça (não reimplemente)
+3. **§4** — o contrato que seu produto precisa atender
+4. **§4.5, §4.6** — folha de decisões + naming, pra fechar o desenho
+5. **§5–§16** — implementação detalhada (isolamento, auth, billing, etc.)
+6. **§16.5** — defaults de infra
+7. **§17** — layout de repositório
+
+Para produto novo, você pode pular §18 e §17.4 — não há legado a migrar.
+
+### 0.3 Gestor avaliando esforço / cronograma
+
+**Você é:** product owner, líder técnico ou patrocinador querendo entender
+custo e risco antes de aprovar.
+
+**Caminho de leitura:**
+
+1. **Sumário Executivo** (acima)
+2. **§1.5** — o que da plataforma está pronto (afeta cronograma)
+3. **§18.0** — matriz tamanho de time × prazo × escopo
+4. **§19** — vantagens e trade-offs (tabela antes vs depois)
+5. **§21** — riscos e mitigações
+
+Os 35 pontos de decisão típicos estão pré-mapeados na §4.5; conte como
+pelo menos 1 semana de discovery antes do dev começar.
+
+### 0.4 Onde encontrar o código de referência
+
+| O que | Onde |
+|---|---|
+| Monólito atual `agent-hub` (Python/FastAPI + React/Vite) | Repo principal — `gh repo view ai-garage/agent-hub` (quando publicado) ou path local do mantenedor |
+| Documentação dos produtos modulares (HR, ITSM, Atendimento) | `docs/plans/pending/ARCHITECTURE_*.md` no agent-hub |
+| Padrões de código (factory de tenant, JWT validator, audit log) | `backend/services/*.py` no agent-hub — referência viva |
+| Exemplos de migration alembic | `backend/migrations/versions/` no agent-hub |
+| Exemplos de admin panel (frontend) | `frontend/src/pages/admin/*` no agent-hub |
+
+**Se você não tem acesso ao repo do agent-hub**, peça antes de começar.
+Tentar refatorar sem o código de referência produz drift entre o que o
+doc descreve e o que de fato existe. Não há atalho.
 
 ---
 
@@ -39,6 +126,57 @@ A v2 NAO substitui a v1 — convivem no diretorio `pending/`. A v1 mantem-se com
 | **Observabilidade desde dia zero** | Trace ID propagado end-to-end, structured logging, audit central, healthcheck consolidado. |
 | **Security by Default** | Cada servico atras do Gateway, rate limiting, mTLS opcional, secrets via vault, RLS substituido por enforcement no service layer + isolation tests. |
 | **Evolucao para Cell-Based** | Quando atingir >100 tenants, considerar agrupamento em celulas independentes para enterprise/compliance. ADR aberto. |
+
+---
+
+## 1.5 Estado atual da plataforma (matriz de maturidade)
+
+**Por que esta seção existe:** as seções 2–22 descrevem a **arquitetura-alvo**.
+Mas para tomar decisão de cronograma, o time de cada produto precisa saber
+**o que já existe** vs **o que precisa ser criado**. Esta tabela é a fonte
+da verdade.
+
+> Esta tabela DEVE ser mantida atualizada pelo time de plataforma. Se você
+> está consultando e a data de atualização está velha (> 30 dias), peça
+> revisão antes de assumir status como verdadeiro.
+
+**Última atualização:** 2026-05-13 (atualizar mensalmente)
+
+| # | Componente | Status atual | ETA se "em construção" | Fallback se ainda não existir | Bloqueia ondas |
+|---|---|---|---|---|---|
+| 1 | **Monólito `agent-hub`** (origem) | ✅ Em produção | — | — | — |
+| 2 | **`agn-shared`** (pacotes Python `agn-core`, `agn-auth`, `agn-billing`, `agn-middleware`, `agn-audit`) | 🟡 Em construção | confirmar com plataforma | Refatorar usando código copiado do agent-hub; consolidar depois | Onda 4+ |
+| 3 | **`agn-shared/typescript/agn-ui`** | 🟡 Em construção | confirmar | shadcn/ui local no produto até existir | Onda 4+ |
+| 4 | **`agn-portal` (control plane backend)** | 🟡 Em construção, parcialmente operacional | confirmar | Mock via Wiremock; manter auth/billing locais até go-live | Onda 1, 2 |
+| 5 | **JWT RS256 + JWKS público** | 🔴 Planejado | confirmar | HS256 com `JWT_LEGACY_MODE=true`; refator depois | Onda 1 |
+| 6 | **Redis Streams `portal.events`** | 🔴 Planejado | confirmar | `xadd` manual nos testes; produto consome quando ativar | Onda 3 |
+| 7 | **`agn-deploy` (Dockerfile/Terraform templates)** | 🟡 Em construção | confirmar | Dockerfile local; copiar do agent-hub | Onda 5 |
+| 8 | **OAuth Google/Microsoft no Portal** | 🔴 Planejado | confirmar | Apenas email/senha até existir | Onda 6 (opcional) |
+| 9 | **MFA (TOTP) no Portal** | 🔴 Planejado | confirmar | Sem MFA até existir | Onda 6 (opcional) |
+| 10 | **Stripe webhook único no Portal** | 🔴 Planejado | confirmar | Webhook por produto temporariamente | Onda 2 |
+| 11 | **Stream Redis `usage.metric`** | 🔴 Planejado | confirmar | Endpoint REST `POST /usage/events` no Portal | Onda 7 |
+| 12 | **`HealthAggregator` no Portal** | 🔴 Planejado | confirmar | Health do produto independente; agregação manual | Onda 3 |
+| 13 | **`audit_logs` central no Portal** | 🟡 Existe no agent-hub | — | Já funciona | — |
+| 14 | **Postgres compartilhado provisionado** | confirmar com plataforma | — | Postgres local Docker até provisionar | Onda 1 |
+| 15 | **Qdrant compartilhado** | ✅ Em produção (single tenant) | — | Coleção dedicada por produto se necessário | — |
+
+Legenda: ✅ pronto · 🟡 em construção · 🔴 planejado · ⚪ a confirmar
+
+### 1.5.1 Como usar esta matriz no cronograma
+
+Para cada componente que **bloqueia** sua onda:
+
+- **✅ Pronto** → ok, siga o plano da v3
+- **🟡 Em construção** → coordene a ETA com o time de plataforma; se não bater com seu cronograma, use o fallback temporário e abra dívida técnica
+- **🔴 Planejado** → assuma que NÃO vai existir no seu cronograma; planeje com o fallback desde o início
+
+### 1.5.2 Implicação para cronograma
+
+A v2 estimava 8–10 fases sem considerar maturidade. Com a matriz acima:
+
+- **Se vários componentes-chave estão 🔴**, sua refatoração ganha **+30% a +60% de tempo**, dividido entre código duplicado, mocks e refator pós-GA.
+- **Se a maioria está ✅**, o cronograma da v2 é realista.
+- Documente na §4.5 da sua app qual era o status no início — vai virar argumento em retro.
 
 ---
 
@@ -274,6 +412,149 @@ Cada produto tem o mesmo "esqueleto" e atende ao mesmo contrato de integracao co
 | **itsm-app** | Em planejamento | Fase 5 | Nasce ja no padrao novo (apos finalizacao de ajustes na app atual) | [ARCHITECTURE_ITSM.md](ARCHITECTURE_ITSM.md) |
 | **scheduling-app** | A extrair | Fase 6 | `backend/services/scheduling*`, `backend/models/scheduling/*`, `backend/apis/v1/scheduling.py` | A criar (analogo ao plano HR) |
 | **chatbot-app** | A extrair | Fase 7 | `backend/services/chat_service.py`, RAG, voice, WhatsApp | A criar |
+
+---
+
+## 4.5 Folha de decisões obrigatórias do produto
+
+**Por que esta seção existe:** ao refatorar uma app para entrar no portal,
+35 decisões aparecem no caminho. Documentos genéricos não conseguem
+respondê-las globalmente — dependem do produto. Esta folha é o **template**
+que cada produto preenche **antes de codar**.
+
+Recomendação: copie esta tabela para um arquivo do seu próprio repo
+(`docs/DECISIONS.md`) e mantenha como vivo. Atualizar quando uma decisão
+mudar é parte do processo.
+
+### 4.5.1 Grupo A — Acesso e contexto
+
+| # | Decisão | Opções típicas | Decisão deste produto |
+|---|---|---|---|
+| A1 | Como acessar o repo `agent-hub` de referência | clone local · gh CLI · acesso via mantenedor | _preencher_ |
+| A2 | Repo de origem da app (URL ou path) | — | _preencher_ |
+| A3 | Branch de origem na app | `main` · outra | _preencher_ |
+| A4 | Pessoa responsável pela validação técnica | — | _preencher_ |
+
+### 4.5.2 Grupo B — Dependências da plataforma (cruze com §1.5)
+
+Para cada item, marque o status visto na §1.5 e o que o produto vai fazer.
+
+| # | Componente | Status §1.5 | Decisão (usar / aguardar / fallback) |
+|---|---|---|---|
+| B1 | `agn-shared` pacotes Python | — | — |
+| B2 | `agn-portal` em ambiente disponível | — | — |
+| B3 | JWT RS256 + JWKS | — | — |
+| B4 | Redis Streams `portal.events` | — | — |
+| B5 | `agn-deploy` templates | — | — |
+| B6 | OAuth/MFA no Portal | — | — |
+
+### 4.5.3 Grupo C — Conflitos arquiteturais
+
+| # | Decisão | Opções | Decisão |
+|---|---|---|---|
+| C1 | Frontend próprio? Manter, migrar pro Portal ou Module Federation? | (a) migrar como módulo lazy · (b) manter próprio (exceção) · (c) Module Federation | ver §17.4 |
+| C2 | Repositório separado já ou monorepo temporário? | (a) split imediato · (b) monorepo até onda X · (c) subtree split na onda final | ver §17.5 |
+| C3 | App em deploy ativo em outro provedor (Vercel/Railway/etc.)? | (a) sim, com tráfego real · (b) só legado de teste | ver §18.0 |
+
+### 4.5.4 Grupo D — Infraestrutura
+
+Use os defaults da **§16.7** quando não tiver contra-indicação. Aqui você
+documenta só o que diverge.
+
+| # | Decisão | Default da plataforma (§16.7) | Decisão do produto |
+|---|---|---|---|
+| D1 | Container runtime | Cloud Run | — |
+| D2 | Docker Registry | GCP Artifact Registry | — |
+| D3 | Postgres (cluster compartilhado vs próprio) | Cluster compartilhado, DB lógica por produto | — |
+| D4 | Conectividade Cloud Run ↔ Postgres | VPC Connector + Private IP | — |
+| D5 | Storage de arquivos | GCS bucket compartilhado, prefixo por tenant | — |
+| D6 | Qdrant compartilhado ou dedicado | Compartilhado, coleção por produto | — |
+| D7 | Secrets | GCP Secret Manager | — |
+
+### 4.5.5 Grupo E — Decisões de domínio (específicas do produto)
+
+Estas são **inerentes ao produto**. Não há resposta certa global.
+
+| # | Pergunta tipo | Exemplo para preenchimento |
+|---|---|---|
+| E1 | Embeddings (qual provedor + via proxy do Portal ou direto?) | "Voyage-3 via Portal proxy" / "OpenAI direto" |
+| E2 | Anonimização LGPD antes de mandar pra LLM | "Só CPF/CNPJ" / "Configurável por tenant" |
+| E3 | Limites por plano: fonte da verdade — Portal cacheado ou consulta cada vez | "Portal envia `subscription.upgraded`, produto cacheia" |
+| E4 | Versão do código legado a herdar (se há mais de uma) | "Usar v5 do orchestrator" |
+| E5 | Cutover de feature legada vs nova (RAG fake vs Qdrant, etc.) | "Feature flag até validar" |
+| E6 | Dados legados — migrar ou descartar | "Migrar via script para tenant default" / "Descartar (eram demos)" |
+| E7..N | Demais decisões de domínio | Acrescente conforme aparecer |
+
+### 4.5.6 Grupo F — Execução do plano
+
+| # | Decisão | Opções | Decisão |
+|---|---|---|---|
+| F1 | Tamanho do time | 1 dev · 2 devs · time variável | — |
+| F2 | Ordem das ondas | sequencial · paralelizar onda 2+3 · outra | — |
+| F3 | Calibração de prazo (folga × pressão) | aceito 1.5× sobre estimativa nominal · comprimir · folga 2× | — |
+| F4 | Critério de "pronto" | MVP enxuto (ondas 0–3) · completo (todas) | — |
+| F5 | App em produção hoje? Implica freeze antes de Onda 7 | sim · não | — |
+
+### 4.5.7 Grupo G — Naming e branding (ver §4.6)
+
+| # | Decisão | Decisão do produto |
+|---|---|---|
+| G1 | Slug canônico (kebab-case, ex.: `meu-produto`) | — |
+| G2 | Domínio público (ex.: `meu-produto.ai-garage.com.br`) | — |
+| G3 | Nome humano (ex.: "Meu Produto AI") | — |
+
+### 4.5.8 Grupo H — Riscos e contingência
+
+| # | Risco | Plano B |
+|---|---|---|
+| H1 | `agn-shared` não estará pronto a tempo | manter código duplicado + refator pós-GA |
+| H2 | Anonimização degrada qualidade do output | anonimizar só na saída pra LLM externo; dados completos no DB |
+| H3 | Migração de dados em produção pode quebrar | dry-run em sandbox; janela de freeze |
+| Hx | Outros riscos identificados | — |
+
+### 4.5.9 Critério de "decisões fechadas"
+
+Antes da Onda 1 começar, este documento (cópia preenchida no repo do produto)
+precisa ter:
+
+- [ ] Todos os campos do Grupo A preenchidos
+- [ ] Grupo B com status copiado da §1.5 e decisões claras
+- [ ] Grupo C com decisões definitivas (não mais "ver §17.4" — escolha feita)
+- [ ] Grupo F1 e F4 fechados (tamanho de time e critério de MVP)
+- [ ] Grupo G fechado (não mude o slug depois de criar o repo)
+
+Os demais campos podem evoluir, mas **estes 5 grupos travam o cronograma**.
+
+---
+
+## 4.6 Convenções de naming/branding
+
+| Convenção | Regra | Exemplo |
+|---|---|---|
+| **Slug canônico** (kebab-case) | usado em URLs, nomes de repo, slugs de produto | `meu-produto` |
+| **Snake case Python** | banco, módulos Python, identificadores em código | `meu_produto` |
+| **Pascal case classes** | classes Python e tipos TypeScript | `MeuProduto` |
+| **Domínio público** | sempre derivado do slug, sufixo `.ai-garage.com.br` (PRD) ou `.dev.ai-garage.com.br` (DEV) | `meu-produto.ai-garage.com.br` |
+| **Nome humano** | exibido na UI; pode ter espaços e acentos | "Meu Produto AI" |
+| **Banco de dados (Postgres)** | `{slug_underline}_db` no cluster compartilhado | `meu_produto_db` |
+| **Coleção Qdrant** | `{slug_underline}_{purpose}` | `meu_produto_kb` |
+| **Stream Redis** | `{slug}:events` para eventos do produto, `portal.events` para Portal | `meu-produto:events` |
+| **Tenant prefix** | nada (multi-tenant via coluna `tenant_id`, não via prefixo) | — |
+
+**Antipadrões a evitar:**
+
+- Não use sufixo `-app` no slug (`meu-produto-app`) — redundante. O repo
+  pode terminar em `-app` (`meu-produto-app/`), mas o slug fica seco.
+- Não use `-saas` ou `-platform` no slug — implícito.
+- Não use o nome humano no slug — o nome humano pode mudar; o slug não.
+- Evite caracteres acentuados em slug ou nomes de coluna.
+- Decida o slug **antes** de criar o repo e a database. Renomear depois
+  custa caro.
+
+**Migração de slug:** se herdou um produto com slug "errado" (ex.:
+`sap-proposal` mas o produto deveria ser `meu-produto`), trate como
+breaking change: nova migration, nova chave de subscription Stripe, comms
+com clientes ativos.
 
 ---
 
@@ -1129,6 +1410,34 @@ Cada servico envia exceptions para Sentry com tags `service`, `tenant_id`, `trac
 
 Substituicao de RLS por enforcement em service layer + isolation tests obrigatorios (mesma decisao dos planos HR e ITSM, ADR-010 daqueles documentos).
 
+### 16.7 Defaults de infraestrutura (referenciado pela §4.5.4)
+
+Esta tabela existe para que cada produto **não precise reinventar a
+decisão de infra**. Os "Default da plataforma" abaixo são o que rola em
+produção — divergir exige justificativa.
+
+| Item | Default da plataforma | Configurável por produto? | Justificativa |
+|---|---|---|---|
+| **Container runtime** | Cloud Run (GCP) | Não | Serverless, autoscale, sem cluster pra operar. GKE só se houver requisito de longa-running process (raro). |
+| **Docker Registry** | GCP Artifact Registry | Não | Mesmo cloud, IAM nativo, scan de vulnerabilidades automático. |
+| **Postgres** | Cluster compartilhado Cloud SQL com **DB lógica por produto** (`{produto}_db`) | Sim, mas pague o custo: Enterprise tenants podem ter cluster dedicado | DB-per-product isola schema/migration; cluster compartilhado isola produto (não tenant). |
+| **Provisionamento da DB do produto** | Time da plataforma cria via Terraform, entrega credenciais como secret | Não | Provisionamento manual gera drift. |
+| **Conectividade Cloud Run ↔ Postgres** | VPC Connector + Private IP | Não | GCP recomendação oficial pra produção. Sem Public IP. |
+| **Storage de arquivos** | GCS bucket compartilhado `ai-garage-files-prod` com prefixo `{produto}/{tenant_id}/...` | Sim, se requisito específico (CDN dedicado, etc.) | IAM por prefixo, sem proliferação de bucket. |
+| **Qdrant** | Cluster compartilhado, **coleção dedicada por produto** (`{slug}_{purpose}`) | Sim, se volume > 100k vetores ou requisito de isolamento | Custo de operar Qdrant múltiplo é alto. |
+| **Redis** | Cluster compartilhado, **namespace dedicado por produto** (`{slug}:...`) | Não | Cache, sessions, rate limit, streams. |
+| **Secrets** | GCP Secret Manager | Não | Rotação nativa, IAM, log de acesso. |
+| **CI/CD** | GitHub Actions, deploy via Cloud Run revisions | Configurável dentro de GHA | Steps comuns vivem em `agn-deploy` reusable workflows. |
+| **Observabilidade** | Google Cloud Logging + Cloud Trace (trace ID propagado) | Sim, pode adicionar Sentry/Honeycomb extra | Mínimo necessário sai de graça com Cloud Run. |
+| **Domínio** | `{slug}.ai-garage.com.br` (PRD) e `{slug}.dev.ai-garage.com.br` (DEV) via Cloudflare Tunnels | Não | DNS, SSL e DDoS centralizados (ver CLAUDE.md global do tenant). |
+| **TLS** | Cloudflare termination + HTTP entre Cloudflare e Cloud Run | Não | Default plataforma. |
+| **Backup** | Postgres automated backups daily (Cloud SQL); GCS versioning | Sim, frequência pode subir para hourly em planos enterprise | — |
+| **Auth** | RS256 + JWKS público do Portal (após §1.5 #5 ficar ✅) | Não | Identidade federada única. |
+
+**Como divergir do default:** abra ADR no repo do produto explicando
+o porquê. Se a divergência tiver custo para o time de plataforma (ex.:
+Postgres próprio = quem rola migrations?), alinhe antes de implementar.
+
 ---
 
 ## 17. Repositorios e Layout
@@ -1192,9 +1501,189 @@ Cada repo de produto tem `shared/` como submodule apontando para `agn-shared`. U
 cd shared && git pull origin main && cd .. && git add shared && git commit -m "bump shared libs"
 ```
 
+### 17.4 Migração de frontends legados
+
+A §17.2 prescreve "produtos NÃO têm frontend próprio" como **estado-alvo**.
+Mas muitas apps que vão entrar no portal **já têm frontend próprio em
+produção**. Esta seção é o caminho de migração.
+
+**3 cenários, 3 playbooks:**
+
+#### Cenário A — Produto novo, sem frontend
+
+Trivial: pages do produto ficam direto em `agn-portal/src/products/{slug}/`
+desde o dia 1. Não há legado a migrar.
+
+#### Cenário B — Produto tem frontend pequeno (1–10 telas, React/Vite)
+
+Playbook recomendado: **migrar como módulo lazy-loaded do Portal SPA**.
+
+| Passo | O que fazer |
+|---|---|
+| 1 | Inventariar telas existentes: arquivo, rotas, dependências externas |
+| 2 | Mapear cada tela para `agn-portal/src/products/{slug}/pages/...` |
+| 3 | Identificar dependências não-shadcn (MUI, Ant, etc.) — decidir trocar agora ou manter como dívida |
+| 4 | Copiar o código para `src/products/{slug}/` mantendo estrutura de pastas (pages, components, services, i18n) |
+| 5 | Ajustar imports (`@/` aponta pra `agn-portal/src/`) |
+| 6 | Trocar chamadas de API próprias por `httpClient` do Portal (auth via JWT do Portal, não localStorage próprio) |
+| 7 | Adicionar rotas em `agn-portal/src/App.tsx` como `<Route path="/{slug}/*" element={lazy(() => import("./products/{slug}"))} />` |
+| 8 | Smoke: navegar manualmente em todas as telas |
+| 9 | Cutover de DNS (rota antiga 301 → nova rota dentro do Portal) |
+
+**Quando essa migração roda:** logo após o produto migrar backend para
+o padrão novo (final da onda de extração do produto), antes do GA.
+
+#### Cenário C — Produto tem frontend grande (>10 telas) ou stack divergente (Vue, Svelte, Angular)
+
+Aqui o trade-off é diferente: porting custa caro e quebra valor em uso.
+Três opções, do mais barato pro mais "limpo":
+
+| Opção | Quando faz sentido | Custo | Trade-off |
+|---|---|---|---|
+| **C.1 — Manter frontend próprio com SSO via Portal** | App tem muito CSS/UX próprio, time de FE separado | Baixo | Não tem coesão visual com o portal; usuário "sai" do portal pra usar |
+| **C.2 — Module Federation** | Stack heterogênea, releases independentes desejados | Médio-alto | Complexidade operacional (orquestração, FOUC, state cross-MFE) |
+| **C.3 — Porting incremental para o Portal SPA** | Stack já é React/Vite, time disposto a refazer | Alto | Demora 2–4× mais que o backend; melhor experiência final |
+
+Default recomendado: **C.1 nos primeiros 90 dias** + plano de **C.3 ou
+B** quando o produto tiver folga.
+
+#### Frontend em outro provedor (Vercel, Netlify, Cloudflare Pages)
+
+Se o frontend legado está em Vercel/Netlify, o cutover pode ser feito
+sem mexer no provedor inicialmente:
+
+1. Backend novo no padrão (Cloud Run / GCP)
+2. Frontend legado continua em Vercel, mas configurado pra chamar o
+   backend novo
+3. JWT compartilhado via JWKS (frontend legado autentica no Portal e usa
+   o token nas chamadas)
+4. Migração do frontend pra dentro do Portal SPA em fase posterior
+
+### 17.5 Estratégia de split de repositório
+
+**Decisão padrão da v2:** produto em repo próprio desde o dia 1
+(multi-repo).
+
+**Decisão da v3:** continuar default, **mas permitir monorepo-temporário
+nas primeiras ondas** para reduzir fricção de configuração de CI, secrets
+e deploy enquanto o contrato com o Portal não está estável.
+
+**Critérios para split (transformar monorepo em repo próprio):**
+
+| Critério | Quando aplica |
+|---|---|
+| Contrato com o Portal estabilizou (não muda há 2 semanas) | Sinal de que o padrão de integração está consolidado |
+| Pelo menos 1 onda de migração concluída e operando em sandbox | Confiança no padrão |
+| Pelo menos 2 deploys do produto sem regredir o resto da app que estava no monorepo | Disciplina de testes |
+| Time decidiu que tamanho do código do produto justifica repo próprio | Critério "macro" |
+
+**Como fazer o split sem perder histórico:**
+
+```bash
+# Dentro do monorepo, usar git subtree split
+git subtree split --prefix=apps/meu-produto -b meu-produto-extract
+
+# Criar novo repo vazio e push
+gh repo create ai-garage/meu-produto-app --private --confirm
+git push git@github.com:ai-garage/meu-produto-app.git meu-produto-extract:main
+
+# No monorepo original, remover o subprojeto
+git rm -r apps/meu-produto
+git commit -m "extract: meu-produto for split → ai-garage/meu-produto-app"
+```
+
+> Não use `git filter-branch` ou `bfg` pra split — `subtree split` é
+> mais simples e preserva exatamente o histórico do subdiretório.
+
+### 17.6 Apps em outros provedores (Vercel/Railway/Heroku) — caminho de migração
+
+Se a app que vai entrar no portal está hoje em outro provedor com
+**deploy ativo em produção**:
+
+1. **Inventário** — listar URLs públicas, secrets, integrações externas (webhooks recebendo de terceiros, etc.)
+2. **Não desligar nada antes do shadow** — manter app antiga rodando
+3. **Subir nova instância em GCP** com mesmo schema (sem dados ainda)
+4. **Dual-write durante 1-2 semanas** — escreve em ambos pra validar
+5. **Migrar dados** com script idempotente; rodar várias vezes
+6. **Cutover de DNS** com TTL baixo (60s) antes da virada — facilita rollback
+7. **Janela de freeze** acordada com stakeholders
+8. **Validação pós-virada** — smoke test + alertas em pé pelas primeiras 48h
+9. **Desligar app legada** somente após 1 semana sem regressão
+
 ---
 
 ## 18. Plano de Migracao (do agent-hub atual)
+
+### 18.0 Adaptando o plano à sua realidade
+
+A v2 trazia o plano de migração com **10 fases e estimativas nominais**.
+Na prática, **cada produto chega com uma realidade diferente**: time
+disponível, escopo aceitável, prazo, urgência. Esta seção é o "antes" do
+plano: como **calibrar** as fases ao seu contexto.
+
+#### 18.0.1 Matriz tamanho de time × prazo × escopo
+
+| Cenário do time | Recomendação de prazo total | Escopo viável |
+|---|---|---|
+| **1 dev sênior dedicado** | 12–16 semanas para produto médio (Ondas 0–7) | MVP enxuto (Ondas 0–3) em 6–8 semanas, GA em 12–16 semanas |
+| **2 devs paralelos** | 8–10 semanas para produto médio | Permite paralelizar Onda 2 (gateway) com Onda 3 (1ª extração); MVP em ~5 semanas |
+| **1 dev part-time + apoio de plataforma** | 18–24 semanas | Foco em MVP enxuto, postergar tudo opcional para fase 2 |
+| **Time crescente (1 → 2 → 3 devs ao longo do projeto)** | 12 semanas para MVP, 6 meses para GA | Aceita complexidade adicional de onboarding incremental |
+
+#### 18.0.2 Calibração de prazo (aplicar sempre)
+
+Estimativas nominais em planos de refatoração historicamente são otimistas
+por um fator de **1.3× a 1.6×**. Recomendação:
+
+- **Pressão alta / escopo crítico**: aceite 1.5× sobre nominal e escope o
+  MVP curto.
+- **Folga / qualidade prioritária**: aceite 2× e entregue tudo no
+  go-live.
+- **Não comprima abaixo do nominal** — o resultado é sempre dívida que
+  reaparece pós-GA.
+
+#### 18.0.3 Critérios de "Pronto para produção" — MVP vs Completo
+
+| Critério | MVP enxuto (Ondas 0–3 + go-live parcial) | Completo (Ondas 0–7) |
+|---|---|---|
+| Autenticação RS256/JWKS | ✅ (ou HS256 dual-mode) | ✅ |
+| Database isolada e migrations próprias | ✅ | ✅ |
+| Contratos `/provision`, `/health`, `/dashboard/summary` | ✅ | ✅ |
+| Frontend integrado no Portal SPA | Opcional (pode manter próprio até fase 2) | ✅ |
+| Consumo de eventos Portal (`tenant.created`, etc.) | Opcional | ✅ |
+| Emissão de eventos `usage.metric`, `audit.action` | Mínimo viável | ✅ |
+| Backup orchestrated pelo Portal | Não | ✅ |
+| OAuth Google/Microsoft | Não | Se §1.5 #8 ✅ |
+| MFA | Não | Se §1.5 #9 ✅ |
+
+> **Recomendação:** começar com MVP enxuto, validar em sandbox, ir pra
+> produção, depois evoluir para Completo. Diluir esforço, validar valor
+> antes de pagar custo.
+
+#### 18.0.4 Ordem das ondas — variações aceitáveis
+
+A v2 prescreve ordem sequencial (Onda 0 → 1 → 2 → ...). Variações
+aceitáveis:
+
+- **Paralelizar 2 + 3** se você tem 2 devs e o backend do produto já
+  está estável.
+- **Pular Onda 4** (shared libs) se §1.5 #2 está 🔴 — usar código
+  copiado e refatorar para `agn-shared` pós-GA.
+- **Antecipar Onda 7** (mover legado pra `legacy/`) se o app está em
+  produção em outro provedor e você quer freezar a "fonte" antes do
+  trabalho começar.
+
+#### 18.0.5 Checklist pré-Onda 0
+
+Não comece a Onda 0 antes de ter:
+
+- [ ] §4.5 completa preenchida no repo do produto
+- [ ] §1.5 consultada e bloqueios mapeados
+- [ ] Acesso ao `agent-hub` de referência confirmado (§0.4)
+- [ ] Sandbox provisionado (URL + credenciais)
+- [ ] Pessoa responsável por validação técnica nomeada
+- [ ] Janela de freeze de produção acordada (se app já está em prod)
+- [ ] Plano de rollback escrito (pelo menos 1 página)
 
 ### 18.1 Visao Geral
 
@@ -1538,6 +2027,8 @@ Fase 0 ──> Fase 1 ──> Fase 2 ──> Fase 3 (Timesheet - piloto)
 
 ## 21. Riscos e Mitigacoes
 
+### 21.1 Riscos estruturais (independente de produto)
+
 | Risco | Probabilidade | Impacto | Mitigacao |
 |-------|--------------|---------|-----------|
 | Migracao paralela cria duplicacao de codigo | Alta | Medio | Shared libs primeiro (Fase 0); feature flags |
@@ -1550,6 +2041,92 @@ Fase 0 ──> Fase 1 ──> Fase 2 ──> Fase 3 (Timesheet - piloto)
 | Cliente percebe inconsistencia entre dashboards | Media | Medio | Dashboard agregado com fan-out + cache + indicador "atualizado ha X segundos" |
 | JWKS endpoint cai e produtos nao validam tokens | Baixa | Alto | Cache local de 24h em cada produto; failover via secondary Portal replica |
 | Acoplamento implicito via Agente.type_config | Alta | Medio | TypedDict por produto; validacao estrita; testes |
+
+### 21.2 Cenários práticos com fallback strategy
+
+Estes são cenários reais que aparecem em refatorações concretas. Cada um
+inclui o **gatilho** (como identificar), a **fallback strategy** (o que
+fazer quando acontecer) e o **plano de saída da dívida** (como sair do
+fallback depois).
+
+#### 21.2.1 `agn-shared` ainda não está pronto na Onda 4
+
+- **Gatilho:** §1.5 #2 marcado como 🔴 ou 🟡 com ETA além do seu cronograma
+- **Fallback:** manter código duplicado do agent-hub no produto. Imports
+  apontam para módulos locais (`from app.core.security import …`) em vez
+  de `from agn_auth import …`
+- **Saída da dívida:** após `agn-shared` ficar ✅, abrir PR que substitui
+  imports locais por imports do `agn-shared`. Code review verifica se
+  comportamento é idêntico. Tamanho da PR: 1-2 dias por pacote.
+
+#### 21.2.2 Portal só emite HS256 quando você precisa de RS256
+
+- **Gatilho:** §1.5 #5 marcado 🔴 e Onda 1 chegando
+- **Fallback:** ativar `JWT_LEGACY_MODE=true` no produto. Validador aceita
+  HS256 com `JWT_SECRET` compartilhado.
+- **Saída da dívida:** quando Portal emitir RS256, mudar `JWT_LEGACY_MODE`
+  para `dual` por 1-2 semanas (aceita ambos), depois `false`. Pra
+  desligar, todos os tokens HS256 expirados.
+- **Risco residual:** se vazar o `JWT_SECRET`, comprometer todos os
+  produtos que ainda estão em legacy mode. Rotacionar segredo é
+  coordenado.
+
+#### 21.2.3 Streams Redis `portal.events` não existem
+
+- **Gatilho:** §1.5 #6 = 🔴 e Onda 3 chegando
+- **Fallback:** consumidor do produto aceita eventos via REST stub:
+  `POST /api/v1/integrations/portal/sync-tenant` que o Portal pode
+  chamar em vez de publicar no stream.
+- **Saída da dívida:** quando stream existir, registrar consumer e
+  desativar o stub. Manter stub por 30 dias após o stream estabilizar
+  como rede de segurança.
+
+#### 21.2.4 Anonimização degrada qualidade do output de LLM
+
+- **Gatilho:** clientes reclamam de qualidade pior depois que anonimização
+  foi ativada
+- **Fallback:** anonimizar **só na saída para LLM externo**. Dados
+  completos ficam no DB e no contexto interno. Para LLMs que oferecem
+  zero-retention (Anthropic Claude com DPA), desligar anonimização.
+- **Saída da dívida:** revisitar matriz de risco LGPD com legal — se DPA
+  cobre, manter dados completos. Documentar decisão.
+
+#### 21.2.5 Migração de dados em produção quebra na carga real
+
+- **Gatilho:** dry-run em sandbox passou; rodar em prod quebra com erro
+  de constraint, encoding, ou volume
+- **Fallback:** rollback imediato (banco anterior preservado por 7 dias);
+  identificar diferenças prod vs sandbox; corrigir script.
+- **Saída da dívida:** prazo mais conservador para próximas migrações;
+  amostra de 100% dos dados em sandbox (não amostra parcial).
+
+#### 21.2.6 Frontend legado em Vercel quebra após backend migrar para Cloud Run
+
+- **Gatilho:** frontend chama URL antiga; backend em Cloud Run respondendo,
+  mas CORS, cookies ou auth diferentes
+- **Fallback:** proxy reverso no Cloudflare apontando rota legada para
+  backend novo, com headers de compatibilidade. Frontend continua igual.
+- **Saída da dívida:** migrar frontend para Portal SPA (§17.4 Cenário B)
+  na fase seguinte; manter proxy até cutover.
+
+#### 21.2.7 App em produção em outro provedor tem secrets que não temos
+
+- **Gatilho:** ao inventariar, descobre integração com terceiro cujo
+  segredo está só no provedor antigo e o time perdeu acesso
+- **Fallback:** congelar integração afetada; manter app antiga para
+  esse caso até resolver com terceiro.
+- **Saída da dívida:** rotacionar segredo via terceiro, configurar no
+  novo Secret Manager, ativar no produto novo.
+
+#### 21.2.8 Onboarding em sandbox funciona, em produção falha
+
+- **Gatilho:** smoke test verde em sandbox; em prod, `POST /provision`
+  do Portal para o produto retorna 500 ou timeout
+- **Fallback:** Portal mantém estado `provisioning_pending`; tentativa
+  manual via admin panel ou linha de comando.
+- **Saída da dívida:** retry com backoff exponencial automatizado;
+  alerta no Slack após N tentativas; root cause da diferença sandbox vs
+  prod (geralmente network policy ou IAM).
 
 ---
 
@@ -1756,4 +2333,132 @@ Pela ADR-010, produtos NAO acessam diretamente as seguintes tabelas — consomem
 
 ---
 
-*Documento gerado em 2026-04-08. Substitui v1 como referencia operacional. v1 preservada como historico do raciocinio inicial. Mudancas materiais devem ser registradas como ADRs adicionais nesta v2 ou em uma futura v3.*
+## Apêndice D: Template de plano de migração por produto
+
+Cada produto novo entrando no portal deve preencher e versionar o
+documento abaixo em seu próprio repo (sugestão: `docs/MIGRATION_PLAN.md`).
+
+```markdown
+# Plano de Migração — {Nome do Produto}
+
+**Versão:** 1.0
+**Data:** {YYYY-MM-DD}
+**Responsável técnico:** {nome}
+**Status do produto na plataforma:** {a-criar | em-extração | em-migração | GA}
+
+## 1. Identidade do produto
+
+| Campo | Valor |
+|---|---|
+| Nome humano | {ex.: "Meu Produto AI"} |
+| Slug canônico | {ex.: `meu-produto`} (ver §4.6) |
+| Domínio PRD | {ex.: `meu-produto.ai-garage.com.br`} |
+| Domínio DEV | {ex.: `meu-produto.dev.ai-garage.com.br`} |
+| Database | {ex.: `meu_produto_db`} |
+| Coleção Qdrant | {ex.: `meu_produto_kb`} |
+| Stream Redis | {ex.: `meu-produto:events`} |
+
+## 2. Origem do código
+
+| Campo | Valor |
+|---|---|
+| Repo de origem | {URL ou path} |
+| Branch base | {`main` ou outra} |
+| Stack atual | {ex.: FastAPI + React/Vite + Postgres} |
+| Em produção hoje? | {sim/não} → se sim, onde: {ex.: Vercel + Railway} |
+| Volume estimado de dados | {ex.: ~5k tenants, 50k registros} |
+
+## 3. Decisões fechadas (cópia da §4.5 da v3 do guia)
+
+Preencher cada grupo:
+
+### 3.1 Grupo A — Acesso
+- A1: …
+- A2: …
+- A3: …
+- A4: …
+
+### 3.2 Grupo B — Dependências da plataforma (consultar §1.5)
+- B1 `agn-shared`: status / decisão
+- B2 `agn-portal`: …
+- B3 JWT RS256: …
+- B4 Redis Streams: …
+- B5 `agn-deploy`: …
+- B6 OAuth/MFA: …
+
+### 3.3 Grupo C — Conflitos arquiteturais
+- C1 Frontend: …
+- C2 Repo: …
+- C3 App em produção externa: …
+
+### 3.4 Grupo D — Infra (só divergências dos defaults da §16.7)
+- D… (preencher só o que diverge)
+
+### 3.5 Grupo E — Decisões de domínio
+- E1 Embeddings: …
+- E2 Anonimização: …
+- E3 Limites por plano: …
+- E4 Versão legado: …
+- E5 Cutover legacy ↔ nova: …
+- E6 Dados legados: …
+- E…: outras decisões do domínio
+
+### 3.6 Grupo F — Execução
+- F1 Time: …
+- F2 Ordem das ondas: …
+- F3 Folga de prazo: …
+- F4 MVP vs Completo: …
+- F5 Em produção hoje: …
+
+### 3.7 Grupo H — Riscos identificados (do produto)
+- H… (mapeie no §21 do guia se já existe; senão, documente novo)
+
+## 4. Cronograma proposto
+
+Preencher matriz da §18.0.1:
+
+| Onda | Escopo | Início | Fim | Owner | Status |
+|---|---|---|---|---|---|
+| 0 | Consolidação / freeze legado | … | … | … | ☐ |
+| 1 | Setup repo + DB + auth | … | … | … | ☐ |
+| 2 | Contratos Portal (provision, dashboard, health) | … | … | … | ☐ |
+| 3 | Primeira extração (escolher subdomínio) | … | … | … | ☐ |
+| 4 | Migração para `agn-shared` (se §1.5 #2 ✅) | … | … | … | ☐ |
+| 5 | Deploy stack (Cloud Run + DB + Qdrant) | … | … | … | ☐ |
+| 6 | Frontend migrado para Portal SPA (se §17.4 aplica) | … | … | … | ☐ |
+| 7 | Cutover de produção | … | … | … | ☐ |
+
+## 5. Checklist pré-Onda 0 (da §18.0.5)
+
+- [ ] §4.5 completa (este documento) revisada
+- [ ] §1.5 consultada
+- [ ] Acesso ao `agent-hub` confirmado
+- [ ] Sandbox provisionado
+- [ ] Validador técnico nomeado
+- [ ] Janela de freeze acordada
+- [ ] Plano de rollback escrito
+
+## 6. Riscos específicos deste produto
+
+| Risco | Probabilidade | Impacto | Plano B |
+|---|---|---|---|
+| {ex.: anonimização degrada output} | {alta/média/baixa} | {alto/médio/baixo} | {ver §21.2.4} |
+
+## 7. Decisões em aberto (aceito assumir o default temporariamente)
+
+| Decisão | Default temporário | Quando revisitar |
+|---|---|---|
+| {ex.: G3 — nome humano} | "Meu Produto" | sprint de naming/branding em mês X |
+
+## 8. Aprovações
+
+| Papel | Pessoa | Data |
+|---|---|---|
+| Tech lead do produto | … | … |
+| Arquiteto da plataforma | … | … |
+| Product owner | … | … |
+```
+
+---
+
+*Documento gerado em 2026-05-13. v3 expande a v2 endereçando 35 pontos de decisão típicos identificados em uso real do guia para refatoração de produtos. v1 e v2 preservadas como histórico. Mudanças materiais devem ser registradas como ADRs adicionais nesta v3 ou em uma futura v4.*
