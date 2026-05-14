@@ -3,7 +3,7 @@ Tenant — raiz da multi-tenancy.
 Representa uma consultoria SAP cliente da plataforma (ex.: Cast Group, Accenture SAP).
 NAO carrega CNPJ (CNPJ e da Company).
 """
-from sqlalchemy import Boolean, Column, DateTime, JSON, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, JSON, String
 from sqlalchemy.orm import relationship
 
 from core.database import Base
@@ -18,9 +18,9 @@ class Tenant(Base, UUIDMixin, TimestampMixin):
     plan_slug = Column(String(50), nullable=False, default="trial")
 
     # Limites e features
-    max_users = Column(nullable=False, default=5)
-    max_proposals_per_month = Column(nullable=False, default=50)
-    max_storage_gb = Column(nullable=False, default=1)
+    max_users = Column(Integer, nullable=False, default=5)
+    max_proposals_per_month = Column(Integer, nullable=False, default=50)
+    max_storage_gb = Column(Integer, nullable=False, default=1)
     features = Column(JSON, default=dict)
 
     # Branding
