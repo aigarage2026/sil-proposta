@@ -1,0 +1,79 @@
+version: "3.9"
+
+networks:
+  sap-proposal-network:
+    driver: bridge
+
+volumes:
+  sap_proposal_pgdata:
+  sap_proposal_redisdata:
+  sap_proposal_documents:
+
+services:
+  postgres-sap-proposal:
+    image: postgres:16-alpine
+    networks: [sap-proposal-network]
+    volumes: [sap_proposal_pgdata:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_DB: sap_proposal
+      POSTGRES_USER: sap_proposal
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sap_proposal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-sap-proposal:
+    image: redis:7-alpine
+    networks: [sap-proposal-network]
+    volumes: [sap_proposal_redisdata:/data]
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  migration:
+    build:
+      context: ../backend
+      dockerfile: ../deployment/backend.Dockerfile
+    networks: [sap-proposal-network]
+    command: alembic upgrade head
+    depends_on:
+      postgres-sap-proposal:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sap_proposal:${POSTGRES_PASSWORD:-secret}@postgres-sap-proposal:5432/sap_proposal
+
+  backend-sap-proposal:
+    build:
+      context: ../backend
+      dockerfile: ../deployment/backend.Dockerfile
+    networks: [sap-proposal-network]
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sap_proposal:${POSTGRES_PASSWORD:-secret}@postgres-sap-proposal:5432/sap_proposal
+      REDIS_URL: redis://redis-sap-proposal:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      AGENT_HUB_API_URL: ${AGENT_HUB_API_URL:-https://app.ai-garage.com.br}
+      AGENT_HUB_API_KEY: ${AGENT_HUB_API_KEY:-}
+      STORAGE_BASE_PATH: /data/sap_proposal
+      DEBUG: "false"
+    volumes:
+      - sap_proposal_documents:/data/sap_proposal
+    restart: unless-stopped
+
+  frontend-sap-proposal:
+    build:
+      context: ../frontend
+      dockerfile: ../deployment/frontend.Dockerfile
+    networks: [sap-proposal-network]
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend-sap-proposal
+    restart: unless-stopped

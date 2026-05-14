@@ -22,27 +22,15 @@ def get_client():
 # ══════════════════════════════════════
 _memory_store: List[Dict] = []
 
-def _embed_text(text: str) -> List[float]:
-    """Gera embedding via Claude (simplificado — usa hash como proxy para testes)"""
-    # Em produção: usar text-embedding-3-small da OpenAI ou Voyage AI
-    # Por ora: vetor hash determinístico para testes sem custo
-    import hashlib, struct
-    h = hashlib.sha256(text.encode()).digest()
-    vec = []
-    for i in range(0, min(len(h), 64), 4):
-        val = struct.unpack('>f', h[i:i+4])[0]
-        if not (val != val):  # nan check
-            vec.append(max(-1.0, min(1.0, val / 1e38)))
-    while len(vec) < 16:
-        vec.append(0.0)
-    return vec[:16]
-
-def _cosine(a: List[float], b: List[float]) -> float:
-    dot = sum(x*y for x,y in zip(a,b))
-    na  = sum(x*x for x in a) ** .5
-    nb  = sum(x*x for x in b) ** .5
-    if na == 0 or nb == 0: return 0.0
-    return dot / (na * nb)
+def _keyword_score(query: str, text: str) -> float:
+    """Busca por keywords reais — conta quantas palavras da query aparecem no texto."""
+    import re
+    query_words = set(re.findall(r'[a-záàâãéèêíïóôõúüç]{3,}', query.lower()))
+    text_lower = text.lower()
+    if not query_words:
+        return 0.0
+    matches = sum(1 for w in query_words if w in text_lower)
+    return matches / max(len(query_words), 1)
 
 # ══════════════════════════════════════
 # DOCUMENTOS DE CONHECIMENTO BASE
@@ -299,26 +287,26 @@ def index_knowledge_base():
     global _memory_store
     _memory_store = []
     for doc in SAP_KNOWLEDGE_BASE:
-        text    = f"{doc['title']}\n\n{doc['content']}"
-        vec     = _embed_text(text)
-        _memory_store.append({**doc, "embedding": vec, "indexed_at": datetime.utcnow().isoformat()})
+        text = f"{doc['title']}\n\n{doc['content']}"
+        _memory_store.append({**doc, "full_text": text, "indexed_at": datetime.utcnow().isoformat()})
     return len(_memory_store)
 
 # ══════════════════════════════════════
 # BUSCA
 # ══════════════════════════════════════
 def search(query: str, top_k: int = 4, category: Optional[str] = None) -> List[Dict]:
-    """Busca semântica na base de conhecimento"""
+    """Busca por keywords reais na base de conhecimento — só retorna docs relevantes."""
     if not _memory_store:
         index_knowledge_base()
 
-    q_vec   = _embed_text(query)
     results = []
     for doc in _memory_store:
         if category and doc.get("category") != category:
             continue
-        score = _cosine(q_vec, doc["embedding"])
-        results.append({**doc, "score": score})
+        text = doc.get("full_text", f"{doc.get('title','')}\n{doc.get('content','')}")
+        score = _keyword_score(query, text)
+        if score > 0.05:  # mínimo 5% de match para evitar docs irrelevantes
+            results.append({**doc, "score": score})
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:top_k]
@@ -338,8 +326,10 @@ def get_context_for_agent(agent_type: str, intake_text: str) -> str:
     k = 5 if agent_type in ("FISCAL_FEDERAL", "REFORMA") else 3
     results = search(intake_text, top_k=k, category=cat)
 
+    # NÃO fazer fallback sem categoria — retornar vazio se não houver match
+    # Isso evita contaminação de docs irrelevantes (ex: ECONF em proposta de estoque)
     if not results:
-        results = search(intake_text, top_k=k)
+        return ""
 
     context = "\n\n---\n\n".join(
         f"[{r['source']} | {r['title']}]\n{r['content']}"

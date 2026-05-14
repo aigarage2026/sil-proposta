@@ -3,7 +3,7 @@ Sil-Proposta — Backend FastAPI v3
 Banco de dados real (SQLite local / PostgreSQL producao)
 """
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 sys.path.insert(0, os.path.dirname(__file__))
 from database import init_db, get_db
 from demo_engine import gerar_proposta_demo
-from agents.orchestrator import Orchestrator
+from agents.orchestrator_v5 import OrchestratorV5 as Orchestrator, _get_billing_records
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -98,6 +98,9 @@ async def upload_rfp(file: UploadFile = File(...)):
 
 @app.post("/api/generate")
 async def generate(payload: IntakePayload, db=Depends(get_db)):
+    # ── LIMPAR estado global — ZERO contaminação entre propostas ──
+    pass  # v5 limpa internamente
+
     engine, api_key = _get_engine()
     result = None
 
@@ -115,6 +118,26 @@ async def generate(payload: IntakePayload, db=Depends(get_db)):
     if result is None:
         print(f"[generate] Usando demo engine")
         result = gerar_proposta_demo(payload)
+
+    # ── Recalcular valor com taxas dos profissionais cadastrados ──
+    try:
+        taxas = await db.get_taxa_por_frente()
+        if taxas:
+            recursos = result.get("wp_resources", [])
+            valor_calc = 0
+            for r in recursos:
+                frente = r.get("frente", "")
+                nivel = r.get("nivel", "Senior")
+                horas = r.get("dias", 0) * 8
+                taxa = taxas.get(f"{frente}_{nivel}", taxas.get(frente, 230))
+                r["taxa_hora"] = taxa
+                r["valor"] = round(horas * taxa)
+                valor_calc += r["valor"]
+            if valor_calc > 0:
+                result["dam"]["comercial"]["valor_referencia"] = valor_calc
+                result["dam"]["comercial"]["tarifa_hora"] = round(valor_calc / max(1, result.get("total_hours", 1)))
+    except Exception as ex:
+        print(f"[generate] Erro ao aplicar taxas: {ex}")
 
     pid = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
@@ -154,11 +177,47 @@ async def generate(payload: IntakePayload, db=Depends(get_db)):
     result["client_name"] = client_name
     result["proposal_number"] = prop_number
     result["saved_to_db"] = True
+
+    # ── Salvar billing usage ──
+    try:
+        billing_records = _get_billing_records()
+        if billing_records:
+            pricing = await db.get_llm_price(billing_records[0].get("model_name", ""))
+            price_input = pricing.get("price_input", 0) if pricing else 0
+            price_output = pricing.get("price_output", 0) if pricing else 0
+            price_cached = pricing.get("price_cached", 0) if pricing else 0
+            for rec in billing_records:
+                ti = rec.get("tokens_input", 0)
+                to = rec.get("tokens_output", 0)
+                tc = rec.get("tokens_cached", 0)
+                ci = round(ti * price_input / 1_000_000, 6)
+                co = round(to * price_output / 1_000_000, 6)
+                cc = round(tc * price_cached / 1_000_000, 6)
+                await db.save_billing_usage({
+                    "id": str(uuid.uuid4()),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "proposal_id": pid,
+                    "model_name": rec.get("model_name", ""),
+                    "agent_name": rec.get("agent_name", ""),
+                    "tokens_input": ti,
+                    "tokens_output": to,
+                    "tokens_cached": tc,
+                    "cost_input": ci,
+                    "cost_output": co,
+                    "cost_cached": cc,
+                    "cost_total": round(ci + co + cc, 6),
+                })
+    except Exception as ex:
+        print(f"[billing] Erro: {ex}")
+
     return result
 
 @app.post("/api/generate/stream")
 async def generate_stream(payload: IntakePayload, db=Depends(get_db)):
     async def stream():
+        # ── LIMPAR estado global — ZERO contaminação ──
+        pass  # v5 limpa internamente
+
         engine, api_key = _get_engine()
         result = None
 
@@ -228,6 +287,39 @@ async def generate_stream(payload: IntakePayload, db=Depends(get_db)):
         result["client_name"] = client_name
         result["proposal_number"] = prop_number
         result["saved_to_db"] = True
+
+        # ── Salvar billing usage (stream) ──
+        try:
+            billing_records = _get_billing_records()
+            if billing_records:
+                pricing = await db.get_llm_price(billing_records[0].get("model_name", ""))
+                price_input = pricing.get("price_input", 0) if pricing else 0
+                price_output = pricing.get("price_output", 0) if pricing else 0
+                price_cached = pricing.get("price_cached", 0) if pricing else 0
+                for rec in billing_records:
+                    ti = rec.get("tokens_input", 0)
+                    to_ = rec.get("tokens_output", 0)
+                    tc = rec.get("tokens_cached", 0)
+                    ci = round(ti * price_input / 1_000_000, 6)
+                    co = round(to_ * price_output / 1_000_000, 6)
+                    cc = round(tc * price_cached / 1_000_000, 6)
+                    await db.save_billing_usage({
+                        "id": str(uuid.uuid4()),
+                        "created_at": datetime.utcnow().isoformat(),
+                        "proposal_id": pid,
+                        "model_name": rec.get("model_name", ""),
+                        "agent_name": rec.get("agent_name", ""),
+                        "tokens_input": ti,
+                        "tokens_output": to_,
+                        "tokens_cached": tc,
+                        "cost_input": ci,
+                        "cost_output": co,
+                        "cost_cached": cc,
+                        "cost_total": round(ci + co + cc, 6),
+                    })
+        except Exception as ex:
+            print(f"[billing-stream] Erro: {ex}")
+
         yield f"data: {json.dumps({'type':'complete','result':result}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream",
@@ -337,6 +429,127 @@ async def dashboard(db=Depends(get_db)):
     return stats
 
 # ════════════════════════════════════════════════════════
+# CLIENTES
+# ════════════════════════════════════════════════════════
+@app.get("/api/clientes")
+async def list_clientes(db=Depends(get_db)):
+    items = await db.list_clientes()
+    return {"clientes": items, "total": len(items)}
+
+@app.post("/api/clientes")
+async def save_cliente(data: dict, db=Depends(get_db)):
+    cid = data.get("id") or str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    record = {
+        "id": cid,
+        "created_at": data.get("created_at", now),
+        "updated_at": now,
+        "nome": data.get("nome", ""),
+        "cnpj": data.get("cnpj", ""),
+        "razao_social": data.get("razao_social", ""),
+        "contato_nome": data.get("contato_nome", ""),
+        "contato_email": data.get("contato_email", ""),
+        "contato_fone": data.get("contato_fone", ""),
+        "endereco": data.get("endereco", ""),
+        "cidade": data.get("cidade", ""),
+        "uf": data.get("uf", ""),
+        "sap_version": data.get("sap_version", ""),
+        "observacoes": data.get("observacoes", ""),
+    }
+    ok = await db.save_cliente(record)
+    return {"ok": ok, "id": cid}
+
+@app.delete("/api/clientes/{cid}")
+async def delete_cliente(cid: str, db=Depends(get_db)):
+    ok = await db.delete_cliente(cid)
+    if not ok:
+        raise HTTPException(404, "Cliente não encontrado")
+    return {"ok": True}
+
+# ════════════════════════════════════════════════════════
+# PROFISSIONAIS
+# ════════════════════════════════════════════════════════
+@app.get("/api/profissionais")
+async def list_profissionais(db=Depends(get_db)):
+    items = await db.list_profissionais()
+    return {"profissionais": items, "total": len(items)}
+
+@app.post("/api/profissionais")
+async def save_profissional(data: dict, db=Depends(get_db)):
+    pid = data.get("id") or str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    record = {
+        "id": pid,
+        "created_at": data.get("created_at", now),
+        "updated_at": now,
+        "nome": data.get("nome", ""),
+        "frente": data.get("frente", "SD"),
+        "nivel": data.get("nivel", "Senior"),
+        "taxa_hora": float(data.get("taxa_hora", 230)),
+        "email": data.get("email", ""),
+        "disponivel": 1 if data.get("disponivel", True) else 0,
+        "observacoes": data.get("observacoes", ""),
+    }
+    ok = await db.save_profissional(record)
+    return {"ok": ok, "id": pid}
+
+@app.delete("/api/profissionais/{pid}")
+async def delete_profissional(pid: str, db=Depends(get_db)):
+    ok = await db.delete_profissional(pid)
+    if not ok:
+        raise HTTPException(404, "Profissional não encontrado")
+    return {"ok": True}
+
+@app.get("/api/profissionais/taxas")
+async def get_taxas(db=Depends(get_db)):
+    """Retorna taxas por frente/nível para uso no cálculo."""
+    taxas = await db.get_taxa_por_frente()
+    return {"taxas": taxas}
+
+# ════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════
+# BILLING — LLM Pricing + Usage
+# ════════════════════════════════════════════════════════
+@app.get("/api/billing/pricing")
+async def list_llm_pricing(db=Depends(get_db)):
+    items = await db.list_llm_pricing()
+    return {"pricing": items, "total": len(items)}
+
+@app.post("/api/billing/pricing")
+async def save_llm_pricing(data: dict, db=Depends(get_db)):
+    pid = data.get("id") or str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    record = {
+        "id": pid,
+        "created_at": data.get("created_at", now),
+        "updated_at": now,
+        "model_name": data.get("model_name", ""),
+        "provider": data.get("provider", "OpenAI"),
+        "price_input": float(data.get("price_input", 0)),
+        "price_cached": float(data.get("price_cached", 0)),
+        "price_output": float(data.get("price_output", 0)),
+        "ativo": 1 if data.get("ativo", True) else 0,
+    }
+    ok = await db.save_llm_pricing(record)
+    return {"ok": ok, "id": pid}
+
+@app.delete("/api/billing/pricing/{pid}")
+async def delete_llm_pricing(pid: str, db=Depends(get_db)):
+    ok = await db.delete_llm_pricing(pid)
+    if not ok:
+        raise HTTPException(404, "LLM não encontrada")
+    return {"ok": True}
+
+@app.get("/api/billing/usage")
+async def list_billing_usage(db=Depends(get_db)):
+    items = await db.list_billing_usage(limit=200)
+    return {"usage": items, "total": len(items)}
+
+@app.get("/api/billing/summary")
+async def get_billing_summary(db=Depends(get_db)):
+    summary = await db.get_billing_summary()
+    return {"summary": summary}
+
 # LEGISLAÇÃO
 # ════════════════════════════════════════════════════════
 @app.get("/api/legislacao")

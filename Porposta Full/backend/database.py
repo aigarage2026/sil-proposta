@@ -63,6 +63,89 @@ async def init_db():
             except:
                 pass
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS clientes (
+                id            TEXT PRIMARY KEY,
+                created_at    TEXT NOT NULL,
+                updated_at    TEXT NOT NULL,
+                nome          TEXT NOT NULL,
+                cnpj          TEXT,
+                razao_social  TEXT,
+                contato_nome  TEXT,
+                contato_email TEXT,
+                contato_fone  TEXT,
+                endereco      TEXT,
+                cidade        TEXT,
+                uf            TEXT,
+                sap_version   TEXT,
+                observacoes   TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS profissionais (
+                id            TEXT PRIMARY KEY,
+                created_at    TEXT NOT NULL,
+                updated_at    TEXT NOT NULL,
+                nome          TEXT NOT NULL,
+                frente        TEXT NOT NULL,
+                nivel         TEXT NOT NULL DEFAULT 'Senior',
+                taxa_hora     REAL NOT NULL DEFAULT 230,
+                email         TEXT,
+                disponivel    INTEGER DEFAULT 1,
+                observacoes   TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS llm_pricing (
+                id            TEXT PRIMARY KEY,
+                created_at    TEXT NOT NULL,
+                updated_at    TEXT NOT NULL,
+                model_name    TEXT NOT NULL,
+                provider      TEXT NOT NULL DEFAULT 'OpenAI',
+                price_input   REAL NOT NULL DEFAULT 0,
+                price_cached  REAL NOT NULL DEFAULT 0,
+                price_output  REAL NOT NULL DEFAULT 0,
+                ativo         INTEGER DEFAULT 1
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS billing_usage (
+                id            TEXT PRIMARY KEY,
+                created_at    TEXT NOT NULL,
+                proposal_id   TEXT,
+                model_name    TEXT NOT NULL,
+                agent_name    TEXT,
+                tokens_input  INTEGER DEFAULT 0,
+                tokens_output INTEGER DEFAULT 0,
+                tokens_cached INTEGER DEFAULT 0,
+                cost_input    REAL DEFAULT 0,
+                cost_output   REAL DEFAULT 0,
+                cost_cached   REAL DEFAULT 0,
+                cost_total    REAL DEFAULT 0
+            )
+        """)
+        # Seed LLM pricing data
+        for model_data in [
+            ("gpt-4o", "OpenAI", 2.50, 1.25, 10.00),
+            ("gpt-4o-mini", "OpenAI", 0.15, 0.075, 0.60),
+            ("gpt-4.1", "OpenAI", 2.00, 0.50, 8.00),
+            ("gpt-4.1-mini", "OpenAI", 0.40, 0.10, 1.60),
+            ("gpt-4.1-nano", "OpenAI", 0.10, 0.025, 0.40),
+            ("o3", "OpenAI", 2.00, 0.50, 8.00),
+            ("o3-pro", "OpenAI", 20.00, 10.00, 80.00),
+            ("o4-mini", "OpenAI", 1.10, 0.275, 4.40),
+            ("claude-sonnet-4", "Anthropic", 3.00, 1.50, 15.00),
+            ("claude-opus-4", "Anthropic", 15.00, 7.50, 75.00),
+            ("claude-haiku-3.5", "Anthropic", 0.80, 0.40, 4.00),
+        ]:
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO llm_pricing (id, created_at, updated_at, model_name, provider, price_input, price_cached, price_output, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)",
+                    (model_data[0], datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), model_data[0], model_data[1], model_data[2], model_data[3], model_data[4])
+                )
+            except:
+                pass
+        conn.commit()
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS legislacao (
                 id TEXT PRIMARY KEY,
                 created_at TEXT NOT NULL,
@@ -126,6 +209,22 @@ async def init_db():
                 await conn.execute(col_sql)
             except:
                 pass
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS clientes (
+                id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                nome TEXT NOT NULL, cnpj TEXT, razao_social TEXT,
+                contato_nome TEXT, contato_email TEXT, contato_fone TEXT,
+                endereco TEXT, cidade TEXT, uf TEXT, sap_version TEXT, observacoes TEXT
+            )
+        """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS profissionais (
+                id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                nome TEXT NOT NULL, frente TEXT NOT NULL, nivel TEXT NOT NULL DEFAULT 'Senior',
+                taxa_hora FLOAT NOT NULL DEFAULT 230, email TEXT,
+                disponivel BOOLEAN DEFAULT TRUE, observacoes TEXT
+            )
+        """)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS legislacao (
                 id TEXT PRIMARY KEY,
@@ -494,6 +593,274 @@ class ProposalDB:
                 except:
                     pass
         return d
+
+    # ══════════════════════════════════════
+    # CLIENTES
+    # ══════════════════════════════════════
+    async def save_cliente(self, data: dict):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                cols = list(data.keys())
+                vals = list(data.values())
+                placeholders = ",".join(["?"] * len(cols))
+                conn.execute(f"INSERT OR REPLACE INTO clientes ({','.join(cols)}) VALUES ({placeholders})", vals)
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                print(f"save_cliente error: {e}")
+                return False
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                cols = list(data.keys())
+                vals = list(data.values())
+                placeholders = ",".join([f"${i+1}" for i in range(len(cols))])
+                await conn.execute(f"INSERT INTO clientes ({','.join(cols)}) VALUES ({placeholders}) ON CONFLICT (id) DO UPDATE SET {','.join(f'{c}=${i+1}' for i,c in enumerate(cols))}", *vals)
+                await conn.close()
+                return True
+            except Exception as e:
+                print(f"save_cliente error: {e}")
+                return False
+
+    async def list_clientes(self):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT * FROM clientes ORDER BY nome").fetchall()
+                conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                rows = await conn.fetch("SELECT * FROM clientes ORDER BY nome")
+                await conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+
+    async def delete_cliente(self, cid):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                c = conn.execute("DELETE FROM clientes WHERE id=?", (cid,))
+                conn.commit()
+                conn.close()
+                return c.rowcount > 0
+            except:
+                return False
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                r = await conn.execute("DELETE FROM clientes WHERE id=$1", cid)
+                await conn.close()
+                return int(r.split()[-1]) > 0
+            except:
+                return False
+
+    # ══════════════════════════════════════
+    # PROFISSIONAIS
+    # ══════════════════════════════════════
+    async def save_profissional(self, data: dict):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                cols = list(data.keys())
+                vals = list(data.values())
+                placeholders = ",".join(["?"] * len(cols))
+                conn.execute(f"INSERT OR REPLACE INTO profissionais ({','.join(cols)}) VALUES ({placeholders})", vals)
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                print(f"save_profissional error: {e}")
+                return False
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                cols = list(data.keys())
+                vals = list(data.values())
+                placeholders = ",".join([f"${i+1}" for i in range(len(cols))])
+                await conn.execute(f"INSERT INTO profissionais ({','.join(cols)}) VALUES ({placeholders}) ON CONFLICT (id) DO UPDATE SET {','.join(f'{c}=${i+1}' for i,c in enumerate(cols))}", *vals)
+                await conn.close()
+                return True
+            except Exception as e:
+                print(f"save_profissional error: {e}")
+                return False
+
+    async def list_profissionais(self):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT * FROM profissionais ORDER BY frente, nome").fetchall()
+                conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                rows = await conn.fetch("SELECT * FROM profissionais ORDER BY frente, nome")
+                await conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+
+    async def delete_profissional(self, pid):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                c = conn.execute("DELETE FROM profissionais WHERE id=?", (pid,))
+                conn.commit()
+                conn.close()
+                return c.rowcount > 0
+            except:
+                return False
+        else:
+            import asyncpg
+            try:
+                conn = await asyncpg.connect(DATABASE_URL)
+                r = await conn.execute("DELETE FROM profissionais WHERE id=$1", pid)
+                await conn.close()
+                return int(r.split()[-1]) > 0
+            except:
+                return False
+
+    async def get_taxa_por_frente(self):
+        """Retorna dict {frente_nivel: taxa_hora} para uso no cálculo da proposta."""
+        profs = await self.list_profissionais()
+        taxas = {}
+        for p in profs:
+            key = f"{p['frente']}_{p['nivel']}"
+            taxas[key] = p.get("taxa_hora", 230)
+            # Também guardar por frente apenas (fallback)
+            if p['frente'] not in taxas:
+                taxas[p['frente']] = p.get("taxa_hora", 230)
+        return taxas
+
+    # ══════════════════════════════════════
+    # LLM PRICING
+    # ══════════════════════════════════════
+    async def save_llm_pricing(self, data: dict):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                cols = list(data.keys())
+                vals = list(data.values())
+                conn.execute(f"INSERT OR REPLACE INTO llm_pricing ({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})", vals)
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                print(f"save_llm_pricing error: {e}")
+                return False
+        return False
+
+    async def list_llm_pricing(self):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT * FROM llm_pricing ORDER BY provider, model_name").fetchall()
+                conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+        return []
+
+    async def delete_llm_pricing(self, pid):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                c = conn.execute("DELETE FROM llm_pricing WHERE id=?", (pid,))
+                conn.commit()
+                conn.close()
+                return c.rowcount > 0
+            except:
+                return False
+        return False
+
+    async def get_llm_price(self, model_name):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                row = conn.execute("SELECT * FROM llm_pricing WHERE model_name=? AND ativo=1", (model_name,)).fetchone()
+                conn.close()
+                return dict(row) if row else None
+            except:
+                return None
+        return None
+
+    # ══════════════════════════════════════
+    # BILLING USAGE
+    # ══════════════════════════════════════
+    async def save_billing_usage(self, data: dict):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                cols = list(data.keys())
+                vals = list(data.values())
+                conn.execute(f"INSERT INTO billing_usage ({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})", vals)
+                conn.commit()
+                conn.close()
+                return True
+            except Exception as e:
+                print(f"save_billing_usage error: {e}")
+                return False
+        return False
+
+    async def list_billing_usage(self, limit=100):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT * FROM billing_usage ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+                conn.close()
+                return [dict(r) for r in rows]
+            except:
+                return []
+        return []
+
+    async def get_billing_summary(self):
+        if DB_BACKEND == "sqlite":
+            try:
+                conn = sqlite3.connect(SQLITE_PATH)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("""
+                    SELECT model_name,
+                           COUNT(*) as total_calls,
+                           COUNT(DISTINCT proposal_id) as total_proposals,
+                           SUM(tokens_input) as total_tokens_input,
+                           SUM(tokens_output) as total_tokens_output,
+                           SUM(tokens_cached) as total_tokens_cached,
+                           SUM(cost_total) as total_cost,
+                           AVG(cost_total) as avg_cost_per_call
+                    FROM billing_usage
+                    GROUP BY model_name
+                """).fetchall()
+                conn.close()
+                summary = [dict(r) for r in rows]
+                # Calcular custo médio por proposta
+                for s in summary:
+                    n_props = s.get("total_proposals", 1) or 1
+                    s["avg_cost_per_proposal"] = round(s.get("total_cost", 0) / n_props, 4)
+                return summary
+            except:
+                return []
+        return []
 
 
 # Dependency injection

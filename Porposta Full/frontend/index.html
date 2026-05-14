@@ -277,6 +277,22 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
     <span data-i18n="nav_legislacao">Legislação</span>
   </div>
 
+  <div class="sb-sec">Cadastros</div>
+  <div class="sb-item" id="sb-billing" onclick="showPage('billing')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6h12M5 9h2M5 11h4"/></svg>
+    <span>Billing</span>
+  </div>
+
+  <div class="sb-sec">Cadastros</div>
+  <div class="sb-item" id="sb-clientes" onclick="showPage('clientes')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><path d="M11 14v-1a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v1"/><circle cx="6.5" cy="5" r="2.5"/><path d="M15 14v-1a2.5 2.5 0 0 0-2-2.45"/><path d="M10.5 2.55a2.5 2.5 0 0 1 0 4.9"/></svg>
+    <span>Clientes</span>
+  </div>
+  <div class="sb-item" id="sb-profissionais" onclick="showPage('profissionais')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+    <span>Profissionais</span>
+  </div>
+
   <div class="sb-sec" data-i18n="sb_system">Sistema</div>
   <div class="sb-item" onclick="showPage('settings')">
     <svg width="14" height="14" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/></svg>
@@ -512,6 +528,53 @@ table.wp tr:last-child td{font-weight:700;color:var(--text);background:var(--bg3
       <div id="leg-federal"></div>
     </div>
   </div>
+</div>
+
+<!-- BILLING -->
+<div id="pg-billing" class="page">
+  <div style="margin-bottom:20px">
+    <div class="ph-title">Billing — Consumo de LLM</div>
+    <div class="ph-desc">Tokens, custos e preço médio por proposta. Gerencie os preços das LLMs utilizadas.</div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div id="billing-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px"></div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn-pri" onclick="showBillingTab('usage')" id="bt-usage">Consumo</button>
+    <button class="btn-outline" onclick="showBillingTab('pricing')" id="bt-pricing">Preços LLMs</button>
+  </div>
+
+  <!-- Usage Table -->
+  <div id="billing-usage"></div>
+
+  <!-- Pricing Config (hidden by default) -->
+  <div id="billing-pricing" style="display:none"></div>
+</div>
+
+<!-- CADASTRO CLIENTES -->
+<div id="pg-clientes" class="page">
+  <div style="margin-bottom:20px">
+    <div class="ph-title">Cadastro de Clientes</div>
+    <div class="ph-desc">Gerencie os clientes para preencher automaticamente nas propostas.</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn-pri" onclick="addCliente()">+ Novo Cliente</button>
+  </div>
+  <div id="clientes-list"></div>
+</div>
+
+<!-- CADASTRO PROFISSIONAIS -->
+<div id="pg-profissionais" class="page">
+  <div style="margin-bottom:20px">
+    <div class="ph-title">Cadastro de Profissionais</div>
+    <div class="ph-desc">Cadastre consultores com taxa/hora por frente. As taxas serão usadas no cálculo das propostas.</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button class="btn-pri" onclick="addProfissional()">+ Novo Profissional</button>
+  </div>
+  <div id="profissionais-list"></div>
 </div>
 
 <!-- SETTINGS -->
@@ -906,12 +969,15 @@ function showPage(page) {
   const sbEl = document.getElementById('sb-' + page);
   if (sbEl) sbEl.classList.add('active');
 
-  if (page === 'intake')    resetForm();
-  if (page === 'proposals') loadProposals();
-  if (page === 'analytics') loadAnalytics();
-  if (page === 'settings')  renderSettings();
-  if (page === 'dashboard') loadDashboard();
-  if (page === 'legislacao') loadLegislacao();
+  if (page === 'intake')        resetForm();
+  if (page === 'proposals')     loadProposals();
+  if (page === 'analytics')     loadAnalytics();
+  if (page === 'settings')      renderSettings();
+  if (page === 'dashboard')     loadDashboard();
+  if (page === 'legislacao')    loadLegislacao();
+  if (page === 'billing')       loadBilling();
+  if (page === 'clientes')      loadClientes();
+  if (page === 'profissionais') loadProfissionais();
   if (page === 'viz') {
     vizRenderGrid();
     if (currentResult && !vizRunning) setTimeout(vizStart, 300);
@@ -1173,33 +1239,32 @@ function renderDraft(result) {
 
   // Body
   const body = document.getElementById('draft-body');
-  const valor = formatCurrency(dam.comercial?.valor_referencia || 0);
-  const equipe = (dam.equipe || result.wp_resources || []).map(r=>`<strong>${r.frente}</strong> ${r.dias}d`).join(' · ');
-  const totalH = result.total_hours || 0;
+  // Calcular horas sempre dos recursos reais — nunca confiar no total do backend
+  const _resources = dam.equipe || result.wp_resources || [];
+  const totalH = _resources.reduce((s,r) => s + (r.dias||0) * 8, 0) || result.total_hours || 0;
+  const equipe = _resources.map(r=>`<strong>${r.frente}</strong> ${r.dias}d`).join(' · ');
+  // Recalcular valor com horas reais
+  const tarifa = dam.comercial?.tarifa_hora || 230;
+  const valorCalc = totalH * tarifa;
+  const valorBackend = dam.comercial?.valor_referencia || 0;
+  const valor = formatCurrency(valorBackend || valorCalc);
   const needsCPI = dam.plano?.needs_cpi;
 
-  // Fluxo por processo
-  const fluxoMap = {
-    MM: 'Requisição → Cotação (ME41) → Pedido (ME21) → Recebimento (MIGO) → Fatura (MIRO) → Pagamento (F110)',
-    SD: 'Pedido de Venda (VA01) → Entrega → NF-e (VF01) → Faturamento → AR',
-    FISCAL: needsCPI ? 'FI Baixa → ABAP Z → iFlow CPI → SVRS SEFAZ → Protocolo ECC' : 'NF-e → ABAP Z → DRC → SEFAZ → Protocolo ECC',
-    MIGR: 'Assessment → Conversão → Testes → Go-Live S/4HANA',
-    PP: 'MRP → Ordem Produção → Confirmação → Custeio',
-    HR: 'Estrutura Org → Dados Mestre → Folha → FI',
-    PM: 'Notificação → Ordem Manutenção → Conclusão → CO',
-  };
-  const fluxo = fluxoMap[mainProc] || fluxoMap['FISCAL'];
+  // Fluxo dinâmico vindo do backend (sem hardcoded)
+  const fluxo = dam.fluxo_solucao || dam.plano?.fluxo || '';
+  const sistemaSAP = dam.sistema_sap || (dam.plano?.needs_cpi ? 'SAP CPI' : 'SAP standard');
 
   // Entregáveis por módulo
   const entregs = dam.entregaveis || [];
   const modsInv = [...new Set(entregs.map(e=>e.mod))];
-  const modDescs = {
-    MM:'Ciclo: requisição → cotação → pedido → MIGO → MIRO → F110',
-    SD:'Ciclo OTC: pedido → entrega → NF-e → faturamento → AR',
-    FI:'AP/AR, pagamentos automáticos, conciliação bancária',
-    ABAP: needsCPI ? 'Cadeia: BAPI Z → BAdI → RFC Z → iFlow CPI → SVRS → Monitor Z' : 'Cadeia: BAdI → RFC Z → DRC → SEFAZ → Monitor Z',
-    DRC: needsCPI ? 'SAP CPI (evento sem nota SAP nativa)' : 'SAP DRC nativo',
-  };
+  // Descrições dinâmicas: resumo do primeiro entregável do módulo nesta proposta
+  const modDescs = {};
+  modsInv.forEach(mod => {
+    const firstItem = entregs.find(e => e.mod === mod);
+    if (firstItem && firstItem.item) {
+      modDescs[mod] = firstItem.item.length > 60 ? firstItem.item.slice(0, 60) + '...' : firstItem.item;
+    }
+  });
 
   const modHtml = modsInv.map(mod => {
     const items = entregs.filter(e=>e.mod===mod);
@@ -1231,7 +1296,37 @@ function renderDraft(result) {
   // Premissas
   const prems = dam.premissas || [];
 
+  const rfpText = dam.necessidade || result.rfp_text || '';
+
   body.innerHTML = `
+    <!-- Solicitação do Cliente -->
+    ${rfpText ? `<div class="section">
+      <div class="section-header">
+        <div class="section-title">Solicitação do Cliente</div>
+        <span class="tag" style="background:#DBEAFE;color:#1E40AF">RFP</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--text2);line-height:1.7;border-left:3px solid var(--accent);white-space:pre-wrap">${rfpText}</div>
+    </div>` : ''}
+
+    <!-- Processo AS-IS / TO-BE -->
+    ${dam.processo_atual || dam.processo_futuro ? `<div class="section">
+      <div class="section-header">
+        <div class="section-title">Necessidade — Processo Atual vs. Futuro</div>
+        <span class="tag" style="background:#FEF3C7;color:#92400E">AS-IS / TO-BE</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        ${dam.processo_atual ? `<div style="background:var(--bg3);border-radius:8px;padding:12px 14px;border-left:3px solid var(--red)">
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">PROCESSO ATUAL (AS-IS)</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">${dam.processo_atual}</div>
+        </div>` : ''}
+        ${dam.processo_futuro ? `<div style="background:var(--bg3);border-radius:8px;padding:12px 14px;border-left:3px solid var(--green)">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">PROCESSO FUTURO (TO-BE)</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">${dam.processo_futuro}</div>
+        </div>` : ''}
+      </div>
+      ${dam.beneficio_esperado ? `<div style="font-size:12px;color:var(--text2);padding:8px 14px;background:var(--bg3);border-radius:8px;border-left:3px solid var(--teal)"><strong style="color:var(--teal)">Benefício esperado:</strong> ${dam.beneficio_esperado}</div>` : ''}
+    </div>` : ''}
+
     <!-- Resumo -->
     <div class="section">
       <div class="section-header">
@@ -1246,8 +1341,8 @@ function renderDraft(result) {
           <span style="background:#F5F3FF;color:#5B21B6;font-size:12px;font-weight:600;padding:3px 11px;border-radius:20px">${mainProcLabel}</span>
           ${legis.map(l=>`<span style="background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">⚠ ${l}</span>`).join('')}
         </div>
-        <div><strong>Sistema:</strong> ${needsCPI ? 'SAP CPI (ECONF sem nota SAP nativa)' : 'SAP DRC nativo'}</div>
-        <div><strong>Fluxo:</strong> ${fluxo}</div>
+        ${sistemaSAP ? '<div><strong>Sistema:</strong> ' + sistemaSAP + '</div>' : ''}
+        ${fluxo ? '<div><strong>Fluxo:</strong> ' + fluxo + '</div>' : ''}
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
           <strong>Equipe:</strong> ${equipe} · <strong>Total:</strong> ${totalH}h (${Math.round(totalH/8)} dias) · <strong style="color:var(--teal)">${valor}</strong>
         </div>
@@ -1280,6 +1375,19 @@ function renderDraft(result) {
       </div>
     </div>
 
+    <!-- Exclusões -->
+    ${(dam.exclusoes && dam.exclusoes.length) ? `<div class="section">
+      <div class="section-header">
+        <div class="section-title">Esta proposta NÃO contempla</div>
+        <span class="tag" style="background:#FEF2F2;color:#991B1B">Fora do escopo</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);background:var(--bg3);border-radius:8px;padding:12px 16px;border-left:3px solid var(--red)">
+        <ul style="padding-left:16px;line-height:1.8;margin:0">
+          ${dam.exclusoes.map(e=>'<li>'+e+'</li>').join('')}
+        </ul>
+      </div>
+    </div>` : ''}
+
     <!-- Comercial -->
     <div class="section">
       <div class="section-header">
@@ -1290,7 +1398,22 @@ function renderDraft(result) {
         ${t('commercial_model')}: <strong>${t('commercial_fixed')}</strong> · ${t('billing')}: <strong>${t('billing_terms')}</strong><br>
         ${t('warranty')}: <strong>${t('days_30')}</strong> · ${t('validity')}: <strong>${t('days_30')}</strong> · ${t('total')}: <strong>${totalH}h</strong>
       </div>
-    </div>`;
+    </div>
+
+    <!-- QA Review -->
+    ${dam.qa_score !== undefined ? `<div class="section">
+      <div class="section-header">
+        <div class="section-title">Revisão QA</div>
+        <span class="tag" style="background:${dam.qa_aprovado ? '#D1FAE5' : '#FEF2F2'};color:${dam.qa_aprovado ? '#065F46' : '#991B1B'}">
+          ${dam.qa_aprovado ? 'Aprovado' : 'Ajustes aplicados'} · Score ${dam.qa_score}/100
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7">
+        ${(dam.qa_problemas||[]).length ? '<div style="margin-bottom:8px"><strong style="color:var(--red)">Problemas identificados:</strong><ul style="padding-left:16px;margin:4px 0">' + (dam.qa_problemas||[]).map(p=>'<li>'+p+'</li>').join('') + '</ul></div>' : ''}
+        ${(dam.qa_sugestoes||[]).length ? '<div><strong style="color:var(--accent)">Sugestões:</strong><ul style="padding-left:16px;margin:4px 0">' + (dam.qa_sugestoes||[]).map(s=>'<li>'+s+'</li>').join('') + '</ul></div>' : ''}
+        ${!(dam.qa_problemas||[]).length && !(dam.qa_sugestoes||[]).length ? '<div style="color:var(--green)">Proposta aprovada sem ressalvas.</div>' : ''}
+      </div>
+    </div>` : ''}`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1341,12 +1464,15 @@ async function loadProposals() {
     // Sidebar
     const sb = document.getElementById('sidebar-proposals');
     if (sb) {
-      sb.innerHTML = proposals.slice(0, 5).map(p => `
-        <div class="sb-item" onclick="viewProposal('${p.id}')">
+      sb.innerHTML = proposals.slice(0, 5).map(p => {
+        const rfpTip = (p.rfp_text||'').replace(/"/g,'&quot;').replace(/\n/g,' ').slice(0,200);
+        return `
+        <div class="sb-item" onclick="viewProposal('${p.id}')" title="${rfpTip || 'Sem descrição'}">
           <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.client_name||'').slice(0,15) || (p.title||'').slice(0,15)} <span style="color:var(--text3);font-size:10px">${p.proposal_number||''}</span></span>
           <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     // Metrics
@@ -1899,6 +2025,372 @@ function formatLegDate(dateStr) {
   } catch(e) { return dateStr; }
 }
 
+// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// BILLING
+// ════════════════════════════════════════════════════════
+function showBillingTab(tab) {
+  document.getElementById('billing-usage').style.display = tab === 'usage' ? '' : 'none';
+  document.getElementById('billing-pricing').style.display = tab === 'pricing' ? '' : 'none';
+  document.getElementById('bt-usage').className = tab === 'usage' ? 'btn-pri' : 'btn-outline';
+  document.getElementById('bt-pricing').className = tab === 'pricing' ? 'btn-pri' : 'btn-outline';
+  if (tab === 'pricing') loadBillingPricing();
+}
+
+async function loadBilling() {
+  // Summary
+  try {
+    const r = await fetch(API + '/api/billing/summary');
+    const d = await r.json();
+    const items = d.summary || [];
+    const el = document.getElementById('billing-summary');
+    if (!items.length) {
+      el.innerHTML = '<div style="grid-column:span 4;color:var(--text3);font-size:12px;padding:20px;text-align:center;background:var(--bg3);border-radius:8px">Nenhum consumo registrado ainda. Gere uma proposta para começar.</div>';
+    } else {
+      const totalCost = items.reduce((s, i) => s + (i.total_cost || 0), 0);
+      const totalTokens = items.reduce((s, i) => s + (i.total_tokens_input || 0) + (i.total_tokens_output || 0), 0);
+      const totalProps = items.reduce((s, i) => s + (i.total_proposals || 0), 0);
+      const avgPerProp = totalProps ? totalCost / totalProps : 0;
+
+      el.innerHTML = `
+        <div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--teal)">US$ ${totalCost.toFixed(4)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Custo total</div></div>
+        <div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--text)">${totalTokens.toLocaleString()}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Total tokens</div></div>
+        <div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--accent)">${totalProps}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Propostas geradas</div></div>
+        <div class="metric-card"><div style="font-size:22px;font-weight:700;color:var(--amber)">US$ ${avgPerProp.toFixed(4)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Custo médio/proposta</div></div>
+      `;
+
+      // Per-model breakdown
+      el.innerHTML += items.map(i => `
+        <div style="background:var(--bg3);border-radius:10px;padding:14px;border:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">${i.model_name}</div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.8">
+            <div>Chamadas: <strong>${i.total_calls}</strong></div>
+            <div>Propostas: <strong>${i.total_proposals}</strong></div>
+            <div>Input: <strong>${(i.total_tokens_input||0).toLocaleString()}</strong> tokens</div>
+            <div>Output: <strong>${(i.total_tokens_output||0).toLocaleString()}</strong> tokens</div>
+            <div>Custo: <strong style="color:var(--teal)">US$ ${(i.total_cost||0).toFixed(4)}</strong></div>
+            <div>Média/proposta: <strong style="color:var(--amber)">US$ ${(i.avg_cost_per_proposal||0).toFixed(4)}</strong></div>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch(ex) {
+    document.getElementById('billing-summary').innerHTML = '<div style="color:var(--red);font-size:11px">Erro: ' + ex.message + '</div>';
+  }
+
+  // Usage table
+  try {
+    const r = await fetch(API + '/api/billing/usage');
+    const d = await r.json();
+    const items = d.usage || [];
+    const el = document.getElementById('billing-usage');
+    if (!items.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;background:var(--bg3);border-radius:8px">Nenhum registro de uso</div>';
+      return;
+    }
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:11px">'
+      + '<tr style="background:var(--bg3);font-weight:700;color:var(--text)"><td style="padding:6px 10px">Data</td><td>Modelo</td><td>Agente</td><td style="text-align:right">Input</td><td style="text-align:right">Output</td><td style="text-align:right">Cached</td><td style="text-align:right">Custo (US$)</td></tr>'
+      + items.slice(0, 50).map(u => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:5px 10px;color:var(--text3)">${(u.created_at||'').slice(0,16)}</td>
+        <td><span style="background:var(--accent-bg);color:var(--accent);font-size:10px;padding:1px 6px;border-radius:8px">${u.model_name||''}</span></td>
+        <td style="color:var(--text)">${u.agent_name||''}</td>
+        <td style="text-align:right;color:var(--text3)">${(u.tokens_input||0).toLocaleString()}</td>
+        <td style="text-align:right;color:var(--text3)">${(u.tokens_output||0).toLocaleString()}</td>
+        <td style="text-align:right;color:var(--text3)">${(u.tokens_cached||0).toLocaleString()}</td>
+        <td style="text-align:right;font-weight:600;color:var(--teal)">${(u.cost_total||0).toFixed(6)}</td>
+      </tr>`).join('')
+      + '</table>';
+  } catch(ex) {}
+}
+
+async function loadBillingPricing() {
+  const el = document.getElementById('billing-pricing');
+  try {
+    const r = await fetch(API + '/api/billing/pricing');
+    const d = await r.json();
+    const items = d.pricing || [];
+
+    el.innerHTML = '<div style="display:flex;gap:8px;margin-bottom:12px"><button class="btn-pri" onclick="addLLMPricing()">+ Nova LLM</button></div>';
+
+    if (!items.length) {
+      el.innerHTML += '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;background:var(--bg3);border-radius:8px">Nenhuma LLM cadastrada. Adicione para calcular custos.</div>';
+      return;
+    }
+    el.innerHTML += '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<tr style="background:var(--bg3);font-weight:700;color:var(--text)"><td style="padding:8px 12px">Modelo</td><td>Provider</td><td style="text-align:right">Input (US$/1M)</td><td style="text-align:right">Cached (US$/1M)</td><td style="text-align:right">Output (US$/1M)</td><td>Ativo</td><td style="width:80px;text-align:center">Ações</td></tr>'
+      + items.map(p => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 12px;font-weight:600;color:var(--text)">${p.model_name||''}</td>
+        <td style="color:var(--text3)">${p.provider||''}</td>
+        <td style="text-align:right;color:var(--teal)">$${(p.price_input||0).toFixed(2)}</td>
+        <td style="text-align:right;color:var(--amber)">$${(p.price_cached||0).toFixed(2)}</td>
+        <td style="text-align:right;color:var(--accent)">$${(p.price_output||0).toFixed(2)}</td>
+        <td>${p.ativo ? '<span style="color:var(--green)">Sim</span>' : '<span style="color:var(--red)">Não</span>'}</td>
+        <td style="text-align:center">
+          <button onclick="editLLMPricing(${JSON.stringify(JSON.stringify(p))})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px">Editar</button>
+          <button onclick="delLLMPricing('${p.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px">Excluir</button>
+        </td>
+      </tr>`).join('')
+      + '</table>';
+  } catch(ex) {
+    el.innerHTML = '<div style="color:var(--red);font-size:11px">Erro: ' + ex.message + '</div>';
+  }
+}
+
+function addLLMPricing(existing) {
+  const p = existing || {};
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;max-width:460px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">${p.id ? 'Editar' : 'Nova'} LLM</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><div class="fl">Modelo</div><input type="text" id="llm-model" value="${p.model_name||''}" placeholder="gpt-4o"></div>
+      <div class="field"><div class="fl">Provider</div><input type="text" id="llm-provider" value="${p.provider||'OpenAI'}" placeholder="OpenAI"></div>
+      <div class="field"><div class="fl">Input (US$ / 1M tokens)</div><input type="number" id="llm-input" value="${p.price_input||0}" step="0.01" min="0"></div>
+      <div class="field"><div class="fl">Cached Input (US$ / 1M)</div><input type="number" id="llm-cached" value="${p.price_cached||0}" step="0.01" min="0"></div>
+      <div class="field"><div class="fl">Output (US$ / 1M tokens)</div><input type="number" id="llm-output" value="${p.price_output||0}" step="0.01" min="0"></div>
+      <div class="field"><div class="fl">Ativo</div><select id="llm-ativo" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)">
+        <option value="1" ${p.ativo!==0?'selected':''}>Sim</option>
+        <option value="0" ${p.ativo===0?'selected':''}>Não</option>
+      </select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="btn-outline" onclick="this.closest('div[style]').remove()">Cancelar</button>
+      <button class="btn-pri" onclick="saveLLMPricing('${p.id||''}')">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function editLLMPricing(jsonStr) { addLLMPricing(JSON.parse(jsonStr)); }
+
+async function saveLLMPricing(existingId) {
+  const data = {
+    model_name: document.getElementById('llm-model').value,
+    provider: document.getElementById('llm-provider').value,
+    price_input: parseFloat(document.getElementById('llm-input').value) || 0,
+    price_cached: parseFloat(document.getElementById('llm-cached').value) || 0,
+    price_output: parseFloat(document.getElementById('llm-output').value) || 0,
+    ativo: document.getElementById('llm-ativo').value === '1',
+  };
+  if (!data.model_name) { toast('Informe o modelo', 'error'); return; }
+  if (existingId) data.id = existingId;
+  try {
+    await fetch(API + '/api/billing/pricing', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    document.querySelector('div[style*="position:fixed"]')?.remove();
+    toast('LLM salva!', 'success');
+    loadBillingPricing();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+async function delLLMPricing(id) {
+  if (!confirm('Excluir esta LLM?')) return;
+  try {
+    await fetch(API + '/api/billing/pricing/' + id, {method:'DELETE'});
+    toast('LLM excluída', 'success');
+    loadBillingPricing();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// CADASTRO CLIENTES
+// ════════════════════════════════════════════════════════
+async function loadClientes() {
+  const el = document.getElementById('clientes-list');
+  if (!el) return;
+  try {
+    const r = await fetch(API + '/api/clientes');
+    const d = await r.json();
+    const items = d.clientes || [];
+    if (!items.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;background:var(--bg3);border-radius:8px">Nenhum cliente cadastrado</div>';
+      return;
+    }
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<tr style="background:var(--bg3);font-weight:700;color:var(--text)"><td style="padding:8px 12px">Nome</td><td>CNPJ</td><td>Contato</td><td>UF</td><td>SAP</td><td style="width:80px;text-align:center">Ações</td></tr>'
+      + items.map(c => `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px 12px;font-weight:600;color:var(--text)">${c.nome||''}</td>
+        <td style="color:var(--text3)">${c.cnpj||''}</td>
+        <td style="color:var(--text3)">${c.contato_nome||''} ${c.contato_email ? '· '+c.contato_email : ''}</td>
+        <td>${c.uf||''}</td>
+        <td style="color:var(--accent)">${c.sap_version||''}</td>
+        <td style="text-align:center">
+          <button onclick="editCliente(${JSON.stringify(JSON.stringify(c))})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px 6px">Editar</button>
+          <button onclick="delCliente('${c.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px 6px">Excluir</button>
+        </td>
+      </tr>`).join('')
+      + '</table>';
+  } catch(ex) {
+    el.innerHTML = '<div style="color:var(--red);font-size:11px">Erro: ' + ex.message + '</div>';
+  }
+}
+
+function addCliente(existing) {
+  const c = existing || {};
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;max-width:520px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">${c.id ? 'Editar' : 'Novo'} Cliente</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="grid-column:span 2"><div class="fl">Nome / Razão Social</div><input type="text" id="cl-nome" value="${c.nome||''}" placeholder="Nome da empresa"></div>
+      <div class="field"><div class="fl">CNPJ</div><input type="text" id="cl-cnpj" value="${c.cnpj||''}" placeholder="00.000.000/0000-00"></div>
+      <div class="field"><div class="fl">UF</div><input type="text" id="cl-uf" value="${c.uf||''}" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
+      <div class="field"><div class="fl">Cidade</div><input type="text" id="cl-cidade" value="${c.cidade||''}"></div>
+      <div class="field"><div class="fl">Versão SAP</div><select id="cl-sap" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)">
+        <option value="">Selecione</option>
+        <option value="ecc604" ${c.sap_version==='ecc604'?'selected':''}>ECC ≤ 6.04</option>
+        <option value="ecc605" ${c.sap_version==='ecc605'?'selected':''}>ECC 6.05+</option>
+        <option value="s4op" ${c.sap_version==='s4op'?'selected':''}>S/4HANA On-premise</option>
+        <option value="s4cloud" ${c.sap_version==='s4cloud'?'selected':''}>S/4HANA Cloud</option>
+      </select></div>
+      <div class="field"><div class="fl">Contato</div><input type="text" id="cl-contato" value="${c.contato_nome||''}"></div>
+      <div class="field"><div class="fl">Email</div><input type="email" id="cl-email" value="${c.contato_email||''}"></div>
+      <div class="field"><div class="fl">Telefone</div><input type="text" id="cl-fone" value="${c.contato_fone||''}"></div>
+      <div class="field" style="grid-column:span 2"><div class="fl">Observações</div><textarea id="cl-obs" rows="2">${c.observacoes||''}</textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="btn-outline" onclick="this.closest('div[style]').remove()">Cancelar</button>
+      <button class="btn-pri" onclick="saveCliente('${c.id||''}')">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function editCliente(jsonStr) { addCliente(JSON.parse(jsonStr)); }
+
+async function saveCliente(existingId) {
+  const data = {
+    nome: document.getElementById('cl-nome').value,
+    cnpj: document.getElementById('cl-cnpj').value,
+    uf: document.getElementById('cl-uf').value.toUpperCase(),
+    cidade: document.getElementById('cl-cidade').value,
+    sap_version: document.getElementById('cl-sap').value,
+    contato_nome: document.getElementById('cl-contato').value,
+    contato_email: document.getElementById('cl-email').value,
+    contato_fone: document.getElementById('cl-fone').value,
+    observacoes: document.getElementById('cl-obs').value,
+  };
+  if (!data.nome) { toast('Informe o nome do cliente', 'error'); return; }
+  if (existingId) data.id = existingId;
+  try {
+    await fetch(API + '/api/clientes', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    document.querySelector('div[style*="position:fixed"]')?.remove();
+    toast('Cliente salvo!', 'success');
+    loadClientes();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+async function delCliente(id) {
+  if (!confirm('Excluir este cliente?')) return;
+  try {
+    await fetch(API + '/api/clientes/' + id, {method:'DELETE'});
+    toast('Cliente excluído', 'success');
+    loadClientes();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// CADASTRO PROFISSIONAIS
+// ════════════════════════════════════════════════════════
+async function loadProfissionais() {
+  const el = document.getElementById('profissionais-list');
+  if (!el) return;
+  try {
+    const r = await fetch(API + '/api/profissionais');
+    const d = await r.json();
+    const items = d.profissionais || [];
+    if (!items.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:20px;text-align:center;background:var(--bg3);border-radius:8px">Nenhum profissional cadastrado</div>';
+      return;
+    }
+    el.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<tr style="background:var(--bg3);font-weight:700;color:var(--text)"><td style="padding:8px 12px">Nome</td><td>Frente</td><td>Nível</td><td>Taxa/h</td><td>Disponível</td><td style="width:80px;text-align:center">Ações</td></tr>'
+      + items.map(p => {
+        const color = {SD:'#3B7BF8',FI:'#0D9488',MM:'#7C3AED',ABAP:'#D97706',PP:'#DC2626',PM:'#B45309',HR:'#F472B6',CO:'#0D9488',QM:'#059669',WM:'#2563EB',GP:'#818CF8',BASIS:'#475569',DRC:'#22D3EE',CPI:'#22D3EE'}[p.frente] || '#94A3B8';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;font-weight:600;color:var(--text)">${p.nome||''}</td>
+          <td><span style="background:${color}18;color:${color};font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px">${p.frente||''}</span></td>
+          <td style="color:var(--text3)">${p.nivel||''}</td>
+          <td style="font-weight:700;color:var(--teal)">R$ ${(p.taxa_hora||0).toFixed(2)}/h</td>
+          <td>${p.disponivel ? '<span style="color:var(--green)">Sim</span>' : '<span style="color:var(--red)">Não</span>'}</td>
+          <td style="text-align:center">
+            <button onclick="editProf(${JSON.stringify(JSON.stringify(p))})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px 6px">Editar</button>
+            <button onclick="delProf('${p.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;padding:2px 6px">Excluir</button>
+          </td>
+        </tr>`;
+      }).join('')
+      + '</table>';
+  } catch(ex) {
+    el.innerHTML = '<div style="color:var(--red);font-size:11px">Erro: ' + ex.message + '</div>';
+  }
+}
+
+function addProfissional(existing) {
+  const p = existing || {};
+  const frentes = ['SD','FI','MM','CO','PP','PM','HR','QM','WM','ABAP','DRC','CPI','BASIS','GP'];
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px 28px;max-width:460px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">${p.id ? 'Editar' : 'Novo'} Profissional</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="grid-column:span 2"><div class="fl">Nome</div><input type="text" id="pf-nome" value="${p.nome||''}" placeholder="Nome completo"></div>
+      <div class="field"><div class="fl">Frente / Módulo</div><select id="pf-frente" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)">
+        ${frentes.map(f => `<option value="${f}" ${p.frente===f?'selected':''}>${f}</option>`).join('')}
+      </select></div>
+      <div class="field"><div class="fl">Nível</div><select id="pf-nivel" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)">
+        <option value="Senior" ${p.nivel==='Senior'?'selected':''}>Senior</option>
+        <option value="Pleno" ${p.nivel==='Pleno'?'selected':''}>Pleno</option>
+        <option value="Junior" ${p.nivel==='Junior'?'selected':''}>Junior</option>
+      </select></div>
+      <div class="field"><div class="fl">Taxa / Hora (R$)</div><input type="number" id="pf-taxa" value="${p.taxa_hora||230}" min="50" step="10" placeholder="230"></div>
+      <div class="field"><div class="fl">Email</div><input type="email" id="pf-email" value="${p.email||''}"></div>
+      <div class="field"><div class="fl">Disponível</div><select id="pf-disp" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);background:var(--bg3);color:var(--text)">
+        <option value="1" ${p.disponivel!==0?'selected':''}>Sim</option>
+        <option value="0" ${p.disponivel===0?'selected':''}>Não</option>
+      </select></div>
+      <div class="field" style="grid-column:span 2"><div class="fl">Observações</div><textarea id="pf-obs" rows="2">${p.observacoes||''}</textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="btn-outline" onclick="this.closest('div[style]').remove()">Cancelar</button>
+      <button class="btn-pri" onclick="saveProf('${p.id||''}')">Salvar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function editProf(jsonStr) { addProfissional(JSON.parse(jsonStr)); }
+
+async function saveProf(existingId) {
+  const data = {
+    nome: document.getElementById('pf-nome').value,
+    frente: document.getElementById('pf-frente').value,
+    nivel: document.getElementById('pf-nivel').value,
+    taxa_hora: parseFloat(document.getElementById('pf-taxa').value) || 230,
+    email: document.getElementById('pf-email').value,
+    disponivel: document.getElementById('pf-disp').value === '1',
+    observacoes: document.getElementById('pf-obs').value,
+  };
+  if (!data.nome) { toast('Informe o nome', 'error'); return; }
+  if (existingId) data.id = existingId;
+  try {
+    await fetch(API + '/api/profissionais', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    document.querySelector('div[style*="position:fixed"]')?.remove();
+    toast('Profissional salvo!', 'success');
+    loadProfissionais();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+async function delProf(id) {
+  if (!confirm('Excluir este profissional?')) return;
+  try {
+    await fetch(API + '/api/profissionais/' + id, {method:'DELETE'});
+    toast('Profissional excluído', 'success');
+    loadProfissionais();
+  } catch(ex) { toast('Erro: ' + ex.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════
+// LEGISLAÇÃO
+// ════════════════════════════════════════════════════════
 async function loadLegislacao() {
   const types = ['municipal','estadual','federal'];
   try {
@@ -2620,118 +3112,146 @@ function getDetailKey(frente) {
   if (f.startsWith('FISCAL') || f.startsWith('FEST') || f.startsWith('FFED')) return 'FISCAL';
   if (f.startsWith('DRC') || f.startsWith('CPI'))  return 'DRC';
   if (f.startsWith('COMER'))  return 'GP';
-  if (f.startsWith('MIGR'))   return 'BASIS'; // migração usa detalhes Basis
+  if (f.startsWith('MIGR'))   return 'BASIS';
+  if (f.startsWith('ADDON') || f.startsWith('SOFICOM') || f.startsWith('MASTERSAF')) return 'FI'; // add-ons fiscais usam detalhes FI
   return f;
 }
 
 function showDetail(frente, idx) {
   const key = getDetailKey(frente);
-  // Se é ABAP 1/2/3, usa ABAP
-  let data = DETAIL_DATA[key] || DETAIL_DATA[frente];
-  if (!data && (frente.includes('ABAP'))) data = DETAIL_DATA['ABAP'];
-  if (!data) {
-    toast('Detalhamento para ' + frente + ' em construção', 'info');
-    return;
-  }
+  // Dados visuais do módulo (ícone, cor, label, transações de referência)
+  let ref = DETAIL_DATA[key] || DETAIL_DATA[frente];
+  if (!ref && frente.includes('ABAP')) ref = DETAIL_DATA['ABAP'];
+  const icon = ref ? ref.icon : '📋';
+  const color = ref ? ref.color : '#94A3B8';
+  const label = ref ? ref.label : frente;
+  const txns = ref ? ref.transactions || [] : [];
 
-  const isAbap = key === 'ABAP';
-  const abapNum = frente.match(/\d+/);
-  const subtitle = isAbap && abapNum
-    ? 'ABAPer #' + abapNum[0] + ' — Desenvolvimento paralelo'
-    : frente + ' · Senior';
+  // ── ENTREGÁVEIS REAIS da proposta atual (não estáticos!) ──
+  const dam = currentResult?.dam || {};
+  const allEntregs = dam.entregaveis || [];
+  const frenteUp = frente.toUpperCase();
+  // Filtrar entregáveis que pertencem a esta frente — busca ampla
+  const realEntregs = allEntregs.filter(e => {
+    if (!e || !e.mod) return false;
+    const eMod = (e.mod || '').toUpperCase().trim();
+    if (eMod === frenteUp) return true;
+    if (frenteUp.startsWith('ABAP') && (eMod === 'ABAP' || eMod.startsWith('ABAP'))) return true;
+    if (frenteUp.startsWith('FISCAL') && (eMod === 'FISCAL' || eMod.startsWith('FISCAL'))) return true;
+    if (frenteUp.startsWith('DRC') && (eMod === 'DRC' || eMod === 'CPI')) return true;
+    if (frenteUp.startsWith('ADDON') && (eMod === 'ADDON' || eMod === 'SOFICOM')) return true;
+    if (frenteUp.startsWith('BASIS') && (eMod === 'BASIS' || eMod === 'BASIS')) return true;
+    return false;
+  });
+  console.log('[showDetail]', frente, '→', realEntregs.length, 'entregáveis de', allEntregs.length, 'total');
 
-  // Build modal HTML
+  // Transações SAP da proposta (se disponíveis)
+  const realTxns = dam.transacoes_sap || [];
+  const recurso = (dam.equipe||[]).find(r => r.frente && r.frente.toUpperCase() === frenteUp);
+  const subtitle = frente + ' · ' + (recurso ? recurso.nivel : 'Senior');
+
+  // Build modal
   let html = '<div class="detail-overlay" onclick="if(event.target===this)closeDetail()">';
   html += '<div class="detail-modal">';
   html += '<div class="detail-hdr">';
   html += '<div class="detail-hdr-left">';
-  html += '<div class="detail-icon" style="background:' + data.color + '">' + data.icon + '</div>';
-  html += '<div><div class="detail-title">' + data.label + '</div>';
+  html += '<div class="detail-icon" style="background:' + color + '">' + icon + '</div>';
+  html += '<div><div class="detail-title">' + label + '</div>';
   html += '<div class="detail-sub">' + subtitle + '</div></div></div>';
   html += '<button class="detail-close" onclick="closeDetail()">×</button>';
   html += '</div>';
   html += '<div class="detail-body">';
 
-  // Transactions
-  html += '<div class="detail-sect">';
-  html += '<div class="detail-sect-title">' + t('detail_transactions') + ' <span class="dtag" style="background:' + data.color + '22;color:' + data.color + '">' + data.transactions.length + '</span></div>';
-  html += '<div class="txn-grid">';
-  data.transactions.forEach(t => {
-    html += '<div class="txn-card"><div class="txn-code">' + t.code + '</div><div class="txn-desc">' + t.desc + '</div></div>';
-  });
-  html += '</div></div>';
-
-  // Activities
-  function renderActList(acts) {
-    let h = '<ul class="act-list">';
-    acts.forEach((a, i) => {
-      const isObj = typeof a === 'object';
-      const title = isObj ? a.title : a;
-      const details = isObj ? a.details : null;
-      h += '<li>';
-      if (details) {
-        const uid = 'act-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2,6);
-        h += '<div class="act-item-hdr" onclick="toggleActDetail(\'' + uid + '\',this)">';
-        h += '<span class="act-arrow">▸</span>';
-        h += '<span class="act-item-title">' + title + '</span></div>';
-        h += '<div class="act-details" id="' + uid + '">' + details.replace(/Transação:/g,'<strong>Transação:</strong>').replace(/Parâmetros:/g,'<strong>Parâmetros:</strong>').replace(/Como fazer:/g,'<strong>Como fazer:</strong>').replace(/Ferramenta:/g,'<strong>Ferramenta:</strong>').replace(/Objeto:/g,'<strong>Objeto:</strong>').replace(/Objetos:/g,'<strong>Objetos:</strong>').replace(/Artefatos:/g,'<strong>Artefatos:</strong>').replace(/Referência:/g,'<strong>Referência:</strong>') + '</div>';
-      } else {
-        h += '<div class="act-item-hdr" style="cursor:default"><span class="act-arrow">▸</span><span class="act-item-title">' + title + '</span></div>';
-      }
-      h += '</li>';
-    });
-    h += '</ul>';
-    return h;
+  // Transações de referência do módulo
+  if (txns.length) {
+    html += '<div class="detail-sect">';
+    html += '<div class="detail-sect-title">' + t('detail_transactions') + ' <span class="dtag" style="background:' + color + '22;color:' + color + '">' + txns.length + '</span></div>';
+    html += '<div class="txn-grid">';
+    for (let ti = 0; ti < txns.length; ti++) {
+      html += '<div class="txn-card"><div class="txn-code">' + txns[ti].code + '</div><div class="txn-desc">' + txns[ti].desc + '</div></div>';
+    }
+    html += '</div></div>';
   }
 
-  // Check for ABAP parallel distribution
-  if (isAbap && data.abapParallel) {
-    const abapNum = frente.match(/\d+/);
-    const showNum = abapNum ? parseInt(abapNum[0]) : null;
-
-    if (showNum && data.abapParallel[showNum]) {
-      // Show specific ABAPer
-      const ap = data.abapParallel[showNum];
-      html += '<div class="detail-sect">';
-      html += '<div class="detail-sect-title">' + t('detail_activities') + ' — ' + ap.role + ' <span class="dtag" style="background:#D9770622;color:#D97706">' + ap.activities.length + '</span></div>';
-      html += renderActList(ap.activities);
+  // Atividades = entregáveis REAIS desta proposta
+  if (realEntregs.length) {
+    html += '<div class="detail-sect">';
+    html += '<div class="detail-sect-title">Atividades detalhadas <span class="dtag" style="background:' + color + '22;color:' + color + '">' + realEntregs.length + '</span></div>';
+    html += '<ul class="act-list">';
+    realEntregs.forEach((e, i) => {
+      const item = typeof e === 'string' ? e : (e.item || '');
+      const horas = e.horas || '';
+      const fase = e.fase || '';
+      const tipo = e.tipo || '';
+      const comoFazer = e.como_fazer || '';
+      const parametros = e.parametros || '';
+      const transacoesArr = e.transacoes || [];
+      const exemploCodigo = e.exemplo_codigo || '';
+      const uid = 'det-' + Date.now() + '-' + i;
+      const hasDetail = horas || fase || tipo || comoFazer || exemploCodigo;
+      html += '<li>';
+      if (hasDetail) {
+        html += '<div class="act-item-hdr" onclick="toggleActDetail(\'' + uid + '\',this)">';
+      } else {
+        html += '<div class="act-item-hdr" style="cursor:default">';
+      }
+      html += '<span class="act-arrow" style="color:' + color + '">▸</span>';
+      html += '<span class="act-item-title" style="flex:1">' + item + '</span>';
+      if (horas) html += '<span style="font-size:10px;color:var(--text3);margin-left:8px;white-space:nowrap">' + horas + 'h</span>';
       html += '</div>';
-    } else {
-      // Show all ABAPers
-      Object.keys(data.abapParallel).forEach(num => {
-        const ap = data.abapParallel[num];
-        html += '<div class="abap-parallel-sect">';
-        html += '<div class="abap-parallel-title"><span class="abap-parallel-badge">' + t('detail_parallel') + '</span> ' + ap.role + '</div>';
-        html += renderActList(ap.activities);
+      if (hasDetail) {
+        html += '<div class="act-details" id="' + uid + '">';
+        html += '<div style="padding:10px 0 8px 24px;font-size:12px;color:var(--text2);line-height:1.7">';
+
+        // Metadados
+        html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;padding:8px;background:var(--bg3);border-radius:6px">';
+        if (horas) html += '<span style="font-size:11px"><strong>⏱ Horas:</strong> ' + horas + 'h (' + Math.ceil(horas/8) + 'd)</span>';
+        if (fase) html += '<span style="font-size:11px"><strong>📅 Fase:</strong> ' + fase + '</span>';
+        if (tipo) html += '<span style="font-size:11px"><strong>🔧 Tipo:</strong> ' + tipo + '</span>';
+        if (transacoesArr.length) html += '<span style="font-size:11px"><strong>📋 Transações:</strong> ' + transacoesArr.join(', ') + '</span>';
         html += '</div>';
-      });
+
+        // Como fazer — passos detalhados
+        if (comoFazer) {
+          html += '<div style="margin-bottom:10px"><strong style="color:' + color + ';font-size:12px">📖 Como fazer:</strong>';
+          html += '<div style="white-space:pre-wrap;padding:8px 12px;background:var(--bg3);border-left:3px solid ' + color + ';border-radius:4px;margin-top:4px;font-size:12px;line-height:1.8">' + comoFazer + '</div></div>';
+        }
+
+        // Parâmetros
+        if (parametros) {
+          html += '<div style="margin-bottom:10px"><strong style="color:' + color + ';font-size:12px">⚙️ Parâmetros:</strong>';
+          html += '<div style="padding:8px 12px;background:var(--bg3);border-radius:4px;margin-top:4px;font-size:11px;font-family:var(--mono,monospace)">' + parametros + '</div></div>';
+        }
+
+        // Código ABAP
+        if (exemploCodigo) {
+          html += '<div><strong style="color:' + color + ';font-size:12px">💻 Código ABAP:</strong>';
+          html += '<pre style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:6px;margin-top:4px;font-size:11px;overflow-x:auto;font-family:Consolas,Monaco,monospace;line-height:1.5">' + exemploCodigo.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre></div>';
+        }
+
+        html += '</div></div>';
+      }
+      html += '</li>';
+    });
+    html += '</ul></div>';
+
+    // Total de horas desta frente
+    const totalFrH = realEntregs.reduce((s, e) => s + (e.horas || 0), 0);
+    if (totalFrH) {
+      html += '<div style="padding:10px 16px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);display:flex;justify-content:space-between">';
+      html += '<span>Total desta frente</span><strong style="color:' + color + '">' + totalFrH + 'h (' + Math.ceil(totalFrH/8) + ' dias)</strong>';
+      html += '</div>';
     }
   } else {
-    html += '<div class="detail-sect">';
-    html += '<div class="detail-sect-title">' + t('detail_activities') + ' <span class="dtag" style="background:' + data.color + '22;color:' + data.color + '">' + data.activities.length + '</span></div>';
-    html += renderActList(data.activities);
-    html += '</div>';
-  }
-
-  // ABAP Code
-  if (isAbap && data.codeExamples) {
-    html += '<div class="detail-sect">';
-    html += '<div class="detail-sect-title">' + t('detail_code') + ' <span class="dtag" style="background:#D9770622;color:#D97706">' + data.codeExamples.length + '</span></div>';
-    data.codeExamples.forEach(ex => {
-      html += '<div style="margin-bottom:14px">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">' + ex.title + '</div>';
-      html += '<div class="code-block"><span class="code-lang">' + ex.lang + '</span>' + ex.code + '</div>';
-      html += '</div>';
-    });
+    html += '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;background:var(--bg3);border-radius:8px">';
+    html += 'Nenhum entregável específico para esta frente nesta proposta.';
     html += '</div>';
   }
 
   html += '</div></div></div>';
 
-  // Remove existing
   const old = document.querySelector('.detail-overlay');
   if (old) old.remove();
-
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -2767,12 +3287,15 @@ window.addEventListener('load', () => {
   fetch(API + '/api/proposals').then(r=>r.json()).then(d=>{
     const sb = document.getElementById('sidebar-proposals');
     if (!sb || !d.proposals?.length) return;
-    sb.innerHTML = d.proposals.slice(0,5).map(p=>`
-      <div class="sb-item" onclick="viewProposal('${p.id}')">
+    sb.innerHTML = d.proposals.slice(0,5).map(p=>{
+      const rfpTip = (p.rfp_text||'').replace(/"/g,'&quot;').replace(/\n/g,' ').slice(0,200);
+      return `
+      <div class="sb-item" onclick="viewProposal('${p.id}')" title="${rfpTip || 'Sem descrição'}">
         <svg width="13" height="13" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5"><path d="M13 8A5 5 0 1 1 3 8"/><polyline points="3 4 3 8 7 8"/></svg>
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(p.client_name||'').slice(0,15) || (p.title||'').slice(0,15)} <span style="color:var(--text3);font-size:10px">${p.proposal_number||''}</span></span>
         <div class="sb-dot ${p.status==='approved'?'':'pending'}"></div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }).catch(()=>{});
 });
 
