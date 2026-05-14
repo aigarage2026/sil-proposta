@@ -21,6 +21,10 @@ dependencies = [
     # Auth
     "pyjwt>=2.8.0",
     "passlib[bcrypt]>=1.7.0",
+    # Pin bcrypt < 4.1 — passlib 1.7.x crashes during backend init with
+    # bcrypt 4.1+ (`ValueError: password cannot be longer than 72 bytes`)
+    # because of the 73-byte detect_wrap_bug() probe.
+    "bcrypt<4.1",
     # Rate limiting
     "slowapi>=0.1.9",
     # Logging
