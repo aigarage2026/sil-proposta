@@ -51,6 +51,10 @@ desktop.ini
 *.pem
 *.key
 
+# Local-only docker compose overrides (per-developer port mappings, etc.)
+docker-compose.override.yml
+docker-compose.override.*.yml
+
 # Runtime data
 *.db
 *.sqlite
