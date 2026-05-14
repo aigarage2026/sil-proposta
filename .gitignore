@@ -67,3 +67,7 @@ logs/
 
 # Misc artifacts
 git
+
+# Windows download metadata (Mark of the Web)
+*:Zone.Identifier
+*Zone.Identifier
