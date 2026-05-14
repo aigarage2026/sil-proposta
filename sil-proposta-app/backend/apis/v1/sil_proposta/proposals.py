@@ -10,13 +10,13 @@ from sqlalchemy.orm import selectinload
 from core.database import get_db
 from core.security import get_current_user
 from models.user import User
-from models.sap_proposal.proposal import Proposal
-from models.sap_proposal.proposal_resource import ProposalResource
-from models.sap_proposal.proposal_deliverable import ProposalDeliverable
-from models.sap_proposal.proposal_premise import ProposalPremise
-from models.sap_proposal.proposal_legislation import ProposalLegislation
-from models.sap_proposal.proposal_dam import ProposalDam
-from models.sap_proposal.agent_execution import AgentExecution
+from models.sil_proposta.proposal import Proposal
+from models.sil_proposta.proposal_resource import ProposalResource
+from models.sil_proposta.proposal_deliverable import ProposalDeliverable
+from models.sil_proposta.proposal_premise import ProposalPremise
+from models.sil_proposta.proposal_legislation import ProposalLegislation
+from models.sil_proposta.proposal_dam import ProposalDam
+from models.sil_proposta.agent_execution import AgentExecution
 from schemas.intake import IntakePayload
 from schemas.proposal import (
     ProposalDetail,
@@ -130,7 +130,7 @@ async def create_proposal(
     db: AsyncSession = Depends(get_db),
 ):
     """Criar proposta e disparar geracao com agentes IA."""
-    from services.sap_proposal.generation_service import generate_proposal
+    from services.sil_proposta.generation_service import generate_proposal
 
     result = await generate_proposal(
         db=db,
@@ -199,7 +199,7 @@ async def export_dam(
     db: AsyncSession = Depends(get_db),
 ):
     """Download DAM como Word."""
-    from services.sap_proposal.export_service import generate_dam_document
+    from services.sil_proposta.export_service import generate_dam_document
 
     result = await db.execute(
         select(Proposal)

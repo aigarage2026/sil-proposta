@@ -1,5 +1,5 @@
 """Agente ABAP Estrutural (Axel Braga)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente ABAP Estrutural. REGRAS OBRIGATORIAS:
 - Hardware externo (maquininha/TEF/POS) -> BAPI Z como primeiro entregavel

@@ -1,5 +1,5 @@
 """Agente Equipe / GP (Eduardo Gomes)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente Equipe. REGRA: 4+ ABAP independentes -> 3 ABAPers paralelos. GP se projeto >3 semanas.
 Retorne JSON:

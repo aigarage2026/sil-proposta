@@ -1,5 +1,5 @@
 """Agente Comercial (Camila Oliveira)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente Comercial. Padrao Cast Group: valor fechado, 50%/50%, garantia 30d, validade 30d.
 Retorne JSON:

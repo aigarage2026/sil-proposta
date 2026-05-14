@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
-RUN mkdir -p /data/sap_proposal
+RUN mkdir -p /data/sil_proposta
 
 EXPOSE 8000
 

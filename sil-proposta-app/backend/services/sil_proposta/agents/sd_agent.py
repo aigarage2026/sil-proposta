@@ -1,5 +1,5 @@
 """Agente SD — Sales & Distribution (Sofia Duarte)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente SAP SD. Analise o escopo e retorne JSON:
 {"entregaveis":[{"mod":"SD","item":"descricao"}],"horas":72,"premissas":["premissa1"],"observacoes":"resumo"}

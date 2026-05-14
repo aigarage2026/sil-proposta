@@ -79,7 +79,7 @@ async def ws_generate(websocket: WebSocket):
             })
 
         # Gerar proposta real
-        from services.sap_proposal.demo_generation_service import gerar_proposta_demo
+        from services.sil_proposta.demo_generation_service import gerar_proposta_demo
         result = gerar_proposta_demo(payload)
 
         await websocket.send_json({

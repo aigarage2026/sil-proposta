@@ -1,34 +1,34 @@
 version: "3.9"
 
 networks:
-  sap-proposal-network:
+  sil-proposta-network:
     driver: bridge
 
 volumes:
-  sap_proposal_pgdata:
-  sap_proposal_redisdata:
-  sap_proposal_documents:
+  sil_proposta_pgdata:
+  sil_proposta_redisdata:
+  sil_proposta_documents:
 
 services:
-  postgres-sap-proposal:
+  postgres-sil-proposta:
     image: postgres:16-alpine
-    networks: [sap-proposal-network]
-    volumes: [sap_proposal_pgdata:/var/lib/postgresql/data]
+    networks: [sil-proposta-network]
+    volumes: [sil_proposta_pgdata:/var/lib/postgresql/data]
     environment:
-      POSTGRES_DB: sap_proposal
-      POSTGRES_USER: sap_proposal
+      POSTGRES_DB: sil_proposta
+      POSTGRES_USER: sil_proposta
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sap_proposal"]
+      test: ["CMD-SHELL", "pg_isready -U sil_proposta"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  redis-sap-proposal:
+  redis-sil-proposta:
     image: redis:7-alpine
-    networks: [sap-proposal-network]
-    volumes: [sap_proposal_redisdata:/data]
+    networks: [sil-proposta-network]
+    volumes: [sil_proposta_redisdata:/data]
     command: redis-server --appendonly yes
     restart: unless-stopped
 
@@ -36,44 +36,44 @@ services:
     build:
       context: ../backend
       dockerfile: ../deployment/backend.Dockerfile
-    networks: [sap-proposal-network]
+    networks: [sil-proposta-network]
     command: alembic upgrade head
     depends_on:
-      postgres-sap-proposal:
+      postgres-sil-proposta:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://sap_proposal:${POSTGRES_PASSWORD:-secret}@postgres-sap-proposal:5432/sap_proposal
+      DATABASE_URL: postgresql+asyncpg://sil_proposta:${POSTGRES_PASSWORD:-secret}@postgres-sil-proposta:5432/sil_proposta
 
-  backend-sap-proposal:
+  backend-sil-proposta:
     build:
       context: ../backend
       dockerfile: ../deployment/backend.Dockerfile
-    networks: [sap-proposal-network]
+    networks: [sil-proposta-network]
     depends_on:
       migration:
         condition: service_completed_successfully
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://sap_proposal:${POSTGRES_PASSWORD:-secret}@postgres-sap-proposal:5432/sap_proposal
-      REDIS_URL: redis://redis-sap-proposal:6379/0
+      DATABASE_URL: postgresql+asyncpg://sil_proposta:${POSTGRES_PASSWORD:-secret}@postgres-sil-proposta:5432/sil_proposta
+      REDIS_URL: redis://redis-sil-proposta:6379/0
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       AGENT_HUB_API_URL: ${AGENT_HUB_API_URL:-https://app.ai-garage.com.br}
       AGENT_HUB_API_KEY: ${AGENT_HUB_API_KEY:-}
-      STORAGE_BASE_PATH: /data/sap_proposal
+      STORAGE_BASE_PATH: /data/sil_proposta
       DEBUG: "false"
     volumes:
-      - sap_proposal_documents:/data/sap_proposal
+      - sil_proposta_documents:/data/sil_proposta
     restart: unless-stopped
 
-  frontend-sap-proposal:
+  frontend-sil-proposta:
     build:
       context: ../frontend
       dockerfile: ../deployment/frontend.Dockerfile
-    networks: [sap-proposal-network]
+    networks: [sil-proposta-network]
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend-sap-proposal
+      - backend-sil-proposta
     restart: unless-stopped

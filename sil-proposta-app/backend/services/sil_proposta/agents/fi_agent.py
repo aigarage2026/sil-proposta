@@ -1,5 +1,5 @@
 """Agente FI — Financial Accounting (Felix Inacio)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente SAP FI. Retorne JSON:
 {"entregaveis":[{"mod":"FI","item":"descricao"}],"horas":88,"premissas":["premissa1"],"observacoes":"resumo"}

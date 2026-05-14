@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "sap_proposal"
+    APP_NAME: str = "sil_proposta"
     APP_NAME_HUMAN: str = "Sil-Proposta"
     VERSION: str = "1.0.0"
     DEBUG: bool = False
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     WORKERS: int = 4
 
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://sap_proposal:secret@localhost:5432/sap_proposal"
+    DATABASE_URL: str = "postgresql+asyncpg://sil_proposta:secret@localhost:5432/sil_proposta"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
 
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     AGENT_HUB_CACHE_TTL_SECONDS: int = 300
 
     # Storage
-    STORAGE_BASE_PATH: str = "/data/sap_proposal"
+    STORAGE_BASE_PATH: str = "/data/sil_proposta"
     MAX_UPLOAD_SIZE_MB: int = 25
 
     # SMTP
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM: str = "noreply@sap-proposal.ai-garage.com.br"
+    SMTP_FROM: str = "noreply@sil-proposta.ai-garage.com.br"
     SMTP_FROM_NAME: str = "Sil-Proposta"
 
     # Rate Limiting
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_CHAT: str = "10/second"
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://sap-proposal.ai-garage.com.br"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,https://sil-proposta.ai-garage.com.br"
 
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -79,7 +79,7 @@ class Settings(BaseSettings):
 
     # Qdrant (optional — MVP-2)
     QDRANT_URL: str = "http://localhost:6333"
-    QDRANT_COLLECTION_PREFIX: str = "sap_proposal"
+    QDRANT_COLLECTION_PREFIX: str = "sil_proposta"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

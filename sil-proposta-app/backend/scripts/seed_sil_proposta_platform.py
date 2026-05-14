@@ -85,7 +85,7 @@ async def seed():
         db.add(company)
 
         # Knowledge docs
-        from models.sap_proposal.knowledge_document import KnowledgeDocument
+        from models.sil_proposta.knowledge_document import KnowledgeDocument
         for doc in KNOWLEDGE_DOCS:
             db.add(KnowledgeDocument(
                 tenant_id=tenant.id,

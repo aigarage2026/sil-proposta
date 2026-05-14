@@ -1,5 +1,5 @@
 """Agente DRC — Document Reporting Compliance (Diana Rocha)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente DRC. REGRA CRITICA: ECONF (110750/110751) NAO tem suporte DRC nativo -> CPI obrigatorio.
 Retorne JSON:

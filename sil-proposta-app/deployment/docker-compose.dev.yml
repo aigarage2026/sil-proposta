@@ -1,23 +1,23 @@
 version: "3.9"
 
 services:
-  postgres-sap-proposal:
+  postgres-sil-proposta:
     image: postgres:16-alpine
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: sap_proposal
-      POSTGRES_USER: sap_proposal
+      POSTGRES_DB: sil_proposta
+      POSTGRES_USER: sil_proposta
       POSTGRES_PASSWORD: secret
     volumes:
       - pgdata_dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sap_proposal"]
+      test: ["CMD-SHELL", "pg_isready -U sil_proposta"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  redis-sap-proposal:
+  redis-sil-proposta:
     image: redis:7-alpine
     ports:
       - "6379:6379"

@@ -85,7 +85,7 @@ async def root():
 
 from apis.v1.auth import router as auth_router
 from apis.v1.setup import router as setup_router
-from apis.v1.sap_proposal.proposals import router as proposals_router
+from apis.v1.sil_proposta.proposals import router as proposals_router
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(setup_router, prefix="/setup", tags=["Setup"])

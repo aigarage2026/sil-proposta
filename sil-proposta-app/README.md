@@ -27,7 +27,7 @@ make dev-backend
 ## Arquitetura
 
 ```
-sap-proposal-app/
+sil-proposta-app/
 ├── backend/          # FastAPI + SQLAlchemy + Alembic
 │   ├── core/         # Config, database, security, middleware
 │   ├── models/       # SQLAlchemy models (base + dominio)

@@ -31,5 +31,5 @@ def setup_logging():
     )
 
 
-def get_logger(name: str = "sap_proposal"):
+def get_logger(name: str = "sil_proposta"):
     return structlog.get_logger(name)

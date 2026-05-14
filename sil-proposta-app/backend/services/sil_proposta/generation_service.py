@@ -10,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.logger import get_logger
-from models.sap_proposal.proposal import Proposal
-from models.sap_proposal.proposal_resource import ProposalResource
-from models.sap_proposal.proposal_deliverable import ProposalDeliverable
-from models.sap_proposal.proposal_premise import ProposalPremise
-from models.sap_proposal.proposal_legislation import ProposalLegislation
-from models.sap_proposal.proposal_dam import ProposalDam
-from models.sap_proposal.agent_execution import AgentExecution
+from models.sil_proposta.proposal import Proposal
+from models.sil_proposta.proposal_resource import ProposalResource
+from models.sil_proposta.proposal_deliverable import ProposalDeliverable
+from models.sil_proposta.proposal_premise import ProposalPremise
+from models.sil_proposta.proposal_legislation import ProposalLegislation
+from models.sil_proposta.proposal_dam import ProposalDam
+from models.sil_proposta.agent_execution import AgentExecution
 from schemas.intake import IntakePayload
 
 settings = get_settings()
@@ -153,12 +153,12 @@ async def generate_proposal(
 
 async def _generate_with_agents(payload: IntakePayload, tenant_id: str) -> dict:
     """Gera via agentes IA (Agent Hub)."""
-    from services.sap_proposal.agents.orchestrator import OrchestratorAgent
+    from services.sil_proposta.agents.orchestrator import OrchestratorAgent
     orch = OrchestratorAgent(payload, tenant_id)
     return await orch.run()
 
 
 def _generate_demo(payload: IntakePayload) -> dict:
     """Fallback: geracao deterministica sem LLM."""
-    from services.sap_proposal.demo_generation_service import gerar_proposta_demo
+    from services.sil_proposta.demo_generation_service import gerar_proposta_demo
     return gerar_proposta_demo(payload)

@@ -34,7 +34,7 @@ migration:
 	cd backend && alembic revision --autogenerate -m "$(name)"
 
 seed:
-	cd backend && python scripts/seed_sap_proposal_platform.py
+	cd backend && python scripts/seed_sil_proposta_platform.py
 
 # === Testing ===
 test:

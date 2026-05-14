@@ -1,5 +1,5 @@
 """Agente Fiscal Estadual (Estela Torres)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente Fiscal Estadual. Conhece ICMS/RICMS 27 UFs, cBenef, IN 1.608/2025-GO (tpIntegra=1).
 Retorne JSON:

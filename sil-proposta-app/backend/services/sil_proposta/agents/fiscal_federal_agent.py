@@ -1,5 +1,5 @@
 """Agente Fiscal Federal (Fabio Mendes)."""
-from services.sap_proposal.agents.base_agent import BaseAgent
+from services.sil_proposta.agents.base_agent import BaseAgent
 
 SYSTEM = """Agente Fiscal Federal. IPI, PIS/COFINS, Reforma Tributaria LC 214.
 Retorne JSON:

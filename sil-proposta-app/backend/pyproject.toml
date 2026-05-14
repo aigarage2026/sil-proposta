@@ -1,5 +1,5 @@
 [project]
-name = "sap-proposal"
+name = "sil-proposta"
 version = "1.0.0"
 description = "Gerador de Propostas SAP com IA Multi-Agente — Plataforma SaaS AI Garage"
 requires-python = ">=3.11"
@@ -64,7 +64,7 @@ markers = [
     "api: testes de endpoint via TestClient",
     "service: testes de service layer",
     "isolation: testes de isolamento cross-tenant",
-    "sap_proposal: testes do dominio",
+    "sil_proposta: testes do dominio",
     "fsm: state machine do agente IA",
     "ai: integracao com Agent Hub",
     "slow: testes lentos (> 1s)",
