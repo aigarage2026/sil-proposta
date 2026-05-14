@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   sil-proposta-network:
     driver: bridge
@@ -33,9 +31,11 @@ services:
     restart: unless-stopped
 
   migration:
+    # Build context is the app root so we can copy backend/ and (later)
+    # shared/ libraries with consistent paths.
     build:
-      context: ../backend
-      dockerfile: ../deployment/backend.Dockerfile
+      context: ..
+      dockerfile: deployment/backend.Dockerfile
     networks: [sil-proposta-network]
     command: alembic upgrade head
     depends_on:
@@ -46,8 +46,8 @@ services:
 
   backend-sil-proposta:
     build:
-      context: ../backend
-      dockerfile: ../deployment/backend.Dockerfile
+      context: ..
+      dockerfile: deployment/backend.Dockerfile
     networks: [sil-proposta-network]
     depends_on:
       migration:
@@ -68,8 +68,8 @@ services:
 
   frontend-sil-proposta:
     build:
-      context: ../frontend
-      dockerfile: ../deployment/frontend.Dockerfile
+      context: ..
+      dockerfile: deployment/frontend.Dockerfile
     networks: [sil-proposta-network]
     ports:
       - "80:80"
