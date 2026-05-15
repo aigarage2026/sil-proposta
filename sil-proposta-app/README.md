@@ -34,7 +34,7 @@ sil-proposta-app/
 │   ├── schemas/      # Pydantic schemas
 │   ├── services/     # Business logic + 10 agentes IA
 │   ├── apis/         # REST endpoints v1
-│   └── integrations/ # Agent Hub client
+│   └── integrations/ # Portal client
 ├── frontend/         # React + Vite + TypeScript (Fase 4)
 ├── deployment/       # Docker, nginx, Dockerfiles
 └── docs/             # Arquitetura e planos

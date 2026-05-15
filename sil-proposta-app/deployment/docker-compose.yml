@@ -58,8 +58,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://sil_proposta:${POSTGRES_PASSWORD:-secret}@postgres-sil-proposta:5432/sil_proposta
       REDIS_URL: redis://redis-sil-proposta:6379/0
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
-      AGENT_HUB_API_URL: ${AGENT_HUB_API_URL:-https://app.ai-garage.com.br}
-      AGENT_HUB_API_KEY: ${AGENT_HUB_API_KEY:-}
+      PORTAL_API_URL: ${PORTAL_API_URL:-https://app.ai-garage.com.br}
+      PORTAL_API_KEY: ${PORTAL_API_KEY:-}
       STORAGE_BASE_PATH: /data/sil_proposta
       DEBUG: "false"
     volumes:

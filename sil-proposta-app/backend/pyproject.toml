@@ -70,7 +70,7 @@ markers = [
     "isolation: testes de isolamento cross-tenant",
     "sil_proposta: testes do dominio",
     "fsm: state machine do agente IA",
-    "ai: integracao com Agent Hub",
+    "ai: integracao com Portal",
     "slow: testes lentos (> 1s)",
     "regression: bugs ja corrigidos",
 ]

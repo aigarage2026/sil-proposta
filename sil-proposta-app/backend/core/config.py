@@ -37,12 +37,12 @@ class Settings(BaseSettings):
     FERNET_KEY: str = ""
 
     # Agent Hub
-    AGENT_HUB_API_URL: str = "https://app.ai-garage.com.br"
-    AGENT_HUB_API_KEY: str = ""
-    AGENT_HUB_HMAC_SECRET: str = ""
-    AGENT_HUB_CIRCUIT_BREAKER_THRESHOLD: int = 5
-    AGENT_HUB_CIRCUIT_BREAKER_TIMEOUT: int = 60
-    AGENT_HUB_CACHE_TTL_SECONDS: int = 300
+    PORTAL_API_URL: str = "https://app.ai-garage.com.br"
+    PORTAL_API_KEY: str = ""
+    PORTAL_HMAC_SECRET: str = ""
+    PORTAL_CIRCUIT_BREAKER_THRESHOLD: int = 5
+    PORTAL_CIRCUIT_BREAKER_TIMEOUT: int = 60
+    PORTAL_JWKS_CACHE_TTL_SECONDS: int = 300
 
     # Storage
     STORAGE_BASE_PATH: str = "/data/sil_proposta"

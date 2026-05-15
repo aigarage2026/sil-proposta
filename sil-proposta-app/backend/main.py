@@ -1,7 +1,7 @@
 """
 Sil-Proposta SaaS — Backend FastAPI
 Gerador de Propostas SAP com IA Multi-Agente
-Plataforma AI Garage
+Portal AI Garage (Agent-Hub)
 """
 from contextlib import asynccontextmanager
 from datetime import datetime

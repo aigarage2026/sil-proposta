@@ -33,7 +33,7 @@ async def generate_proposal(
     start = time.monotonic()
 
     # Tentar LLM, fallback para demo
-    if settings.AGENT_HUB_API_KEY and not settings.SAP_DEMO_MODE_ENABLED:
+    if settings.PORTAL_API_KEY and not settings.SAP_DEMO_MODE_ENABLED:
         try:
             result = await _generate_with_agents(payload, tenant_id)
             mode = "llm"
