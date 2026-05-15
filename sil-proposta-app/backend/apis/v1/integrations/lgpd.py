@@ -32,6 +32,7 @@ from models.company import Company
 from models.sil_proposta.proposal import Proposal
 from models.tenant import Tenant
 from models.user import User
+from services.rag.service import RAGService
 
 logger = get_logger()
 
@@ -128,6 +129,18 @@ async def delete_tenant(
 
     await db.delete(tenant)
     await db.commit()
+
+    # Drop any RAG chunks owned by this tenant from the vector store too.
+    # Best-effort: a Qdrant outage must not block LGPD compliance — the
+    # SQL cascade above has already removed the canonical data.
+    try:
+        await RAGService.from_settings().purge_tenant(body.tenant_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "lgpd_rag_purge_failed",
+            tenant_id=body.tenant_id,
+            error=str(exc),
+        )
 
     logger.info(
         "lgpd_tenant_deleted",

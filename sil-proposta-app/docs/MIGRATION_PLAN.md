@@ -171,12 +171,19 @@ Onda 5:
 | 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` (não conectado ao orchestrator — depende de corpus real) |
 | 5g | Deploy: `Dockerfile.cloudrun`, Terraform skeleton (Artifact Registry + Cloud Run + SA + Secret Manager bindings), workflow `.github/workflows/deploy.yml` |
 
-**Suite:** 183 testes verdes; ruff clean.
+**Suite:** 196 testes verdes; ruff clean.
+
+**Inclui agora:**
+- `tests/isolation/test_tenant_isolation.py` (11 testes) — todas as rotas
+  auth-protected de Proposal exercitadas com 2 tenants. Endereça H6
+  (severidade *Crítico*).
+- `RAGService.purge_tenant()` chamado pelo `POST /lgpd/delete-tenant`
+  (best-effort: falha do Qdrant não bloqueia LGPD).
+- Counters Prometheus `proposals_generated_total`/`dam_documents_exported_total`/`wp_documents_exported_total`
+  incrementados nos endpoints reais — viraram observáveis.
 
 **Não conectados ainda (debt curto):**
-- `RAGService.search()` no orchestrator (depende de corpus indexado)
-- `RAGService.purge_tenant()` no endpoint LGPD (depende de coleções em uso)
-- Counters Prometheus de business metric (definidos, sem `.inc()` — `emit_usage_metric` cobre o caminho do Portal)
+- `RAGService.search()` no orchestrator (depende de corpus indexado).
 
 ---
 

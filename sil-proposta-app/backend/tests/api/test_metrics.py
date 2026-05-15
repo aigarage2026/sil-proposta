@@ -104,3 +104,32 @@ async def test_duration_histogram_records_buckets(client):
     assert "sil_proposta_http_request_duration_seconds_bucket" in r.text
     assert "sil_proposta_http_request_duration_seconds_count" in r.text
     assert "sil_proposta_http_request_duration_seconds_sum" in r.text
+
+
+# ── business counters ──────────────────────────────────────────────────────
+
+
+async def test_business_counters_advertised_in_metrics():
+    """The proposals_/dam_/wp_*_exported_total counters are declared at
+    import time. Whether or not they've been incremented, their HELP+TYPE
+    lines must appear in the exposition (so Prometheus learns about them).
+    """
+    from core import metrics as m
+    body, _ = m.render_metrics()
+    text = body.decode()
+    assert "sil_proposta_proposals_generated_total" in text
+    assert "sil_proposta_dam_documents_exported_total" in text
+    assert "sil_proposta_wp_documents_exported_total" in text
+
+
+async def test_business_counter_increments_appear_in_metrics():
+    """Calling .inc() lights the per-tenant labeled value up in the output."""
+    from core import metrics as m
+    m.proposals_generated_total.labels(tenant_id="t-bizcounter").inc()
+    m.dam_documents_exported_total.labels(tenant_id="t-bizcounter").inc()
+    m.wp_documents_exported_total.labels(tenant_id="t-bizcounter").inc()
+    body, _ = m.render_metrics()
+    text = body.decode()
+    assert 'sil_proposta_proposals_generated_total{tenant_id="t-bizcounter"} 1.0' in text
+    assert 'sil_proposta_dam_documents_exported_total{tenant_id="t-bizcounter"} 1.0' in text
+    assert 'sil_proposta_wp_documents_exported_total{tenant_id="t-bizcounter"} 1.0' in text

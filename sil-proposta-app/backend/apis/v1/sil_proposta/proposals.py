@@ -8,6 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core.database import get_db
+from core.metrics import (
+    dam_documents_exported_total,
+    proposals_generated_total,
+    wp_documents_exported_total,
+)
 from core.security import get_current_user
 from models.sil_proposta.proposal import Proposal
 from models.user import User
@@ -151,6 +156,7 @@ async def create_proposal(
         unit="count",
         metadata={"proposal_id": proposal_id} if proposal_id else None,
     )
+    proposals_generated_total.labels(tenant_id=user.tenant_id).inc()
     return result
 
 
@@ -265,6 +271,7 @@ async def export_dam(
         unit="count",
         metadata={"proposal_id": proposal_id},
     )
+    dam_documents_exported_total.labels(tenant_id=user.tenant_id).inc()
 
     return StreamingResponse(
         buf,
@@ -308,6 +315,7 @@ async def export_wp(
         unit="count",
         metadata={"proposal_id": proposal_id},
     )
+    wp_documents_exported_total.labels(tenant_id=user.tenant_id).inc()
 
     return StreamingResponse(
         buf,
