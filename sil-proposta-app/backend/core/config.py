@@ -122,9 +122,15 @@ class Settings(BaseSettings):
     SAP_AGENT_TIMEOUT_SECONDS: int = 60
     SAP_DEMO_MODE_ENABLED: bool = True
 
-    # Qdrant (optional — MVP-2)
+    # Qdrant (RAG vector store — Onda 5)
     QDRANT_URL: str = "http://localhost:6333"
     QDRANT_COLLECTION_PREFIX: str = "sil_proposta"
+    QDRANT_API_KEY: str = ""  # empty in dev; cloud Qdrant requires it
+    QDRANT_TIMEOUT_SECONDS: float = 10.0
+
+    # OpenAI embeddings (RAG ingest + query path)
+    OPENAI_EMBED_MODEL: str = "text-embedding-3-large"
+    OPENAI_EMBED_DIM: int = 3072  # 3-large default; downstream collection size
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
