@@ -75,6 +75,13 @@ dam_documents_exported_total = Counter(
     registry=registry,
 )
 
+wp_documents_exported_total = Counter(
+    f"{_slug()}_wp_documents_exported_total",
+    "WP Excel work packages exported.",
+    labelnames=("tenant_id",),
+    registry=registry,
+)
+
 
 def render_metrics() -> tuple[bytes, str]:
     """Return (body, content_type) for the /metrics endpoint."""
@@ -91,5 +98,6 @@ def reset_for_tests() -> None:
         http_request_duration_seconds,
         proposals_generated_total,
         dam_documents_exported_total,
+        wp_documents_exported_total,
     ):
         collector._metrics.clear()  # type: ignore[attr-defined]

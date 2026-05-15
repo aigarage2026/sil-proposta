@@ -271,3 +271,46 @@ async def export_dam(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
+
+
+@router.get("/{proposal_id}/export/wp")
+async def export_wp(
+    proposal_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download Work Package como Excel."""
+    from services.sil_proposta.export_service import generate_wp_workbook
+
+    result = await db.execute(
+        select(Proposal)
+        .where(Proposal.id == proposal_id, Proposal.tenant_id == user.tenant_id)
+        .options(selectinload(Proposal.resources))
+    )
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposta nao encontrada")
+
+    buf = generate_wp_workbook(proposal)
+    fname = f"WP_{proposal.title[:30].replace(' ', '_')}.xlsx"
+
+    await audit(
+        request, user,
+        action="proposal.wp_exported",
+        entity="Proposal",
+        entity_id=proposal_id,
+    )
+    await emit_usage_metric(
+        tenant_id=user.tenant_id,
+        metric="wp_documents_exported",
+        value=1,
+        unit="count",
+        metadata={"proposal_id": proposal_id},
+    )
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )

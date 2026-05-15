@@ -29,6 +29,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Inches, Pt, RGBColor
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 # ── palette ─────────────────────────────────────────────────────────────────
 
@@ -444,5 +447,309 @@ def _render(sections: dict[str, Any]) -> io.BytesIO:
     # ── serialize ──────────────────────────────────────────────────────
     buf = io.BytesIO()
     doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# WP (Excel Work Package) — Cast Group template
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Migrated from legacy/sil-proposta-monolith/backend/generators/wp.py.
+# Renders SAP Activate-aligned weekly distribution by resource, with totals
+# in days and hours and an obrigatório "KT AMS" deploy row.
+
+HORAS_DIA = 8
+SEMANAS_MAX = 6
+
+# colors
+WP_AZUL_FILL = PatternFill("solid", fgColor="1F4E79")
+WP_AZUL_CL_FILL = PatternFill("solid", fgColor="2E75B6")
+WP_CINZA_FILL = PatternFill("solid", fgColor="D9E1F2")
+WP_VERDE_FILL = PatternFill("solid", fgColor="E2EFDA")
+WP_LARANJA_FILL = PatternFill("solid", fgColor="FCE4D6")
+
+# fonts
+WP_FONT_TITLE = Font(name="Calibri", size=16, bold=True, color="1F4E79")
+WP_FONT_HEAD = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+WP_FONT_FASE = Font(name="Calibri", size=10, bold=True, color="1F4E79")
+WP_FONT_BODY = Font(name="Calibri", size=10)
+WP_FONT_TOTAL = Font(name="Calibri", size=10, bold=True)
+WP_FONT_SMALL = Font(name="Calibri", size=9, color="595959")
+WP_FONT_TOTAL_GERAL_LBL = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+WP_FONT_TOTAL_GERAL_VAL = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+WP_FONT_INFO = Font(name="Calibri", size=9, italic=True, color="7F7F7F")
+
+WP_BORDER_THIN = Border(
+    left=Side(style="thin", color="BFBFBF"),
+    right=Side(style="thin", color="BFBFBF"),
+    top=Side(style="thin", color="BFBFBF"),
+    bottom=Side(style="thin", color="BFBFBF"),
+)
+WP_BORDER_MED = Border(
+    left=Side(style="medium", color="595959"),
+    right=Side(style="medium", color="595959"),
+    top=Side(style="medium", color="595959"),
+    bottom=Side(style="medium", color="595959"),
+)
+WP_CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
+WP_LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+
+def _resource_week_distribution(frente: str, total_dias: int) -> dict[int, int]:
+    """Spread the resource's days across SAP Activate weeks (Realize phase).
+
+    SD/FI start in week 1, ABAP in week 2 (after specs), GP one day per week.
+    Max 5 days/week per resource per week. Up to SEMANAS_MAX weeks.
+    """
+    dist: dict[int, int] = {}
+    if frente in ("SD", "FI"):
+        start = 1
+    elif "ABAP" in frente:
+        start = 2
+    elif frente == "GP":
+        for s in range(1, min(total_dias + 1, SEMANAS_MAX + 1)):
+            dist[s] = 1
+        return dist
+    else:
+        start = 1
+
+    remaining = total_dias
+    week = start
+    while remaining > 0 and week <= SEMANAS_MAX:
+        slice_days = min(5, remaining)
+        dist[week] = slice_days
+        remaining -= slice_days
+        week += 1
+    return dist
+
+
+def _wp_resources_from_proposal(proposal) -> list[dict[str, Any]]:
+    """Map proposal.resources → list[dict] the renderer consumes."""
+    rows = []
+    for r in (proposal.resources or []):
+        rows.append(
+            {
+                "frente": r.frente or "",
+                "nivel": r.nivel or "Senior",
+                "dias": int(r.dias or 0),
+            }
+        )
+    return rows
+
+
+def _wp_header(ws, header_row: int, col_td: int, col_th: int) -> None:
+    for col, label in ((1, "Frente"), (2, "Recurso"), (3, "Nível")):
+        c = ws.cell(row=header_row, column=col, value=label)
+        c.font = WP_FONT_HEAD
+        c.fill = WP_AZUL_CL_FILL
+        c.alignment = WP_CENTER
+    for s in range(1, SEMANAS_MAX + 1):
+        c = ws.cell(row=header_row, column=3 + s, value=f"Sem {s}")
+        c.font = WP_FONT_HEAD
+        c.fill = WP_AZUL_CL_FILL
+        c.alignment = WP_CENTER
+    for col, label in ((col_td, "Total Dias"), (col_th, "Total Horas")):
+        c = ws.cell(row=header_row, column=col, value=label)
+        c.font = WP_FONT_HEAD
+        c.fill = WP_AZUL_FILL
+        c.alignment = WP_CENTER
+    ws.row_dimensions[header_row].height = 24
+
+
+def generate_wp_workbook(proposal) -> io.BytesIO:
+    """Build the Cast Group Work Package .xlsx for a Proposal."""
+    return _render_wp(_wp_resources_from_proposal(proposal), proposal.hours_presale or 0)
+
+
+def _render_wp(resources: list[dict[str, Any]], presale_hours: int) -> io.BytesIO:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "WP_RFP"
+    ws.sheet_view.showGridLines = False
+
+    col_td = 3 + SEMANAS_MAX + 1
+    col_th = col_td + 1
+
+    # title row
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=col_th)
+    ws.cell(row=1, column=1, value="WORK PACKAGE — SIL-PROPOSTA").font = WP_FONT_TITLE
+    ws.cell(row=1, column=1).alignment = WP_LEFT
+    ws.row_dimensions[1].height = 30
+
+    header_row = 3
+    _wp_header(ws, header_row, col_td, col_th)
+
+    # fallback when no resources provided — keeps the doc usable for drafts.
+    if not resources:
+        resources = [
+            {"frente": "SD", "nivel": "Senior", "dias": 9},
+            {"frente": "FI", "nivel": "Senior", "dias": 11},
+            {"frente": "GP", "nivel": "Senior", "dias": 4},
+            {"frente": "ABAP 1", "nivel": "Senior", "dias": 14},
+            {"frente": "ABAP 2", "nivel": "Senior", "dias": 14},
+            {"frente": "ABAP 3", "nivel": "Senior", "dias": 14},
+        ]
+
+    current_row = header_row + 1
+
+    # phase header — Recursos
+    ws.merge_cells(
+        start_row=current_row, start_column=1,
+        end_row=current_row, end_column=col_th,
+    )
+    c = ws.cell(row=current_row, column=1, value="■  Recursos do Projeto")
+    c.font = WP_FONT_FASE
+    c.fill = WP_CINZA_FILL
+    c.alignment = WP_LEFT
+    ws.row_dimensions[current_row].height = 20
+    current_row += 1
+
+    total_horas_proj = 0
+
+    for rec in resources:
+        frente = rec.get("frente", "")
+        nivel = rec.get("nivel", "Senior")
+        dias = int(rec.get("dias", 0) or 0)
+        dist = _resource_week_distribution(frente, dias)
+
+        # left columns
+        for col, val, font, align in (
+            (1, frente, WP_FONT_BODY, WP_LEFT),
+            (2, frente, WP_FONT_BODY, WP_LEFT),
+            (3, nivel, WP_FONT_SMALL, WP_CENTER),
+        ):
+            c = ws.cell(row=current_row, column=col, value=val)
+            c.font = font
+            c.alignment = align
+            c.border = WP_BORDER_THIN
+
+        total_dias_rec = 0
+        for s in range(1, SEMANAS_MAX + 1):
+            v = dist.get(s, 0)
+            c = ws.cell(row=current_row, column=3 + s, value=v if v else None)
+            c.alignment = WP_CENTER
+            c.border = WP_BORDER_THIN
+            if v:
+                c.fill = WP_VERDE_FILL if frente not in ("GP",) else WP_CINZA_FILL
+                total_dias_rec += v
+
+        horas_rec = total_dias_rec * HORAS_DIA
+        total_horas_proj += horas_rec
+
+        c_td = ws.cell(row=current_row, column=col_td, value=total_dias_rec)
+        c_td.font = WP_FONT_TOTAL
+        c_td.alignment = WP_CENTER
+        c_td.border = WP_BORDER_THIN
+        c_td.fill = WP_CINZA_FILL
+
+        c_th = ws.cell(row=current_row, column=col_th, value=horas_rec)
+        c_th.font = WP_FONT_TOTAL
+        c_th.alignment = WP_CENTER
+        c_th.border = WP_BORDER_THIN
+        c_th.fill = WP_CINZA_FILL
+
+        ws.row_dimensions[current_row].height = 20
+        current_row += 1
+
+    # KT AMS — mandatory deploy row
+    current_row += 1
+    ws.merge_cells(
+        start_row=current_row, start_column=1,
+        end_row=current_row, end_column=col_th,
+    )
+    c = ws.cell(row=current_row, column=1, value="■  Deploy — KT AMS (obrigatório)")
+    c.font = WP_FONT_FASE
+    c.fill = WP_LARANJA_FILL
+    c.alignment = WP_LEFT
+    ws.row_dimensions[current_row].height = 20
+    current_row += 1
+
+    ws.cell(row=current_row, column=1, value="KT AMS").font = WP_FONT_BODY
+    ws.cell(row=current_row, column=1).border = WP_BORDER_THIN
+    ws.cell(row=current_row, column=2, value="Transferência de conhecimento").font = WP_FONT_SMALL
+    ws.cell(row=current_row, column=2).border = WP_BORDER_THIN
+    ws.cell(row=current_row, column=3, value="—").alignment = WP_CENTER
+    ws.cell(row=current_row, column=3).border = WP_BORDER_THIN
+    for s in range(1, SEMANAS_MAX + 1):
+        ws.cell(row=current_row, column=3 + s).border = WP_BORDER_THIN
+    # KT AMS lands in the last-but-one week.
+    kt_col = 3 + SEMANAS_MAX - 1
+    ws.cell(row=current_row, column=kt_col, value=2).fill = WP_LARANJA_FILL
+    ws.cell(row=current_row, column=kt_col).border = WP_BORDER_THIN
+    c = ws.cell(row=current_row, column=col_td, value=2)
+    c.font = WP_FONT_TOTAL
+    c.alignment = WP_CENTER
+    c.border = WP_BORDER_THIN
+    c = ws.cell(row=current_row, column=col_th, value=16)
+    c.font = WP_FONT_TOTAL
+    c.alignment = WP_CENTER
+    c.border = WP_BORDER_THIN
+    total_horas_proj += 16
+    current_row += 2
+
+    # grand total
+    ws.merge_cells(
+        start_row=current_row, start_column=1,
+        end_row=current_row, end_column=col_td - 1,
+    )
+    c = ws.cell(row=current_row, column=1, value="TOTAL GERAL DO PROJETO")
+    c.font = WP_FONT_TOTAL_GERAL_LBL
+    c.fill = WP_AZUL_FILL
+    c.alignment = WP_LEFT
+    c.border = WP_BORDER_MED
+
+    c_th = ws.cell(row=current_row, column=col_th, value=total_horas_proj)
+    c_th.font = WP_FONT_TOTAL_GERAL_VAL
+    c_th.fill = WP_AZUL_FILL
+    c_th.alignment = WP_CENTER
+    c_th.border = WP_BORDER_MED
+    ws.row_dimensions[current_row].height = 28
+    current_row += 2
+
+    # internal cost (pre-sale hours) — only when non-zero
+    if presale_hours and presale_hours > 0:
+        ws.merge_cells(
+            start_row=current_row, start_column=1,
+            end_row=current_row, end_column=col_th,
+        )
+        c = ws.cell(
+            row=current_row, column=1,
+            value=(
+                f"⚙  CUSTO INTERNO — Horas de pré-venda: {presale_hours}h "
+                f"(não incluídas na proposta ao cliente)"
+            ),
+        )
+        c.font = WP_FONT_INFO
+        c.alignment = WP_LEFT
+        current_row += 1
+
+        ws.merge_cells(
+            start_row=current_row, start_column=1,
+            end_row=current_row, end_column=col_th,
+        )
+        pct = round((presale_hours / total_horas_proj) * 100, 1) if total_horas_proj else 0
+        c = ws.cell(
+            row=current_row, column=1,
+            value=(
+                f"   Total real (faturável + pré-venda): {total_horas_proj + presale_hours}h"
+                f"  |  Custo oculto: {pct}%"
+            ),
+        )
+        c.font = WP_FONT_INFO
+        c.alignment = WP_LEFT
+
+    # column widths + freeze panes
+    ws.column_dimensions["A"].width = 14
+    ws.column_dimensions["B"].width = 22
+    ws.column_dimensions["C"].width = 10
+    for s in range(1, SEMANAS_MAX + 1):
+        ws.column_dimensions[get_column_letter(3 + s)].width = 8
+    ws.column_dimensions[get_column_letter(col_td)].width = 12
+    ws.column_dimensions[get_column_letter(col_th)].width = 13
+    ws.freeze_panes = "D4"
+
+    buf = io.BytesIO()
+    wb.save(buf)
     buf.seek(0)
     return buf
