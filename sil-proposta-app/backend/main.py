@@ -20,6 +20,7 @@ from core.database import check_db, init_db, close_db
 from core.jwks_client import get_jwks_client
 from core.logger import setup_logging, get_logger
 from core.rate_limiter import limiter
+from core.subscription_middleware import SubscriptionMiddleware
 from core.trace_middleware import TraceMiddleware
 
 settings = get_settings()
@@ -47,11 +48,12 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# ── Middleware Stack (ordem: SlowAPI → Trace → CORS → Handler) ──────────
+# ── Middleware Stack (ordem: SlowAPI → Trace → Subscription → CORS → Handler) ──
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(TraceMiddleware)
+app.add_middleware(SubscriptionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS.split(","),
@@ -161,6 +163,7 @@ from apis.v1.auth import router as auth_router
 from apis.v1.setup import router as setup_router
 from apis.v1.sil_proposta.proposals import router as proposals_router
 from apis.v1.integrations.portal import router as portal_integrations_router
+from apis.v1.integrations.lgpd import router as lgpd_router
 from apis.v1.dashboard import router as dashboard_router
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
@@ -171,4 +174,5 @@ app.include_router(
     prefix="/api/v1/integrations/portal",
     tags=["Portal Integrations"],
 )
+app.include_router(lgpd_router, prefix="/api/v1/lgpd", tags=["LGPD"])
 app.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["Dashboard"])
