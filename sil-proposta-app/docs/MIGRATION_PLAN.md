@@ -146,9 +146,9 @@ Base: matriz §18.0.1 do guia, perfil "1 dev sênior + apoio". Estimativas com f
 - [x] Sandbox provisionado (Docker compose local + override de portas)
 - [x] Pessoa responsável por validação técnica nomeada (Rogerio)
 - [N/A] Janela de freeze de produção (sem prod ativa)
-- [ ] **Plano de rollback escrito** — falta criar `docs/RUNBOOK_ROLLBACK.md`
+- [x] **Plano de rollback escrito** — `docs/RUNBOOK_ROLLBACK.md` criado
 
-**2 itens pendentes** antes de iniciar Onda 1.
+**1 item pendente** antes de iniciar Onda 1.
 
 ---
 
