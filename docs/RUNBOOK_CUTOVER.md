@@ -1,7 +1,7 @@
-# Runbook de Cutover — Sil-Proposta (Onda 7)
+# Runbook de Cutover — PropostAI (Onda 7)
 
-**Objetivo:** sair do monorepo atual (`sil-proposta` contendo backend +
-frontend + legacy) para um repositório dedicado `github.com/ai-garage/sil-proposta-app`,
+**Objetivo:** sair do monorepo atual (`propostai` contendo backend +
+frontend + legacy) para um repositório dedicado `github.com/ai-garage/propostai-app`,
 com DNS apontando para Cloud Run e smoke E2E em sandbox por 7 dias antes
 do go-live.
 
@@ -13,18 +13,18 @@ o de rollback cobre regressões pós-deploy; este aqui cobre a *transição*.
 Marque cada item antes de iniciar:
 
 - [ ] Ondas 0–5 ✅ DONE (suite de testes verde, `MIGRATION_PLAN.md §5.1`).
-- [ ] Onda 6 ✅ — frontend mountado em `agn-portal` sob `/sil-proposta/*` com
+- [ ] Onda 6 ✅ — frontend mountado em `agn-portal` sob `/propostai/*` com
       `agn-ui.AuthContext` funcionando ponta a ponta no Portal SPA.
-- [ ] Repositório destino `github.com/ai-garage/sil-proposta-app` criado e
+- [ ] Repositório destino `github.com/ai-garage/propostai-app` criado e
       vazio (sem commit inicial — o split traz o histórico).
 - [ ] Cloud Run em ambiente `stg` recebendo deploys via `.github/workflows/deploy.yml`
       há pelo menos uma semana sem incidente.
 - [ ] D3 (Postgres compartilhado) provisionado e migração rodada com sucesso.
 - [ ] Plano de comunicação alinhado: product owner + tech lead do Portal +
-      um arquiteto SAP de plantão da Cast Group.
+      um arquiteto SAP de plantão da Direto ao Ponto.
 - [ ] Janela de manutenção combinada (sugestão: 2h fora do horário comercial).
 
-## 1. Subtree split — extração do `sil-proposta-app`
+## 1. Subtree split — extração do `propostai-app`
 
 ```bash
 # A partir do repo monorepo atual, na branch main já com Ondas 0–6 mergeadas:
@@ -32,20 +32,20 @@ cd /path/to/monorepo
 git checkout main
 git pull --ff-only origin main
 
-# Cria uma branch local com APENAS o histórico de sil-proposta-app/:
-git subtree split --prefix=sil-proposta-app -b export/sil-proposta-app
+# Cria uma branch local com APENAS o histórico de propostai-app/:
+git subtree split --prefix=propostai-app -b export/propostai-app
 
 # Adiciona o remote do repo destino e empurra:
-git remote add sil-proposta-destination git@github.com:ai-garage/sil-proposta-app.git
-git push sil-proposta-destination export/sil-proposta-app:main
+git remote add propostai-destination git@github.com:ai-garage/propostai-app.git
+git push propostai-destination export/propostai-app:main
 ```
 
 **Validações pós-split:**
 
 ```bash
 # Clona o repo novo num diretório separado e roda CI local:
-git clone git@github.com:ai-garage/sil-proposta-app.git /tmp/silp-fresh
-cd /tmp/silp-fresh/backend
+git clone git@github.com:ai-garage/propostai-app.git /tmp/propostai-fresh
+cd /tmp/propostai-fresh/backend
 pip install -e ".[dev]"
 ruff check . && pytest -q
 # Esperado: ruff clean, 196+ tests green.
@@ -61,21 +61,21 @@ Após o repo destino estar verde:
 
 ```bash
 cd /path/to/monorepo
-git checkout -b chore/remove-sil-proposta-app
+git checkout -b chore/remove-propostai-app
 # Remove o subprojeto, o legacy archive e os docs já replicados:
-git rm -r sil-proposta-app/
-git rm -r legacy/sil-proposta-monolith/
+git rm -r propostai-app/
+git rm -r legacy/sil-proposta-monolith/   # historical archive — kept old name
 # docs/ARCHITECTURE_PORTAL_SAAS_v3.md fica no monorepo — é guia da plataforma.
 # Marca o ponto:
-git commit -m "chore: split sil-proposta-app to its own repo"
-git push origin chore/remove-sil-proposta-app
+git commit -m "chore: split propostai-app to its own repo"
+git push origin chore/remove-propostai-app
 # Abrir PR de limpeza no monorepo, mergear após smoke do repo novo (§5).
 ```
 
 ## 3. CI/CD no repo novo
 
 O workflow `ci.yml` continua igual — só ajustar paths se necessário (os
-nossos já usavam paths relativos a `sil-proposta-app/`, então no repo
+nossos já usavam paths relativos a `propostai-app/`, então no repo
 novo eles passam a ser raiz). Mesma coisa para `deploy.yml`.
 
 Após o push inicial:
@@ -96,20 +96,20 @@ Hoje (durante Ondas 0–5):
 - Frontend sandbox vive no Vite dev server local.
 
 Cutover esperado (§16.7 do guia):
-- `sil-proposta.ai-garage.com.br` → CloudFlare → Cloud Run (PRD)
-- `sil-proposta.dev.ai-garage.com.br` → CloudFlare → Cloud Run (DEV)
+- `propostai.ai-garage.com.br` → CloudFlare → Cloud Run (PRD)
+- `propostai.dev.ai-garage.com.br` → CloudFlare → Cloud Run (DEV)
 
 Etapas:
 
 1. **Cloudflare tunnel:** criar um tunnel apontando para o serviço Cloud Run.
    O time da plataforma rodou esse passo para outros produtos — solicitar
-   replicação para `sil-proposta`.
+   replicação para `propostai`.
 2. **DNS:** registro `CNAME` apontando para o tunnel.
 3. **TLS:** terminação no Cloudflare; o backend serve HTTP plain entre
    Cloudflare e Cloud Run (default da plataforma).
 4. **CORS:** atualizar `CORS_ORIGINS` no Cloud Run para incluir o novo
    hostname antes do switch.
-5. **Validação:** `curl -fsS https://sil-proposta.dev.ai-garage.com.br/health`
+5. **Validação:** `curl -fsS https://propostai.dev.ai-garage.com.br/health`
    precisa retornar `{"status":"healthy"}` com o overall=`healthy`.
 
 ## 5. Smoke E2E em sandbox (7 dias)
@@ -127,7 +127,7 @@ corridos** sob carga sintética. Roteiro mínimo:
 - [ ] Cron diário chamando `POST /api/v1/lgpd/export-tenant` (HMAC) para
       um tenant de teste.
 - [ ] Verificar **diariamente**:
-      - Sem entradas `ERROR` em Sentry com tag `service=sil-proposta`.
+      - Sem entradas `ERROR` em Sentry com tag `service=propostai`.
       - Latência p95 de `proposals_generated` < 60s no Prometheus.
       - `tenant_id` aparecendo nas labels de `http_requests_total`
         (sinal de que o `MetricsMiddleware` decodifica os JWTs).
@@ -141,7 +141,7 @@ Critério: 7 dias de smoke E2E sem incidente classe Sev-1 ou Sev-2.
 Etapas (na janela de manutenção):
 
 1. **Snapshot** do banco PRD se já existe carga real. `gcloud sql backups create`.
-2. **DNS switch**: registro `CNAME` de `sil-proposta.ai-garage.com.br`
+2. **DNS switch**: registro `CNAME` de `propostai.ai-garage.com.br`
    apontando para o tunnel PRD.
 3. **Smoke imediato pós-switch:**
    - `GET /health` retorna 200 com `status=healthy`
@@ -156,7 +156,7 @@ Etapas (na janela de manutenção):
 
 - [ ] Tag git no repo novo: `v1.0.0-ga`.
 - [ ] Arquivar a branch `feat/onda-1-align-v3` no monorepo (não deletar).
-- [ ] Atualizar [`MIGRATION_PLAN.md`](../sil-proposta-app/docs/MIGRATION_PLAN.md)
+- [ ] Atualizar [`MIGRATION_PLAN.md`](../propostai-app/docs/MIGRATION_PLAN.md)
       marcando Onda 7 como ✅ DONE.
 - [ ] Post-mortem leve: o que funcionou, o que demorou mais que o estimado,
       decisões em aberto que ficaram para revisitar.

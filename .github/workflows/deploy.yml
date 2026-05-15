@@ -29,8 +29,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "sil-proposta-app/backend/**"
-      - "sil-proposta-app/deployment/Dockerfile.cloudrun"
+      - "propostai-app/backend/**"
+      - "propostai-app/deployment/Dockerfile.cloudrun"
       - ".github/workflows/deploy.yml"
 
 concurrency:
@@ -46,7 +46,7 @@ jobs:
     name: Build + Deploy (Cloud Run)
     runs-on: ubuntu-latest
     env:
-      SERVICE_NAME: sil-proposta
+      SERVICE_NAME: propostai
       ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
     steps:
@@ -78,9 +78,9 @@ jobs:
         run: |
           image="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${SERVICE_NAME}/${SERVICE_NAME}:${{ steps.tag.outputs.tag }}"
           docker build \
-            -f sil-proposta-app/deployment/Dockerfile.cloudrun \
+            -f propostai-app/deployment/Dockerfile.cloudrun \
             -t "${image}" \
-            sil-proposta-app/
+            propostai-app/
           docker push "${image}"
           echo "image=${image}" >> "$GITHUB_ENV"
 

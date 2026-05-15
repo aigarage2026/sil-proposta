@@ -1,14 +1,14 @@
-# Runbook de Rollback — Sil-Proposta
+# Runbook de Rollback — PropostAI
 
-**Objetivo:** documentar o processo seguro de reversão do ambiente de migração para `sil-proposta-app` caso seja necessário retornar ao estado pré-refatoração.
+**Objetivo:** documentar o processo seguro de reversão do ambiente de migração para `propostai-app` caso seja necessário retornar ao estado pré-refatoração.
 
 ## 1. Contexto
 
-Este runbook cobre o rollback do projeto `sil-proposta` no contexto da migração para o padrão Portal SaaS v3.
+Este runbook cobre o rollback do projeto `propostai` no contexto da migração para o padrão Portal SaaS v3.
 
 O plano de migração atual considera:
-- `sil-proposta-app/` como código ativo de migração
-- `legacy/sil-proposta-monolith/` como histórico arquivado
+- `propostai-app/` como código ativo de migração
+- `legacy/propostai-monolith/` como histórico arquivado
 - `docs/ARCHITECTURE_PORTAL_SAAS_v3.md` como guia de arquitetura
 - `docs/MIGRATION_PLAN.md` como plano de execução do produto
 
@@ -20,7 +20,7 @@ Execute rollback quando qualquer uma das condições abaixo ocorrer:
 - Autenticação/JWT legada falhar e não puder ser corrigida rapidamente
 - Isolamento multi-tenant estiver comprometido em ambiente de prova de conceito
 - Integração com o Portal (ou com mock do Portal) quebrar de forma que não seja possível entrega mínima do MVP
-- O deploy do `sil-proposta-app` em uma nuvem de teste causar degradação maior do que o aceitável para validação técnica
+- O deploy do `propostai-app` em uma nuvem de teste causar degradação maior do que o aceitável para validação técnica
 
 ## 3. Rollback imediato (local / sandbox)
 
@@ -39,7 +39,7 @@ git checkout backup/pre-org-2026-05-14
 5. Recriar o ambiente local:
 
 ```bash
-cd sil-proposta-app
+cd propostai-app
 # ajuste conforme o ambiente local
 poetry install
 pytest
@@ -58,7 +58,7 @@ alembic upgrade head
 
 1. Identificar se o rollback deve ser no deployment Cloud Run / Railway / outro provedor.
 2. Se houver snapshot ou tag de release anterior, restaurar a imagem/versão anterior.
-3. Reaplicar configurações padrão de database e ambiente do `sil-proposta-app`.
+3. Reaplicar configurações padrão de database e ambiente do `propostai-app`.
 4. Validar com smoke tests:
 - `/health`
 - autenticação básica
