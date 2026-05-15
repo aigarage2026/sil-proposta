@@ -1,9 +1,14 @@
 """
 Servico de geracao de propostas.
-Orquestra agentes IA e fallback para demo mode.
+Orquestra agentes IA (OrchestratorV5) e fallback para demo mode.
+
+OrchestratorV5 é o catálogo-first migrado em §Onda 5: classifica a
+demanda deterministicamente, chama LLMs só para texto descritivo, e
+honra a flag LGPD do tenant antes de mandar a RFP para a API externa.
 """
 import time
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
@@ -15,6 +20,7 @@ from models.sil_proposta.proposal_deliverable import ProposalDeliverable
 from models.sil_proposta.proposal_legislation import ProposalLegislation
 from models.sil_proposta.proposal_premise import ProposalPremise
 from models.sil_proposta.proposal_resource import ProposalResource
+from models.tenant import Tenant
 from schemas.intake import IntakePayload
 
 settings = get_settings()
@@ -30,13 +36,16 @@ async def generate_proposal(
     """Gera proposta via agentes IA ou demo mode."""
     start = time.monotonic()
 
-    # Tentar LLM, fallback para demo
-    if settings.PORTAL_API_KEY and not settings.SAP_DEMO_MODE_ENABLED:
+    # Try the LLM orchestrator when at least one provider key is set AND
+    # demo mode is off. Either OpenAI or Anthropic is enough — OrchestratorV5
+    # routes per-agent and falls back gracefully when one provider fails.
+    has_llm = bool(settings.OPENAI_API_KEY or settings.ANTHROPIC_API_KEY)
+    if has_llm and not settings.SAP_DEMO_MODE_ENABLED:
         try:
-            result = await _generate_with_agents(payload, tenant_id)
+            result = await _generate_with_agents(db, payload, tenant_id)
             mode = "llm"
-        except Exception as e:
-            logger.warning("LLM generation failed, using demo mode", error=str(e))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("llm_generation_failed_falling_back_to_demo", error=str(e))
             result = _generate_demo(payload)
             mode = "demo"
     else:
@@ -149,10 +158,20 @@ async def generate_proposal(
     }
 
 
-async def _generate_with_agents(payload: IntakePayload, tenant_id: str) -> dict:
-    """Gera via agentes IA (Agent Hub)."""
-    from services.sil_proposta.agents.orchestrator import OrchestratorAgent
-    orch = OrchestratorAgent(payload, tenant_id)
+async def _generate_with_agents(
+    db: AsyncSession, payload: IntakePayload, tenant_id: str
+) -> dict:
+    """Gera via OrchestratorV5 (catalog + LLM descriptive).
+
+    Loads the Tenant so the orchestrator can read its lgpd_anonymize_llm
+    feature flag before anonymizing the RFP for external LLM calls.
+    """
+    from services.sil_proposta.agents.orchestrator_v5 import OrchestratorV5
+
+    tenant_row = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_row.scalar_one_or_none()
+
+    orch = OrchestratorV5(payload=payload, tenant=tenant)
     return await orch.run()
 
 
