@@ -11,7 +11,7 @@ import httpx
 import redis.asyncio as redis_lib
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -19,6 +19,8 @@ from core.config import get_settings
 from core.database import check_db, init_db, close_db
 from core.jwks_client import get_jwks_client
 from core.logger import setup_logging, get_logger
+from core.metrics import render_metrics
+from core.metrics_middleware import MetricsMiddleware
 from core.rate_limiter import limiter
 from core.subscription_middleware import SubscriptionMiddleware
 from core.trace_middleware import TraceMiddleware
@@ -64,12 +66,15 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# ── Middleware Stack (ordem: SlowAPI → Trace → Subscription → CORS → Handler) ──
+# ── Middleware Stack (ordem: SlowAPI → Metrics → Trace → Subscription → CORS → Handler) ──
+# Metrics outermost so it records every response status (including 4xx/5xx
+# raised by middleware below).
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(TraceMiddleware)
 app.add_middleware(SubscriptionMiddleware)
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS.split(","),
@@ -171,6 +176,14 @@ async def root():
 @app.get("/.well-known/openapi.json", include_in_schema=False)
 async def well_known_openapi():
     return RedirectResponse(url="/openapi.json", status_code=301)
+
+
+# ── /metrics (Prometheus) — v3 §15.3 ────────────────────────────────────
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    body, content_type = render_metrics()
+    return Response(content=body, media_type=content_type)
 
 
 # ── Routers ─────────────────────────────────────────────────────────────

@@ -29,8 +29,10 @@ dependencies = [
     "bcrypt<4.1",
     # Rate limiting
     "slowapi>=0.1.9",
-    # Logging
+    # Logging + Observability
     "structlog>=24.0.0",
+    # Prometheus /metrics (v3 §15.3)
+    "prometheus-client>=0.20.0",
     # Document generation
     "python-docx>=1.1.2",
     "openpyxl>=3.1.5",
