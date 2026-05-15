@@ -34,7 +34,23 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Sil-Proposta", version=settings.VERSION)
     if settings.DEBUG:
         await init_db()
+
+    # portal.events consumer (Onda 3 — v3 §4.2)
+    consumer_task = None
+    if settings.EVENT_CONSUMER_ENABLED:
+        from services.events.consumer import start_consumer
+        consumer_task = start_consumer()
+        logger.info("event_consumer_lifecycle_started")
+
     yield
+
+    if consumer_task is not None:
+        consumer_task.cancel()
+        try:
+            await consumer_task
+        except asyncio.CancelledError:
+            pass
+
     await close_db()
     logger.info("Sil-Proposta stopped")
 

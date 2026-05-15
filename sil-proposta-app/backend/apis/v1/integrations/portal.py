@@ -24,6 +24,7 @@ from core.security import hash_password
 from models.company import Company
 from models.tenant import Tenant
 from models.user import User
+from services.events.handlers import dispatch as dispatch_event
 
 logger = get_logger()
 
@@ -216,3 +217,49 @@ async def deprovision(
     await db.commit()
     logger.info("tenant_hard_deleted", tenant_id=body.tenant_id)
     return DeprovisionResponse(tenant_id=body.tenant_id, status="deleted")
+
+
+# ── REST fallback for portal.events (v3 §21.2.3) ────────────────────────────
+
+
+class SyncTenantRequest(BaseModel):
+    """A single Portal event delivered via REST instead of Redis Streams.
+    Used while B4 (portal.events stream) is 🔴 unavailable on the Portal.
+    Payload mirrors what XADD would carry: a `type` plus event-specific keys.
+    """
+    type: str
+    tenant_id: Optional[str] = None
+    payload: Optional[dict] = None
+
+
+class SyncTenantResponse(BaseModel):
+    status: Literal["applied", "skipped", "deferred"]
+    type: str
+
+
+@router.post(
+    "/sync-tenant",
+    response_model=SyncTenantResponse,
+    dependencies=[Depends(require_portal_hmac)],
+    summary="REST fallback for portal.events (used while Redis Streams is unavailable)",
+)
+async def sync_tenant(
+    body: SyncTenantRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SyncTenantResponse:
+    event = {"type": body.type}
+    if body.tenant_id:
+        event["tenant_id"] = body.tenant_id
+    if body.payload:
+        # Merge payload at top level — handlers expect a flat dict.
+        event.update(body.payload)
+
+    ok = await dispatch_event(event, db)
+    if not ok:
+        # Handler returned False — caller should retry. We surface 503 so
+        # the Portal can apply its own backoff/retry policy.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Failed to apply event {body.type}; retry later",
+        )
+    return SyncTenantResponse(status="applied", type=body.type)

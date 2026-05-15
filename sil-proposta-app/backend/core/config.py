@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     PORTAL_CIRCUIT_BREAKER_TIMEOUT: int = 60
     PORTAL_JWKS_CACHE_TTL_SECONDS: int = 300
 
+    # Events (v3 §12.4, §4.2, §4.3)
+    # Set EVENT_CONSUMER_ENABLED=true in prod to start the portal.events
+    # consumer in the lifespan. Default false to keep dev/test loops quiet
+    # — the REST fallback /sync-tenant is always available when HMAC is set.
+    EVENT_CONSUMER_ENABLED: bool = False
+    # B4 escape hatch (§1.5 #6 / §21.2.3): when the portal.events stream
+    # doesn't exist yet, prefer the REST fallback path on the Portal side.
+    EVENT_PUBLISHER_PREFER_REST: bool = False
+
     # Storage
     STORAGE_BASE_PATH: str = "/data/sil_proposta"
     MAX_UPLOAD_SIZE_MB: int = 25
