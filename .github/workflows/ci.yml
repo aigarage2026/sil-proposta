@@ -93,10 +93,10 @@ jobs:
           fi
 
       - name: Lint (eslint)
-        # Warn-only until Onda 6 migrates the frontend config to ESLint v9's
-        # flat-config (eslint.config.js). Build below is the gate.
-        continue-on-error: true
-        run: npm run lint --if-present
+        # ESLint v9 flat-config landed in eslint.config.js. We allow warnings
+        # to surface but fail the build on any *error* (--max-warnings keeps
+        # accumulation visible). Flip to 0 after the next style pass.
+        run: npm run lint --if-present -- --max-warnings 50
 
       - name: Build (vite)
         run: npm run build

@@ -127,8 +127,8 @@ Base: matriz §18.0.1 do guia, perfil "1 dev sênior + apoio". Estimativas com f
 | **3** | Eventos Redis Streams: consumer de `portal.events` (handlers `tenant.created`, `subscription.upgraded`, etc.). Publisher de `usage.metric`, `audit.action`. Audit central via `POST /api/portal/audit/events` (com fallback REST). | 2 sem | ✅ **DONE** | B4 🔴 → fallback REST `POST /usage/events` no Portal |
 | **4** | **PULAR/POSTERGAR** — `agn-shared` ainda 🟡. Manter código duplicado em `sil-proposta-app/backend/core/`. Revisitar pós-GA. | (postergada) | — | B1 🟡 |
 | **5** | Domínio + infra prod: migrar RAG real (Qdrant + OpenAI embeddings), DAM Word generator, WP Excel generator, orchestrator_v5 do legacy. Anonimização LGPD. Sentry + Prometheus. Cloud Run deploy. CI/CD GitHub Actions. | 3 sem | ✅ **DONE** (código completo; deploy real depende de D3) | D3 (Postgres compartilhado) precisa estar provisionado |
-| **6** | Frontend integrado no Portal SPA: migrar 5 páginas como módulos lazy (`agn-portal/src/products/sil-proposta/`). Adotar `agn-ui` (AuthContext, ProductSwitcher, httpClient). Branding via tenant. i18n hierárquico. | 3 sem | pending | Portal SPA precisa existir em ambiente acessível |
-| **7** | Cutover & split: `git subtree split --prefix=sil-proposta-app` para `github.com/ai-garage/sil-proposta-app`. Remover `legacy/`. DNS para Cloud Run. Smoke test E2E em sandbox por 7 dias. | 1 sem | pending | Ondas 1-6 completas |
+| **6** | Frontend integrado no Portal SPA: migrar 5 páginas como módulos lazy (`agn-portal/src/products/sil-proposta/`). Adotar `agn-ui` (AuthContext, ProductSwitcher, httpClient). Branding via tenant. i18n hierárquico. | 3 sem | 🟡 **PREP DONE** (lazy routes, namespace `products/sil-proposta/`, AuthContext com claims v3, ESLint v9 flat-config); integração com `agn-ui` espera Portal SPA | Portal SPA precisa existir em ambiente acessível |
+| **7** | Cutover & split: `git subtree split --prefix=sil-proposta-app` para `github.com/ai-garage/sil-proposta-app`. Remover `legacy/`. DNS para Cloud Run. Smoke test E2E em sandbox por 7 dias. | 1 sem | 🟡 **RUNBOOK DONE** (`docs/RUNBOOK_CUTOVER.md`); execução real espera Ondas 1–6 mergeadas + Cloud Run em sandbox | Ondas 1-6 completas |
 
 **Total nominal:** 13–14 semanas
 **Com folga 1.5×:** ~20 semanas (~5 meses)
@@ -170,6 +170,8 @@ Onda 5:
 | 5e | OrchestratorV5 catalog-first + LLMClient (OpenAI+Anthropic) + billing por execução; ligado em `generation_service` (legacy agents deletados) |
 | 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` (não conectado ao orchestrator — depende de corpus real) |
 | 5g | Deploy: `Dockerfile.cloudrun`, Terraform skeleton (Artifact Registry + Cloud Run + SA + Secret Manager bindings), workflow `.github/workflows/deploy.yml` |
+| 6 (prep) | Frontend: ESLint v9 flat-config (`eslint.config.js`), `Suspense + React.lazy` por rota (chunks separados emitidos pelo vite), `frontend/src/products/sil-proposta/routes.tsx` (namespace alinhado com §17.4), `AuthContext` enriquecido com `products[]` + `rolesByProduct` + `hasProduct()` + `roleFor()` (assinatura espelha o contrato esperado de `agn-ui`) |
+| 7 (runbook) | `docs/RUNBOOK_CUTOVER.md` cobre subtree split, limpeza do monorepo, CI/CD no repo destino, DNS via Cloudflare tunnel, smoke E2E de 7 dias, go-live e rollback de cutover |
 
 **Suite:** 196 testes verdes; ruff clean.
 
