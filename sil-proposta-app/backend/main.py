@@ -22,6 +22,7 @@ from core.logger import setup_logging, get_logger
 from core.metrics import render_metrics
 from core.metrics_middleware import MetricsMiddleware
 from core.rate_limiter import limiter
+from core.sentry import SentryContextMiddleware, init_sentry
 from core.subscription_middleware import SubscriptionMiddleware
 from core.trace_middleware import TraceMiddleware
 
@@ -33,6 +34,7 @@ logger = get_logger()
 async def lifespan(app: FastAPI):
     """Startup / shutdown."""
     setup_logging()
+    init_sentry()
     logger.info("Starting Sil-Proposta", version=settings.VERSION)
     if settings.DEBUG:
         await init_db()
@@ -66,13 +68,18 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# ── Middleware Stack (ordem: SlowAPI → Metrics → Trace → Subscription → CORS → Handler) ──
-# Metrics outermost so it records every response status (including 4xx/5xx
-# raised by middleware below).
+# ── Middleware Stack ────────────────────────────────────────────────────
+# Innermost → outermost (FastAPI applies the LAST add_middleware first):
+#   TraceMiddleware           → bind trace_id to contextvars + request.state
+#   SentryContextMiddleware   → push scope w/ tenant_id, trace_id, user_id
+#   SubscriptionMiddleware    → 423 suspended writes
+#   MetricsMiddleware         → record http_requests_total + duration
+#   CORSMiddleware            → outermost
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(TraceMiddleware)
+app.add_middleware(SentryContextMiddleware)
 app.add_middleware(SubscriptionMiddleware)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(

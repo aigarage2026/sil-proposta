@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     PORTAL_CIRCUIT_BREAKER_TIMEOUT: int = 60
     PORTAL_JWKS_CACHE_TTL_SECONDS: int = 300
 
+    # Sentry (v3 §15.5) — disabled when DSN is empty (dev default).
+    SENTRY_DSN: str = ""
+    SENTRY_ENVIRONMENT: str = "dev"
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.0  # tracing off by default; opt-in per-env
+    SENTRY_RELEASE: str = ""  # set at deploy time to the git sha
+
     # Events (v3 §12.4, §4.2, §4.3)
     # Set EVENT_CONSUMER_ENABLED=true in prod to start the portal.events
     # consumer in the lifespan. Default false to keep dev/test loops quiet
