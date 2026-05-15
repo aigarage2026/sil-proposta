@@ -58,9 +58,10 @@ async def test_delete_tenant_invalid_signature(client, sap_world):
 
 async def test_delete_tenant_success(client, sap_world, db):
     from sqlalchemy import select
+
+    from models.company import Company
     from models.tenant import Tenant
     from models.user import User
-    from models.company import Company
 
     tenant_id = sap_world["tenant"].id
     body = {"tenant_id": tenant_id, "requested_by": "compliance@cast.com", "reason": "art. 18, VI"}

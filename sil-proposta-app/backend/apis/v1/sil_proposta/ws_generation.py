@@ -3,15 +3,11 @@ WebSocket endpoint para streaming de geracao de propostas.
 Envia eventos em tempo real conforme cada agente processa.
 """
 import asyncio
-import json
-import time
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from core.database import get_db
-from core.security import decode_token
 from core.logger import get_logger
+from core.security import decode_token
 from schemas.intake import IntakePayload
 
 router = APIRouter()
@@ -31,9 +27,7 @@ async def ws_generate(websocket: WebSocket):
 
         # Validar token
         try:
-            claims = await decode_token(token)
-            tenant_id = claims["tenant_id"]
-            user_id = claims["sub"]
+            await decode_token(token)
         except Exception:
             await websocket.send_json({"type": "error", "msg": "Token invalido"})
             await websocket.close()

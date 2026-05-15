@@ -2,10 +2,10 @@
 AuditLog — log de auditoria append-only.
 Registra acoes de usuarios para rastreabilidade e compliance.
 """
-from sqlalchemy import Column, JSON, String, Text
+from sqlalchemy import JSON, Column, String, Text
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class AuditLog(Base, UUIDMixin, TimestampMixin, TenantMixin):

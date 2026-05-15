@@ -3,6 +3,7 @@ Portal client — integracao com a plataforma AI Garage.
 LLM, billing, provisioning.
 """
 import httpx
+
 from core.config import get_settings
 from core.logger import get_logger
 

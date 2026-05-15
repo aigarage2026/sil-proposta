@@ -19,8 +19,8 @@ gateway should also restrict their reachability.
 """
 from __future__ import annotations
 
-import hmac
 import hashlib
+import hmac
 
 from fastapi import HTTPException, Request, status
 

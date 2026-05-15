@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class ProposalPremise(Base, UUIDMixin, TimestampMixin, TenantMixin):

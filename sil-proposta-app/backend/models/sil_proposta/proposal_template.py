@@ -1,8 +1,8 @@
 """ProposalTemplate — template customizavel de proposta."""
-from sqlalchemy import Boolean, Column, ForeignKey, JSON, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, String, UniqueConstraint
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class ProposalTemplate(Base, UUIDMixin, TimestampMixin, TenantMixin):

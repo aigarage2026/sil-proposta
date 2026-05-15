@@ -9,16 +9,16 @@ from datetime import datetime
 
 import httpx
 import redis.asyncio as redis_lib
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from core.config import get_settings
-from core.database import check_db, init_db, close_db
+from core.database import check_db, close_db, init_db
 from core.jwks_client import get_jwks_client
-from core.logger import setup_logging, get_logger
+from core.logger import get_logger, setup_logging
 from core.metrics import render_metrics
 from core.metrics_middleware import MetricsMiddleware
 from core.rate_limiter import limiter
@@ -196,11 +196,11 @@ async def metrics():
 # ── Routers ─────────────────────────────────────────────────────────────
 
 from apis.v1.auth import router as auth_router
+from apis.v1.dashboard import router as dashboard_router
+from apis.v1.integrations.lgpd import router as lgpd_router
+from apis.v1.integrations.portal import router as portal_integrations_router
 from apis.v1.setup import router as setup_router
 from apis.v1.sil_proposta.proposals import router as proposals_router
-from apis.v1.integrations.portal import router as portal_integrations_router
-from apis.v1.integrations.lgpd import router as lgpd_router
-from apis.v1.dashboard import router as dashboard_router
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(setup_router, prefix="/setup", tags=["Setup"])

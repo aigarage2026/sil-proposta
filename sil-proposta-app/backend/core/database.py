@@ -2,9 +2,9 @@
 SQLAlchemy async engine + session factory.
 Padrao AI Garage: pool configuravel, health check integrado.
 """
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import text
 
 from core.config import get_settings
 

@@ -58,9 +58,9 @@ class OrchestratorAgent:
         fired.append("Orquestrador")
 
         # 2. Agentes paralelos (SD, FI, ABAP)
-        from services.sil_proposta.agents.sd_agent import SDAgent
-        from services.sil_proposta.agents.fi_agent import FIAgent
         from services.sil_proposta.agents.abap_agent import ABAPAgent
+        from services.sil_proposta.agents.fi_agent import FIAgent
+        from services.sil_proposta.agents.sd_agent import SDAgent
 
         parallel_agents = []
         for mod in plan.get("modules", ["SD", "FI", "ABAP"]):
@@ -84,11 +84,11 @@ class OrchestratorAgent:
                     fired.append(name)
 
         # 3. Agentes sequenciais (dependem dos anteriores)
+        from services.sil_proposta.agents.comercial_agent import ComercialAgent
         from services.sil_proposta.agents.drc_agent import DRCAgent
+        from services.sil_proposta.agents.equipe_agent import EquipeAgent
         from services.sil_proposta.agents.fiscal_estadual_agent import FiscalEstadualAgent
         from services.sil_proposta.agents.fiscal_federal_agent import FiscalFederalAgent
-        from services.sil_proposta.agents.equipe_agent import EquipeAgent
-        from services.sil_proposta.agents.comercial_agent import ComercialAgent
 
         # DRC
         drc = DRCAgent(self.tenant_id)
@@ -135,7 +135,7 @@ class OrchestratorAgent:
                 all_e.extend(v.get("entregaveis", []))
                 all_p.extend(v.get("premissas", []))
 
-        BASE_PREMISSAS = [
+        base_premissas = [
             "Os acessos necessarios deverao estar liberados ate o inicio do projeto.",
             "Os usuarios disponibilizados deverao ter acesso para depuracao em QAS.",
             "Todos os desenvolvimentos serao realizados em ABAP.",
@@ -145,7 +145,7 @@ class OrchestratorAgent:
             "Duvidas ou falhas devem ser reportadas durante testes.",
             "A documentacao sera entregue em lingua portuguesa.",
         ]
-        premissas = BASE_PREMISSAS + [p for p in all_p if p not in BASE_PREMISSAS]
+        premissas = base_premissas + [p for p in all_p if p not in base_premissas]
 
         dam = {
             "titulo": f"DAM - {(self.payload.rfp_text or 'Proposta SAP')[:60]}",

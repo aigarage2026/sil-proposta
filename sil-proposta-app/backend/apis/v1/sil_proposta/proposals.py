@@ -3,35 +3,29 @@ API v1 — Proposals CRUD + Generation + Export.
 """
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core.database import get_db
 from core.security import get_current_user
-from models.user import User
-from services.events.audit import audit
-from services.events.publisher import emit_usage_metric
 from models.sil_proposta.proposal import Proposal
-from models.sil_proposta.proposal_resource import ProposalResource
-from models.sil_proposta.proposal_deliverable import ProposalDeliverable
-from models.sil_proposta.proposal_premise import ProposalPremise
-from models.sil_proposta.proposal_legislation import ProposalLegislation
-from models.sil_proposta.proposal_dam import ProposalDam
-from models.sil_proposta.agent_execution import AgentExecution
+from models.user import User
 from schemas.intake import IntakePayload
 from schemas.proposal import (
+    AgentExecutionSchema,
+    ConfidenceSchema,
+    DeliverableSchema,
+    LegislationSchema,
+    PremiseSchema,
     ProposalDetail,
     ProposalListResponse,
     ProposalStatusUpdate,
     ProposalSummary,
-    ConfidenceSchema,
     ResourceSchema,
-    DeliverableSchema,
-    PremiseSchema,
-    LegislationSchema,
-    AgentExecutionSchema,
 )
+from services.events.audit import audit
+from services.events.publisher import emit_usage_metric
 
 router = APIRouter()
 
@@ -117,7 +111,7 @@ async def get_proposal(
         resources=[ResourceSchema.model_validate(r) for r in proposal.resources],
         deliverables=[DeliverableSchema.model_validate(d) for d in proposal.deliverables],
         premises=[PremiseSchema.model_validate(p) for p in proposal.premises],
-        legislations=[LegislationSchema.model_validate(l) for l in proposal.legislations],
+        legislations=[LegislationSchema.model_validate(leg) for leg in proposal.legislations],
         agent_executions=[AgentExecutionSchema.model_validate(a) for a in proposal.agent_executions],
         dam_json=proposal.dam.dam_json if proposal.dam else None,
         created_at=proposal.created_at,

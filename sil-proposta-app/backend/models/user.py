@@ -2,11 +2,11 @@
 User — usuario interno do tenant (pre-vendas, gerente, diretor).
 Pertence ao Tenant, NAO a uma Company. Acesso a Companies via UserCompanyAccess.
 """
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class User(Base, UUIDMixin, TimestampMixin, TenantMixin):

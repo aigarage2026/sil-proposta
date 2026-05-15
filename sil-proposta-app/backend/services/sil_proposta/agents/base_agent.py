@@ -5,7 +5,6 @@ Cada agente herda e implementa _system_prompt() e _parse_result().
 import json
 import re
 import time
-from typing import Optional
 
 from core.config import get_settings
 from core.logger import get_logger

@@ -3,14 +3,12 @@ Seed de dados iniciais da plataforma Sil-Proposta.
 Idempotente — pode ser re-executado sem duplicar dados.
 """
 import asyncio
-from uuid import uuid4
 
 from core.database import async_session, init_db
+from core.security import hash_password
+from models.company import Company
 from models.tenant import Tenant
 from models.user import User
-from models.company import Company
-from core.security import hash_password
-
 
 KNOWLEDGE_DOCS = [
     {"title": "ECONF 110750 — Conciliacao Financeira", "category": "fiscal",

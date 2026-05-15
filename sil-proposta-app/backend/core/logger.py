@@ -3,6 +3,7 @@ Structured logging via structlog.
 Inclui automaticamente: trace_id, tenant_id, service name.
 """
 import logging
+
 import structlog
 
 from core.config import get_settings

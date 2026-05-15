@@ -2,6 +2,7 @@
 Schemas Pydantic para o intake de propostas.
 """
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 

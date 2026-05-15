@@ -2,14 +2,13 @@
 Fixtures globais para testes.
 """
 import asyncio
-import pytest
 from uuid import uuid4
 
+import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from httpx import AsyncClient, ASGITransport
 
 from core.database import Base
-
 
 # Engine SQLite in-memory para testes unitarios
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -45,8 +44,8 @@ async def db():
 @pytest.fixture
 async def client(db):
     """HTTP client para testes de API."""
-    from main import app
     from core.database import get_db
+    from main import app
 
     async def override_get_db():
         yield db
@@ -76,8 +75,8 @@ def make_tenant(db):
 @pytest.fixture
 def make_user(db):
     async def _make(tenant_id, email=None, role="editor", is_platform_admin=False):
-        from models.user import User
         from core.security import hash_password
+        from models.user import User
         u = User(
             tenant_id=tenant_id,
             email=email or f"user-{uuid4().hex[:8]}@test.com",

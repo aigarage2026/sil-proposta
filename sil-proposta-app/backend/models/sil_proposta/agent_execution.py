@@ -1,9 +1,9 @@
 """AgentExecution — log de execucao de cada agente IA."""
-from sqlalchemy import Column, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class AgentExecution(Base, UUIDMixin, TimestampMixin, TenantMixin):

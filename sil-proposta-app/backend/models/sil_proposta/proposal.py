@@ -1,9 +1,9 @@
 """Proposal — entidade central do dominio."""
-from sqlalchemy import Boolean, Column, ForeignKey, Index, Integer, JSON, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class Proposal(Base, UUIDMixin, TimestampMixin, TenantMixin):

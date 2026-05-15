@@ -40,8 +40,9 @@ async def test_consumer_dispatches_and_acks(db, sap_world):
     await bus.ensure_consumer_group(PORTAL_EVENTS_STREAM, CONSUMER_GROUP)
 
     # Override async_session inside the consumer so it sees the test DB.
-    import services.events.consumer as consumer_mod
     from contextlib import asynccontextmanager
+
+    import services.events.consumer as consumer_mod
 
     @asynccontextmanager
     async def _session_cm():
@@ -65,6 +66,7 @@ async def test_consumer_dispatches_and_acks(db, sap_world):
 
     # State changes applied.
     from sqlalchemy import select
+
     from models.tenant import Tenant
     t = (await db.execute(select(Tenant).where(Tenant.id == tid))).scalar_one()
     # Last write wins; subscription.upgraded ran after tenant.suspended, but
@@ -78,8 +80,9 @@ async def test_consumer_empty_batch_returns_zero(db):
     bus = _FakeBus()
     await bus.ensure_consumer_group(PORTAL_EVENTS_STREAM, CONSUMER_GROUP)
 
-    import services.events.consumer as consumer_mod
     from contextlib import asynccontextmanager
+
+    import services.events.consumer as consumer_mod
 
     @asynccontextmanager
     async def _session_cm():

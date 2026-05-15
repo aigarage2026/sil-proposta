@@ -5,7 +5,6 @@ Strategy: use a stub EventBus that either returns a fake msg id ("stream"
 path) or returns None ("REST fallback" path). REST is short-circuited via
 monkeypatching httpx.AsyncClient.post to a fake.
 """
-import json
 from typing import Any, Optional
 
 import httpx

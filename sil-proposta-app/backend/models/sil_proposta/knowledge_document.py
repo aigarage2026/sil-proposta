@@ -1,8 +1,8 @@
 """KnowledgeDocument — base de conhecimento para RAG."""
-from sqlalchemy import Boolean, Column, Index, JSON, String, Text
+from sqlalchemy import JSON, Boolean, Column, Index, String, Text
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class KnowledgeDocument(Base, UUIDMixin, TimestampMixin, TenantMixin):

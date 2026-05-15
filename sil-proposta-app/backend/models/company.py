@@ -2,11 +2,11 @@
 Company — cliente final da consultoria SAP (CNPJ, razao social).
 Sempre vinculada a um Tenant. Propostas sao filhas da Company.
 """
-from sqlalchemy import Boolean, Column, ForeignKey, JSON, String
+from sqlalchemy import JSON, Boolean, Column, String
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class Company(Base, UUIDMixin, TimestampMixin, TenantMixin):

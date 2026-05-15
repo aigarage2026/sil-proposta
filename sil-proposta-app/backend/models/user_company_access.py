@@ -3,10 +3,10 @@ UserCompanyAccess — N:N User <-> Company com role por company.
 Owner do tenant NAO precisa desta tabela (acesso implicito a tudo).
 """
 from sqlalchemy import Column, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
-from sqlalchemy.orm import relationship
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class UserCompanyAccess(Base, UUIDMixin, TimestampMixin, TenantMixin):

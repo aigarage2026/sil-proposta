@@ -1,9 +1,9 @@
 """ProposalDam — cache do JSON completo do DAM."""
-from sqlalchemy import Column, ForeignKey, Integer, JSON, String
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin, TenantMixin
+from models.mixins import TenantMixin, TimestampMixin, UUIDMixin
 
 
 class ProposalDam(Base, UUIDMixin, TimestampMixin, TenantMixin):

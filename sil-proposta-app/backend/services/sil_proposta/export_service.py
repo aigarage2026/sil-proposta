@@ -3,9 +3,10 @@ Export service — gera DAM (Word) e WP (Excel).
 Migrado de generators/dam.py e generators/wp.py do legado.
 """
 import io
+
 from docx import Document
-from docx.shared import Inches, Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Cm, Pt, RGBColor
 
 AZUL = RGBColor(0x1F, 0x4E, 0x79)
 AZUL_CL = RGBColor(0x2E, 0x75, 0xB6)

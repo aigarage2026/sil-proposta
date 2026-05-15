@@ -2,21 +2,19 @@
 Servico de geracao de propostas.
 Orquestra agentes IA e fallback para demo mode.
 """
-import asyncio
 import time
-from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.logger import get_logger
-from models.sil_proposta.proposal import Proposal
-from models.sil_proposta.proposal_resource import ProposalResource
-from models.sil_proposta.proposal_deliverable import ProposalDeliverable
-from models.sil_proposta.proposal_premise import ProposalPremise
-from models.sil_proposta.proposal_legislation import ProposalLegislation
-from models.sil_proposta.proposal_dam import ProposalDam
 from models.sil_proposta.agent_execution import AgentExecution
+from models.sil_proposta.proposal import Proposal
+from models.sil_proposta.proposal_dam import ProposalDam
+from models.sil_proposta.proposal_deliverable import ProposalDeliverable
+from models.sil_proposta.proposal_legislation import ProposalLegislation
+from models.sil_proposta.proposal_premise import ProposalPremise
+from models.sil_proposta.proposal_resource import ProposalResource
 from schemas.intake import IntakePayload
 
 settings = get_settings()

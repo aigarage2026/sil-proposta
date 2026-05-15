@@ -3,11 +3,11 @@ Tenant — raiz da multi-tenancy.
 Representa uma consultoria SAP cliente da plataforma (ex.: Cast Group, Accenture SAP).
 NAO carrega CNPJ (CNPJ e da Company).
 """
-from sqlalchemy import Boolean, Column, DateTime, Integer, JSON, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 
 from core.database import Base
-from models.mixins import UUIDMixin, TimestampMixin
+from models.mixins import TimestampMixin, UUIDMixin
 
 
 class Tenant(Base, UUIDMixin, TimestampMixin):

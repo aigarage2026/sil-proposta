@@ -2,8 +2,8 @@
 Demo generation service — fallback deterministico sem LLM.
 Migrado de demo_engine.py do legado.
 """
-from schemas.intake import IntakePayload
 from core.config import get_settings
+from schemas.intake import IntakePayload
 
 settings = get_settings()
 

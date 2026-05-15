@@ -4,7 +4,7 @@ Auth endpoints — login, register, refresh, me, logout.
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +14,6 @@ from core.security import (
     create_refresh_token,
     decode_token,
     get_current_user,
-    hash_password,
     verify_password,
 )
 from models.user import User

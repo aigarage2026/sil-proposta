@@ -3,6 +3,7 @@ Configuracao centralizada da aplicacao via Pydantic Settings.
 Todas as variaveis de ambiente sao lidas aqui.
 """
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings
 
 

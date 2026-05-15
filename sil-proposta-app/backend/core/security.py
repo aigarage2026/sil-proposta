@@ -10,8 +10,10 @@ Until the Portal exposes JWKS RS256, this module signs locally with HS256.
 The decode side already accepts iss/aud claims in lenient mode for forward
 compatibility.
 """
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
@@ -22,6 +24,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.database import get_db
+
+if TYPE_CHECKING:
+    from models.user import User
 
 settings = get_settings()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
