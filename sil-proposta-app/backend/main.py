@@ -86,7 +86,13 @@ async def root():
 from apis.v1.auth import router as auth_router
 from apis.v1.setup import router as setup_router
 from apis.v1.sil_proposta.proposals import router as proposals_router
+from apis.v1.integrations.portal import router as portal_integrations_router
 
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(setup_router, prefix="/setup", tags=["Setup"])
 app.include_router(proposals_router, prefix="/api/v1/proposals", tags=["Proposals"])
+app.include_router(
+    portal_integrations_router,
+    prefix="/api/v1/integrations/portal",
+    tags=["Portal Integrations"],
+)
