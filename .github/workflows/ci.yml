@@ -93,6 +93,9 @@ jobs:
           fi
 
       - name: Lint (eslint)
+        # Warn-only until Onda 6 migrates the frontend config to ESLint v9's
+        # flat-config (eslint.config.js). Build below is the gate.
+        continue-on-error: true
         run: npm run lint --if-present
 
       - name: Build (vite)
