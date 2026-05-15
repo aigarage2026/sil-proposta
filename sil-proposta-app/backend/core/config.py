@@ -33,6 +33,21 @@ class Settings(BaseSettings):
     JWT_EXPIRES_MIN: int = 60
     REFRESH_TOKEN_EXPIRES_DAYS: int = 30
 
+    # JWT identity claims (v3 §6.3)
+    # PRODUCT_SLUG is the canonical product identifier in the platform.
+    # It appears in `products[]` and as a key in `roles{by_product}`.
+    PRODUCT_SLUG: str = "sil-proposta"
+    # JWT_ISSUER: who issued the token. Until the Portal emits RS256 tokens,
+    # this product issues its own with iss=https://sil-proposta.ai-garage.com.br.
+    # When the Portal is ready, switch to validating tokens issued by it.
+    JWT_ISSUER: str = "https://sil-proposta.ai-garage.com.br"
+    # JWT_KID: key id. With local HS256 we use a fixed marker; with RS256 from
+    # Portal each rotated key has its own kid.
+    JWT_KID: str = "local-hs256-default"
+    # When True, decoding validates iss/aud strictly (production). When False,
+    # iss/aud are accepted but not enforced (legacy tokens, dev convenience).
+    JWT_STRICT_VALIDATION: bool = False
+
     # Encryption
     FERNET_KEY: str = ""
 

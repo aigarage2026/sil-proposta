@@ -1,6 +1,14 @@
 """
 Autenticacao e autorizacao — JWT, password hashing, RBAC dependencies.
-Padrao agn-auth da plataforma AI Garage.
+Padrao agn-auth da plataforma AI Garage (v3 §6).
+
+Tokens emitidos seguem o shape v3 §6.3:
+  { sub, email, tenant_id, products[], roles{by_product},
+    exp, iat, iss, aud, kid, trace_id }
+
+Until the Portal exposes JWKS RS256, this module signs locally with HS256.
+The decode side already accepts iss/aud claims in lenient mode for forward
+compatibility.
 """
 from datetime import datetime, timedelta
 from typing import Optional
@@ -32,46 +40,101 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ── JWT ─────────────────────────────────────────────────────────────────────
 
+def _build_roles_claim(role: str, is_platform_admin: bool) -> dict:
+    """Builds the v3 `roles{by_product}` claim from the local user record.
+
+    Until the Portal owns roles, every user gets the same role under
+    PRODUCT_SLUG, plus a synthesized `platform` role for super admins.
+    """
+    roles: dict[str, str] = {settings.PRODUCT_SLUG: role}
+    if is_platform_admin:
+        roles["platform"] = "super_admin"
+    else:
+        roles["platform"] = "tenant_admin" if role == "owner" else "tenant_user"
+    return roles
+
+
 def create_access_token(
     user_id: str,
     tenant_id: str,
     email: str,
     role: str,
     is_platform_admin: bool = False,
+    products: Optional[list[str]] = None,
+    trace_id: Optional[str] = None,
     expires_minutes: Optional[int] = None,
 ) -> str:
-    exp = datetime.utcnow() + timedelta(minutes=expires_minutes or settings.JWT_EXPIRES_MIN)
+    """Issues a v3-shaped access token (HS256 for now; RS256 when Portal lands)."""
+    now = datetime.utcnow()
+    exp = now + timedelta(minutes=expires_minutes or settings.JWT_EXPIRES_MIN)
     payload = {
+        # v3 §6.3 claims
         "sub": user_id,
-        "tenant_id": tenant_id,
         "email": email,
+        "tenant_id": tenant_id,
+        "products": products or [settings.PRODUCT_SLUG],
+        "roles": _build_roles_claim(role, is_platform_admin),
+        "iss": settings.JWT_ISSUER,
+        "aud": [settings.PRODUCT_SLUG],
+        "exp": exp,
+        "iat": now,
+        # Legacy claims kept for backward compatibility with existing
+        # decode paths and the frontend until it is updated to read
+        # the new shape.
         "role": role,
         "is_platform_admin": is_platform_admin,
-        "exp": exp,
-        "iat": datetime.utcnow(),
     }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    if trace_id:
+        payload["trace_id"] = trace_id
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+        headers={"kid": settings.JWT_KID},
+    )
 
 
 def create_refresh_token(user_id: str, tenant_id: str) -> str:
-    exp = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRES_DAYS)
+    now = datetime.utcnow()
+    exp = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRES_DAYS)
     payload = {
         "sub": user_id,
         "tenant_id": tenant_id,
         "type": "refresh",
+        "iss": settings.JWT_ISSUER,
+        "aud": [settings.PRODUCT_SLUG],
         "exp": exp,
-        "iat": datetime.utcnow(),
+        "iat": now,
     }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+        headers={"kid": settings.JWT_KID},
+    )
 
 
 def decode_token(token: str) -> dict:
+    """Decodes and validates a JWT. iss/aud are validated only in strict mode."""
+    options = {"require": ["exp", "sub"]}
+    decode_kwargs: dict = {
+        "key": settings.JWT_SECRET,
+        "algorithms": [settings.JWT_ALGORITHM],
+        "options": options,
+    }
+    if settings.JWT_STRICT_VALIDATION:
+        decode_kwargs["issuer"] = settings.JWT_ISSUER
+        decode_kwargs["audience"] = settings.PRODUCT_SLUG
+    else:
+        # Skip iss/aud verification — accept legacy tokens that lack them.
+        options["verify_aud"] = False
+        options["verify_iss"] = False
     try:
-        return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        return jwt.decode(token, **decode_kwargs)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Token invalido: {e}")
 
 
 # ── Dependencies ────────────────────────────────────────────────────────────
