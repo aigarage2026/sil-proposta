@@ -126,7 +126,7 @@ Base: matriz §18.0.1 do guia, perfil "1 dev sênior + apoio". Estimativas com f
 | **2** | Contratos Portal: implementar `POST /integrations/portal/provision` (HMAC), `POST /deprovision`, `GET /api/v1/dashboard/summary` (cache 60s), `GET /health` enriquecido (DB+Redis+Qdrant), `POST /lgpd/delete-tenant`, `POST /lgpd/export-tenant`. SubscriptionMiddleware. | 3 sem | ✅ **DONE** | B2 🟡 → testar contra Wiremock até Portal estar pronto |
 | **3** | Eventos Redis Streams: consumer de `portal.events` (handlers `tenant.created`, `subscription.upgraded`, etc.). Publisher de `usage.metric`, `audit.action`. Audit central via `POST /api/portal/audit/events` (com fallback REST). | 2 sem | ✅ **DONE** | B4 🔴 → fallback REST `POST /usage/events` no Portal |
 | **4** | **PULAR/POSTERGAR** — `agn-shared` ainda 🟡. Manter código duplicado em `sil-proposta-app/backend/core/`. Revisitar pós-GA. | (postergada) | — | B1 🟡 |
-| **5** | Domínio + infra prod: migrar RAG real (Qdrant + OpenAI embeddings), DAM Word generator, WP Excel generator, orchestrator_v5 do legacy. Anonimização LGPD. Sentry + Prometheus. Cloud Run deploy. CI/CD GitHub Actions. | 3 sem | pending | D3 (Postgres compartilhado) precisa estar provisionado |
+| **5** | Domínio + infra prod: migrar RAG real (Qdrant + OpenAI embeddings), DAM Word generator, WP Excel generator, orchestrator_v5 do legacy. Anonimização LGPD. Sentry + Prometheus. Cloud Run deploy. CI/CD GitHub Actions. | 3 sem | ✅ **DONE** (código completo; deploy real depende de D3) | D3 (Postgres compartilhado) precisa estar provisionado |
 | **6** | Frontend integrado no Portal SPA: migrar 5 páginas como módulos lazy (`agn-portal/src/products/sil-proposta/`). Adotar `agn-ui` (AuthContext, ProductSwitcher, httpClient). Branding via tenant. i18n hierárquico. | 3 sem | pending | Portal SPA precisa existir em ambiente acessível |
 | **7** | Cutover & split: `git subtree split --prefix=sil-proposta-app` para `github.com/ai-garage/sil-proposta-app`. Remover `legacy/`. DNS para Cloud Run. Smoke test E2E em sandbox por 7 dias. | 1 sem | pending | Ondas 1-6 completas |
 
@@ -149,6 +149,34 @@ Base: matriz §18.0.1 do guia, perfil "1 dev sênior + apoio". Estimativas com f
 - [x] **Plano de rollback escrito** — `docs/RUNBOOK_ROLLBACK.md` criado
 
 **1 item pendente** antes de iniciar Onda 1.
+
+---
+
+## 5.1 Status de execução (Ondas 0–5)
+
+Snapshot do código entregue na branch `feat/onda-1-align-v3` ao fim da
+Onda 5:
+
+| Onda | Highlights |
+|---|---|
+| 0 | Repo consolidado, `legacy/` isolado, Alembic baseline, smoke test |
+| 1 | Dual JWT HS256/RS256 + JWKS, `core/permissions.py`, rename `AGENT_HUB_*→PORTAL_*` |
+| 2 | LGPD delete/export-tenant (HMAC), Portal provision/deprovision, SubscriptionMiddleware (423 read-only quando suspended), dashboard summary, health enriquecido |
+| 3 | Redis Streams: consumer de `portal.events` com 7 handlers idempotentes; publisher de `usage.metric`+`audit.action` com fallback REST; `/sync-tenant` REST stub (§21.2.3); audit wiring em todas as rotas de Proposal |
+| 5a | Observabilidade: `/metrics` Prometheus + `MetricsMiddleware`, Sentry com tags `tenant_id`/`trace_id`/`user_id` |
+| 5b | CI GitHub Actions (ruff + pytest backend + build/lint frontend) |
+| 5c | DAM Word + WP Excel generators migrados do legado (template Cast Group) |
+| 5d | LGPD anonimizer (CPF/CNPJ/e-mail/telefone) com flag por tenant |
+| 5e | OrchestratorV5 catalog-first + LLMClient (OpenAI+Anthropic) + billing por execução; ligado em `generation_service` (legacy agents deletados) |
+| 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` (não conectado ao orchestrator — depende de corpus real) |
+| 5g | Deploy: `Dockerfile.cloudrun`, Terraform skeleton (Artifact Registry + Cloud Run + SA + Secret Manager bindings), workflow `.github/workflows/deploy.yml` |
+
+**Suite:** 183 testes verdes; ruff clean.
+
+**Não conectados ainda (debt curto):**
+- `RAGService.search()` no orchestrator (depende de corpus indexado)
+- `RAGService.purge_tenant()` no endpoint LGPD (depende de coleções em uso)
+- Counters Prometheus de business metric (definidos, sem `.inc()` — `emit_usage_metric` cobre o caminho do Portal)
 
 ---
 
