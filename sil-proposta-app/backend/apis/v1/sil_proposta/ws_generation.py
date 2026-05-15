@@ -31,7 +31,7 @@ async def ws_generate(websocket: WebSocket):
 
         # Validar token
         try:
-            claims = decode_token(token)
+            claims = await decode_token(token)
             tenant_id = claims["tenant_id"]
             user_id = claims["sub"]
         except Exception:

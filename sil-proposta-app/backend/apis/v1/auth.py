@@ -73,7 +73,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(body: dict, db: AsyncSession = Depends(get_db)):
     token = body.get("refresh_token", "")
-    payload = decode_token(token)
+    payload = await decode_token(token)
     if payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
 

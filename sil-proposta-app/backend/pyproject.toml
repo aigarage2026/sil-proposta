@@ -19,7 +19,9 @@ dependencies = [
     # Cache / Sessions
     "redis>=5.0.0",
     # Auth
-    "pyjwt>=2.8.0",
+    # pyjwt[crypto] pulls in `cryptography`, required for RS256/JWKS
+    # validation (v3 §6 dual mode).
+    "pyjwt[crypto]>=2.8.0",
     "passlib[bcrypt]>=1.7.0",
     # Pin bcrypt < 4.1 — passlib 1.7.x crashes during backend init with
     # bcrypt 4.1+ (`ValueError: password cannot be longer than 72 bytes`)

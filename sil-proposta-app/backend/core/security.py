@@ -114,23 +114,87 @@ def create_refresh_token(user_id: str, tenant_id: str) -> str:
     )
 
 
-def decode_token(token: str) -> dict:
-    """Decodes and validates a JWT. iss/aud are validated only in strict mode."""
+async def decode_token(token: str) -> dict:
+    """Decodes and validates a JWT — dual mode (v3 §6.5).
+
+    Strategy:
+      1. Read the unverified header to learn `alg` and `kid`.
+      2. If `alg=RS256` and a JWKS client is enabled, fetch the public
+         key for `kid` from the Portal's JWKS and validate.
+      3. Else (HS256, or RS256 with no Portal yet) validate locally
+         with JWT_SECRET. This is the v3 §6.5 dual-mode fallback.
+
+    iss/aud are enforced only when JWT_STRICT_VALIDATION=true.
+    """
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token invalido (header): {e}",
+        )
+
+    alg = unverified_header.get("alg")
+    kid = unverified_header.get("kid")
+
     options = {"require": ["exp", "sub"]}
-    decode_kwargs: dict = {
-        "key": settings.JWT_SECRET,
-        "algorithms": [settings.JWT_ALGORITHM],
-        "options": options,
-    }
+    decode_kwargs: dict = {"options": options}
     if settings.JWT_STRICT_VALIDATION:
         decode_kwargs["issuer"] = settings.JWT_ISSUER
         decode_kwargs["audience"] = settings.PRODUCT_SLUG
     else:
-        # Skip iss/aud verification — accept legacy tokens that lack them.
+        options["verify_aud"] = False
+        options["verify_iss"] = False
+
+    # Try RS256 via Portal JWKS first when the token claims that algorithm.
+    if alg == "RS256" and kid:
+        from core.jwks_client import get_jwks_client
+
+        jwks = get_jwks_client()
+        if jwks.enabled:
+            public_key = await jwks.get_signing_key(kid)
+            if public_key is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Token kid '{kid}' nao encontrado no JWKS do Portal",
+                )
+            decode_kwargs["key"] = public_key
+            decode_kwargs["algorithms"] = ["RS256"]
+            try:
+                return jwt.decode(token, **decode_kwargs)
+            except jwt.ExpiredSignatureError:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
+            except jwt.InvalidTokenError as e:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Token invalido: {e}")
+
+    # Local HS256 path (legacy tokens, dev tokens, or RS256 fallback when
+    # Portal is unreachable but dual mode is on).
+    decode_kwargs["key"] = settings.JWT_SECRET
+    decode_kwargs["algorithms"] = [settings.JWT_ALGORITHM]
+    try:
+        return jwt.decode(token, **decode_kwargs)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Token invalido: {e}")
+
+
+def decode_token_sync(token: str) -> dict:
+    """Synchronous fallback for callsites that can't await (rare).
+
+    Always uses local HS256. Don't use in async paths — prefer decode_token().
+    """
+    options = {"require": ["exp", "sub"]}
+    if not settings.JWT_STRICT_VALIDATION:
         options["verify_aud"] = False
         options["verify_iss"] = False
     try:
-        return jwt.decode(token, **decode_kwargs)
+        return jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+            options=options,
+        )
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expirado")
     except jwt.InvalidTokenError as e:
@@ -147,7 +211,7 @@ async def get_current_user(
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token nao fornecido")
 
-    payload = decode_token(credentials.credentials)
+    payload = await decode_token(credentials.credentials)
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalido")
@@ -161,12 +225,12 @@ async def get_current_user(
     return user
 
 
-def get_current_tenant_id(request: Request) -> str:
+async def get_current_tenant_id(request: Request) -> str:
     """Extrai tenant_id do JWT sem carregar o User completo."""
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token nao fornecido")
-    payload = decode_token(auth[7:])
+    payload = await decode_token(auth[7:])
     tenant_id = payload.get("tenant_id")
     if not tenant_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Tenant nao identificado")
