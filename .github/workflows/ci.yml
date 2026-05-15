@@ -56,17 +56,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node
+      # Detect lockfile presence so we can opt into npm-cache only when it
+      # exists. setup-node@v4 hard-errors on a missing cache-dependency-path,
+      # so toggling `with.cache` conditionally is the right shape.
+      - name: Check for lockfile
+        id: lockfile
+        run: |
+          if [ -f sil-proposta-app/frontend/package-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node (with cache)
+        if: steps.lockfile.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: sil-proposta-app/frontend/package-lock.json
 
+      - name: Set up Node (no cache — lockfile absent)
+        if: steps.lockfile.outputs.present != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install dependencies
-        # Prefer npm ci when a lockfile is present; fall back to npm install
-        # so the workflow still works on first commit before the lockfile
-        # lands in the repo.
+        # npm ci when the lockfile exists; npm install otherwise (first
+        # commit / pre-lockfile flow).
         run: |
           if [ -f package-lock.json ]; then
             npm ci
