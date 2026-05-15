@@ -60,6 +60,20 @@ class Settings(BaseSettings):
     PORTAL_CIRCUIT_BREAKER_TIMEOUT: int = 60
     PORTAL_JWKS_CACHE_TTL_SECONDS: int = 300
 
+    # LLM providers (orchestrator_v5 — Onda 5)
+    # Empty defaults so tests / dev environments without keys can still import.
+    # The orchestrator raises if a real call is attempted while the key is empty.
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o"
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-opus-4-7"
+    # Agents routed through Claude (comma-separated; rest go to OpenAI).
+    # Default mirrors the legacy: ABAP + QA get Claude when the key is set.
+    CLAUDE_AGENTS: str = "ABAP,QA"
+    # Timeouts for outbound LLM calls.
+    LLM_TIMEOUT_OPENAI: int = 60
+    LLM_TIMEOUT_ANTHROPIC: int = 300
+
     # Sentry (v3 §15.5) — disabled when DSN is empty (dev default).
     SENTRY_DSN: str = ""
     SENTRY_ENVIRONMENT: str = "dev"
