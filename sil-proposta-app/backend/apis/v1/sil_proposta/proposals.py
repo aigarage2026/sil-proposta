@@ -1,7 +1,7 @@
 """
 API v1 — Proposals CRUD + Generation + Export.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,8 @@ from sqlalchemy.orm import selectinload
 from core.database import get_db
 from core.security import get_current_user
 from models.user import User
+from services.events.audit import audit
+from services.events.publisher import emit_usage_metric
 from models.sil_proposta.proposal import Proposal
 from models.sil_proposta.proposal_resource import ProposalResource
 from models.sil_proposta.proposal_deliverable import ProposalDeliverable
@@ -126,6 +128,7 @@ async def get_proposal(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_proposal(
     payload: IntakePayload,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -138,6 +141,22 @@ async def create_proposal(
         user_id=user.id,
         payload=payload,
     )
+
+    proposal_id = result.get("id") or result.get("proposal_id") if isinstance(result, dict) else None
+    await audit(
+        request, user,
+        action="proposal.created",
+        entity="Proposal",
+        entity_id=proposal_id,
+        changes={"title": getattr(payload, "title", None)},
+    )
+    await emit_usage_metric(
+        tenant_id=user.tenant_id,
+        metric="proposals_generated",
+        value=1,
+        unit="count",
+        metadata={"proposal_id": proposal_id} if proposal_id else None,
+    )
     return result
 
 
@@ -145,6 +164,7 @@ async def create_proposal(
 async def update_status(
     proposal_id: str,
     body: ProposalStatusUpdate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -170,13 +190,23 @@ async def update_status(
             detail=f"Transicao invalida: {proposal.status} -> {body.status}. Permitidas: {allowed}",
         )
 
+    old_status = proposal.status
     proposal.status = body.status
+
+    await audit(
+        request, user,
+        action="proposal.status_changed",
+        entity="Proposal",
+        entity_id=proposal_id,
+        changes={"from": old_status, "to": body.status},
+    )
     return {"ok": True, "proposal_id": proposal_id, "status": body.status}
 
 
 @router.delete("/{proposal_id}")
 async def delete_proposal(
     proposal_id: str,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -188,13 +218,23 @@ async def delete_proposal(
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposta nao encontrada")
 
+    title = proposal.title
     await db.delete(proposal)
+
+    await audit(
+        request, user,
+        action="proposal.deleted",
+        entity="Proposal",
+        entity_id=proposal_id,
+        changes={"title": title},
+    )
     return {"ok": True, "proposal_id": proposal_id}
 
 
 @router.get("/{proposal_id}/export/dam")
 async def export_dam(
     proposal_id: str,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -217,6 +257,20 @@ async def export_dam(
 
     buf = generate_dam_document(proposal)
     fname = f"DAM_{proposal.title[:30].replace(' ', '_')}.docx"
+
+    await audit(
+        request, user,
+        action="proposal.dam_exported",
+        entity="Proposal",
+        entity_id=proposal_id,
+    )
+    await emit_usage_metric(
+        tenant_id=user.tenant_id,
+        metric="dam_documents_exported",
+        value=1,
+        unit="count",
+        metadata={"proposal_id": proposal_id},
+    )
 
     return StreamingResponse(
         buf,
