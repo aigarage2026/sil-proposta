@@ -46,6 +46,18 @@ dependencies = [
     "apscheduler>=3.10.0",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Flat layout: there's no single root package, so list the top-level
+# modules explicitly. tests/, scripts/, data/, migrations/ are intentionally
+# left out of the install — they're either runtime data, dev tooling, or
+# alembic-generated.
+include = ["apis*", "core*", "integrations*", "models*", "schemas*", "services*"]
+exclude = ["tests*", "scripts*", "data*", "migrations*"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
@@ -54,6 +66,9 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.6.0",
     "mypy>=1.11.0",
+    # Test-only fakes:
+    "aiosqlite>=0.20.0",
+    "fakeredis>=2.20.0",
 ]
 qdrant = [
     "qdrant-client>=1.12.0",
@@ -62,9 +77,27 @@ qdrant = [
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+extend-exclude = ["migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+# E712 (== True) is the standard SQLAlchemy idiom for boolean column comparisons;
+# `.is_(True)` is equivalent but uglier and not what the codebase uses.
+ignore = ["E712"]
+
+[tool.ruff.lint.per-file-ignores]
+# Late router imports in main.py are intentional — they run after FastAPI
+# is constructed so middleware order is preserved.
+"main.py" = ["E402"]
+# Tests have long inline payloads and locally-rebound variables; we don't
+# want to litter them with noqa.
+"tests/**/*.py" = ["E501"]
+# Seed / demo / agent prompt files are mostly inline data + Portuguese
+# narratives — wrapping them does not improve clarity.
+"scripts/**/*.py" = ["E501"]
+"services/sil_proposta/demo_generation_service.py" = ["E501"]
+"services/sil_proposta/agents/**/*.py" = ["E501"]
+"core/security.py" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
