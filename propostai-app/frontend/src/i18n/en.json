@@ -4,7 +4,7 @@
   "auth": { "login": "Sign in", "email": "Email", "password": "Password", "logout": "Sign out" },
   "intake": {
     "title": "Create SAP proposal",
-    "desc": "Fill in the fields. AI agents will analyze the scope and generate the DAM v1 draft.",
+    "desc": "Fill in the fields. AI agents will analyze the scope and generate the PS (Solution Proposal) v1 draft.",
     "project_type": "Project type",
     "sap_version": "SAP version",
     "states": "Client state(s)",

@@ -30,7 +30,7 @@ def test_masks_cnpj():
 
 
 def test_masks_email():
-    assert anonymize("Contato: joao.silva@cast.com.br ok") == "Contato: [EMAIL] ok"
+    assert anonymize("Contato: joao.silva@example.com.br ok") == "Contato: [EMAIL] ok"
 
 
 @pytest.mark.parametrize(
@@ -57,7 +57,7 @@ def test_bare_digit_sequences_are_not_masked():
 
 def test_masks_multiple_patterns_in_one_pass():
     src = (
-        "Cliente João da Silva, CPF 123.456.789-00, e-mail joao@cast.com.br, "
+        "Cliente João da Silva, CPF 123.456.789-00, e-mail joao@example.com.br, "
         "CNPJ 12.345.678/0001-90, tel (11) 98765-4321."
     )
     out = anonymize(src)
@@ -68,7 +68,7 @@ def test_masks_multiple_patterns_in_one_pass():
     # Original values must be gone.
     assert "123.456.789-00" not in out
     assert "12.345.678/0001-90" not in out
-    assert "joao@cast.com.br" not in out
+    assert "joao@example.com.br" not in out
     assert "98765-4321" not in out
 
 
@@ -97,7 +97,7 @@ def test_anonymize_payload_only_targets_listed_fields():
     payload = {
         "rfp_text": "CPF 111.222.333-44",
         "title": "Proposta",
-        "notes": "Contato joao@cast.com",
+        "notes": "Contato joao@example.com",
         "untouched": "CPF 999.999.999-99",
     }
     out = anonymize_payload(payload, fields=["rfp_text", "notes"])

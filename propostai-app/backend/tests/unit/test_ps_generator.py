@@ -1,5 +1,6 @@
 """
-Unit tests for the DAM Word generator (services/propostai/export_service.py).
+Unit tests for the PS (Proposta de Solução) Word generator
+(services/propostai/export_service.py).
 
 Parses the generated .docx with python-docx and verifies key content and
 structure:
@@ -7,7 +8,7 @@ structure:
   - All 8 numbered sections present.
   - Premissas + deliverables + resources flow through correctly.
   - Investment value formats as Brazilian BRL.
-  - dam_json values override Proposal columns when both present.
+  - ps_json values override Proposal columns when both present.
 """
 from types import SimpleNamespace
 
@@ -17,7 +18,7 @@ from docx import Document
 from services.propostai.export_service import (
     _format_brl,
     _proposal_to_sections,
-    generate_dam_document,
+    generate_ps_document,
 )
 
 pytestmark = pytest.mark.unit
@@ -52,7 +53,7 @@ def _proposal(
     needs_cpi=False,
     total_hours=528,
     valor=121_440.00,
-    dam_json=None,
+    ps_json=None,
     resources=None,
     deliverables=None,
     premises=None,
@@ -63,7 +64,7 @@ def _proposal(
         deliverables = [_deliverable(module="SD", item="BAPI Z"), _deliverable(module="FI", item="Trigger evento")]
     if premises is None:
         premises = [_premise("Acessos liberados antes do kickoff."), _premise("Janela QAS disponível.")]
-    dam = SimpleNamespace(dam_json=dam_json) if dam_json is not None else None
+    ps = SimpleNamespace(ps_json=ps_json) if ps_json is not None else None
     return SimpleNamespace(
         title=title,
         project_type=project_type,
@@ -73,7 +74,7 @@ def _proposal(
         needs_cpi=needs_cpi,
         total_hours=total_hours,
         valor=valor,
-        dam=dam,
+        ps=ps,
         resources=resources,
         deliverables=deliverables,
         premises=premises,
@@ -94,7 +95,7 @@ def _doc_text(buf) -> str:
 # ── adapter ─────────────────────────────────────────────────────────────────
 
 
-def test_proposal_to_sections_pulls_from_columns_when_dam_json_absent():
+def test_proposal_to_sections_pulls_from_columns_when_ps_json_absent():
     sections = _proposal_to_sections(_proposal())
     assert sections["titulo"] == "Reforma Tributária — Cenário 1"
     assert sections["versao_sap"] == "ECC 6.0 EHP8"
@@ -106,9 +107,9 @@ def test_proposal_to_sections_pulls_from_columns_when_dam_json_absent():
     assert sections["comercial"]["valor_referencia"] == 121_440.00
 
 
-def test_proposal_to_sections_dam_json_overrides_columns():
-    dam_json = {
-        "titulo": "DAM Gerado pela IA",
+def test_proposal_to_sections_ps_json_overrides_columns():
+    ps_json = {
+        "titulo": "PS Gerada pela IA",
         "necessidade": "Texto refinado pelo agente Orion.",
         "comercial": {
             "valor_referencia": 200_000.00,
@@ -117,8 +118,8 @@ def test_proposal_to_sections_dam_json_overrides_columns():
             "validade": "45 dias",
         },
     }
-    sections = _proposal_to_sections(_proposal(dam_json=dam_json))
-    assert sections["titulo"] == "DAM Gerado pela IA"
+    sections = _proposal_to_sections(_proposal(ps_json=ps_json))
+    assert sections["titulo"] == "PS Gerada pela IA"
     assert sections["necessidade"] == "Texto refinado pelo agente Orion."
     assert sections["comercial"]["valor_referencia"] == 200_000.00
     assert sections["comercial"]["faturamento"] == "30/30/40"
@@ -127,24 +128,24 @@ def test_proposal_to_sections_dam_json_overrides_columns():
 # ── renderer ────────────────────────────────────────────────────────────────
 
 
-def test_generate_dam_produces_nonempty_docx():
-    buf = generate_dam_document(_proposal())
+def test_generate_ps_produces_nonempty_docx():
+    buf = generate_ps_document(_proposal())
     assert buf.getbuffer().nbytes > 0
     # Docx files are ZIPs; the magic bytes are "PK".
     buf.seek(0)
     assert buf.read(2) == b"PK"
 
 
-def test_generate_dam_cover_carries_title():
-    buf = generate_dam_document(_proposal(title="Adequação NF-e Cenário Maquininha"))
+def test_generate_ps_cover_carries_title():
+    buf = generate_ps_document(_proposal(title="Adequação NF-e Cenário Maquininha"))
     text = _doc_text(buf)
     assert "Adequação NF-e Cenário Maquininha" in text
     assert "DIRETO AO PONTO PARTNER" in text
-    assert "DAM — Documento de Arquitetura de Melhoria — v1" in text
+    assert "PS — Proposta de Solução — v1" in text
 
 
-def test_generate_dam_has_all_eight_sections():
-    buf = generate_dam_document(_proposal())
+def test_generate_ps_has_all_eight_sections():
+    buf = generate_ps_document(_proposal())
     text = _doc_text(buf)
     for heading in (
         "1. Necessidade",
@@ -159,8 +160,8 @@ def test_generate_dam_has_all_eight_sections():
         assert heading in text, f"missing section heading: {heading}"
 
 
-def test_generate_dam_lists_premissas():
-    buf = generate_dam_document(
+def test_generate_ps_lists_premissas():
+    buf = generate_ps_document(
         _proposal(
             premises=[
                 _premise("Premissa única e específica do cenário."),
@@ -173,8 +174,8 @@ def test_generate_dam_lists_premissas():
     assert "Outra premissa que precisa aparecer." in text
 
 
-def test_generate_dam_lists_equipe():
-    buf = generate_dam_document(
+def test_generate_ps_lists_equipe():
+    buf = generate_ps_document(
         _proposal(
             resources=[
                 _resource(frente="ABAP", nivel="Pleno"),
@@ -188,35 +189,35 @@ def test_generate_dam_lists_equipe():
     assert "Consultor SD" in text
 
 
-def test_generate_dam_formats_brl_value():
-    buf = generate_dam_document(_proposal(valor=121_440.00))
+def test_generate_ps_formats_brl_value():
+    buf = generate_ps_document(_proposal(valor=121_440.00))
     text = _doc_text(buf)
     assert "R$ 121.440,00" in text
 
 
-def test_generate_dam_uses_dam_json_value_when_present():
-    buf = generate_dam_document(
+def test_generate_ps_uses_ps_json_value_when_present():
+    buf = generate_ps_document(
         _proposal(
             valor=121_440.00,
-            dam_json={"comercial": {"valor_referencia": 250_000.00}},
+            ps_json={"comercial": {"valor_referencia": 250_000.00}},
         )
     )
     text = _doc_text(buf)
     assert "R$ 250.000,00" in text
 
 
-def test_generate_dam_needs_cpi_routing_phrase():
-    buf_no_cpi = generate_dam_document(_proposal(needs_cpi=False))
-    buf_cpi = generate_dam_document(_proposal(needs_cpi=True))
+def test_generate_ps_needs_cpi_routing_phrase():
+    buf_no_cpi = generate_ps_document(_proposal(needs_cpi=False))
+    buf_cpi = generate_ps_document(_proposal(needs_cpi=True))
     text_no_cpi = _doc_text(buf_no_cpi)
     text_cpi = _doc_text(buf_cpi)
     assert "SAP DRC" in text_no_cpi
     assert "SAP CPI" in text_cpi
 
 
-def test_generate_dam_handles_empty_proposal_gracefully():
+def test_generate_ps_handles_empty_proposal_gracefully():
     # No resources, no deliverables, no premises, no rfp_text.
-    buf = generate_dam_document(
+    buf = generate_ps_document(
         _proposal(
             resources=[],
             deliverables=[],

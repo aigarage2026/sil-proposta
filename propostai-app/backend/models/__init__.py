@@ -10,10 +10,10 @@ from models.propostai.knowledge_document import KnowledgeDocument  # noqa: F401
 
 # Domain models (propostai)
 from models.propostai.proposal import Proposal  # noqa: F401
-from models.propostai.proposal_dam import ProposalDam  # noqa: F401
 from models.propostai.proposal_deliverable import ProposalDeliverable  # noqa: F401
 from models.propostai.proposal_legislation import ProposalLegislation  # noqa: F401
 from models.propostai.proposal_premise import ProposalPremise  # noqa: F401
+from models.propostai.proposal_ps import ProposalPS  # noqa: F401
 from models.propostai.proposal_resource import ProposalResource  # noqa: F401
 from models.propostai.proposal_template import ProposalTemplate  # noqa: F401
 

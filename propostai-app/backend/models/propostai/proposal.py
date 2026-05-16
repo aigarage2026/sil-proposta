@@ -43,7 +43,7 @@ class Proposal(Base, UUIDMixin, TimestampMixin, TenantMixin):
     deliverables = relationship("ProposalDeliverable", back_populates="proposal", cascade="all, delete-orphan")
     premises = relationship("ProposalPremise", back_populates="proposal", cascade="all, delete-orphan")
     legislations = relationship("ProposalLegislation", back_populates="proposal", cascade="all, delete-orphan")
-    dam = relationship("ProposalDam", back_populates="proposal", uselist=False, cascade="all, delete-orphan")
+    ps = relationship("ProposalPS", back_populates="proposal", uselist=False, cascade="all, delete-orphan")
     agent_executions = relationship("AgentExecution", back_populates="proposal", cascade="all, delete-orphan")
 
     __table_args__ = (

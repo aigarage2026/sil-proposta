@@ -7,8 +7,8 @@ LLM-derived fields are sourced from the stub's scripted replies.
 
 Coverage:
   - run() returns the expected shape (main_proc, total_hours, wp_resources,
-    confidence, agents_fired, dam, billing_records)
-  - DAM carries the real RFP in `necessidade` even when anonymization is on
+    confidence, agents_fired, ps, billing_records)
+  - PS carries the real RFP in `necessidade` even when anonymization is on
   - Anonymizer runs on the prompt the LLM actually sees (CPF/CNPJ masked)
   - When tenant has lgpd_anonymize_llm=False, LLM receives the raw RFP
   - billing_records flow back to the caller from the LLMClient
@@ -138,7 +138,7 @@ async def test_run_returns_expected_top_level_shape():
     out = await orch.run()
 
     for key in ("main_proc", "total_hours", "wp_resources", "confidence",
-                "agents_fired", "dam", "billing_records"):
+                "agents_fired", "ps", "billing_records"):
         assert key in out, f"missing key in run() output: {key}"
 
     assert out["main_proc"] == "SD"  # cbenef.main_proc
@@ -147,22 +147,22 @@ async def test_run_returns_expected_top_level_shape():
     assert out["agents_fired"][0].startswith("Classificador")
 
 
-async def test_run_uses_catalog_to_build_dam_for_known_demand():
+async def test_run_uses_catalog_to_build_ps_for_known_demand():
     llm = _StubLLM()
     orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
     out = await orch.run()
-    dam = out["dam"]
-    assert dam["tipo_demanda"] == "cbenef"
-    assert dam["label_demanda"].startswith("Implementação cBenef")
-    assert dam["plano"]["modules"] == ["SD", "ABAP"]
+    ps = out["ps"]
+    assert ps["tipo_demanda"] == "cbenef"
+    assert ps["label_demanda"].startswith("Implementação cBenef")
+    assert ps["plano"]["modules"] == ["SD", "ABAP"]
     # entregaveis built from catalog should be non-empty.
-    assert dam["entregaveis"]
+    assert ps["entregaveis"]
     # comercial calculated from total_horas * 250
-    assert dam["comercial"]["tarifa_hora"] == 250
-    assert dam["comercial"]["valor_referencia"] == out["total_hours"] * 250
+    assert ps["comercial"]["tarifa_hora"] == 250
+    assert ps["comercial"]["valor_referencia"] == out["total_hours"] * 250
 
 
-async def test_dam_keeps_real_rfp_in_necessidade_even_with_anonymization():
+async def test_ps_keeps_real_rfp_in_necessidade_even_with_anonymization():
     rfp_with_cnpj = "Cliente CNPJ 12.345.678/0001-90 quer cBenef em SP."
     llm = _StubLLM()
     orch = OrchestratorV5(
@@ -172,7 +172,7 @@ async def test_dam_keeps_real_rfp_in_necessidade_even_with_anonymization():
     )
     out = await orch.run()
     # Customer-facing field has the raw value.
-    assert out["dam"]["necessidade"] == rfp_with_cnpj
+    assert out["ps"]["necessidade"] == rfp_with_cnpj
     # But the LLM never saw it.
     for call in llm.calls:
         assert "12.345.678/0001-90" not in call.user
@@ -205,7 +205,7 @@ async def test_billing_records_propagate_to_caller():
 # ── as-is / to-be content flow ─────────────────────────────────────────────
 
 
-async def test_as_is_to_be_text_flows_from_llm_into_dam():
+async def test_as_is_to_be_text_flows_from_llm_into_ps():
     llm = _StubLLM(
         responses_by_agent={
             "AS_IS_TO_BE": (
@@ -217,9 +217,9 @@ async def test_as_is_to_be_text_flows_from_llm_into_dam():
     )
     orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
     out = await orch.run()
-    assert out["dam"]["processo_atual"] == "Estado atual descrito"
-    assert out["dam"]["processo_futuro"] == "Estado futuro descrito"
-    assert out["dam"]["beneficio_esperado"] == "Conformidade fiscal e produtividade"
+    assert out["ps"]["processo_atual"] == "Estado atual descrito"
+    assert out["ps"]["processo_futuro"] == "Estado futuro descrito"
+    assert out["ps"]["beneficio_esperado"] == "Conformidade fiscal e produtividade"
 
 
 # ── generic demand fallback ────────────────────────────────────────────────
@@ -235,24 +235,24 @@ async def test_generic_demand_invokes_generic_agent():
         }
     )
     orch = OrchestratorV5(
-        payload=_stub_payload(rfp_text="Algo totalmente fora do catálogo padrão da Cast."),
+        payload=_stub_payload(rfp_text="Algo totalmente fora do catálogo padrão."),
         tenant=_tenant(anonymize=False),
         llm=llm,
     )
     out = await orch.run()
-    assert out["dam"]["tipo_demanda"] == "generic"
+    assert out["ps"]["tipo_demanda"] == "generic"
     assert any("Agente Genérico" in a for a in out["agents_fired"])
     # Entregável veio do LLM e passou pelo filter (sem placeholders).
     assert any(
         e["item"] == "Configuração SD específica do cliente"
-        for e in out["dam"]["entregaveis"]
+        for e in out["ps"]["entregaveis"]
     )
 
 
 # ── QA flow ────────────────────────────────────────────────────────────────
 
 
-async def test_qa_score_flows_into_dam():
+async def test_qa_score_flows_into_ps():
     llm = _StubLLM(
         responses_by_agent={
             "QA": '{"aprovado":true,"score":95,"problemas":[],"sugestoes":["Adicionar item X"]}',
@@ -260,16 +260,16 @@ async def test_qa_score_flows_into_dam():
     )
     orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
     out = await orch.run()
-    assert out["dam"]["qa_score"] == 95
-    assert out["dam"]["qa_aprovado"] is True
-    assert out["dam"]["qa_sugestoes"] == ["Adicionar item X"]
+    assert out["ps"]["qa_score"] == 95
+    assert out["ps"]["qa_aprovado"] is True
+    assert out["ps"]["qa_sugestoes"] == ["Adicionar item X"]
 
 
 # ── failure tolerance ─────────────────────────────────────────────────────
 
 
 async def test_llm_failures_do_not_break_run():
-    # All LLM agents raise — orchestrator still returns a valid DAM (catalog wins).
+    # All LLM agents raise — orchestrator still returns a valid PS (catalog wins).
     llm = _StubLLM(
         raise_for_agent={"AS_IS_TO_BE", "ABAP", "SD", "QA"},
         default_response="not_json",
@@ -277,11 +277,11 @@ async def test_llm_failures_do_not_break_run():
     orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
     out = await orch.run()
 
-    assert out["dam"]["tipo_demanda"] == "cbenef"
+    assert out["ps"]["tipo_demanda"] == "cbenef"
     # AS-IS fields fell back to empty.
-    assert out["dam"]["processo_atual"] == ""
+    assert out["ps"]["processo_atual"] == ""
     # QA fell back to its default open-pass dict.
-    assert out["dam"]["qa_aprovado"] is True
+    assert out["ps"]["qa_aprovado"] is True
 
 
 async def test_default_tenant_assumes_anonymize_on():
@@ -315,7 +315,7 @@ async def test_sap_version_labels_resolved(raw, expected):
         llm=llm,
     )
     out = await orch.run()
-    assert out["dam"]["versao_sap"] == expected
+    assert out["ps"]["versao_sap"] == expected
 
 
 async def test_unknown_sap_version_passes_through():
@@ -326,7 +326,7 @@ async def test_unknown_sap_version_passes_through():
         llm=llm,
     )
     out = await orch.run()
-    assert out["dam"]["versao_sap"] == "custom_version"
+    assert out["ps"]["versao_sap"] == "custom_version"
 
 
 # ── RAG wiring (Onda 5 close) ──────────────────────────────────────────────
@@ -441,9 +441,9 @@ async def test_default_profile_does_not_change_baseline():
     llm = _StubLLM()
     orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
     out = await orch.run()
-    assert out["dam"]["comercial"]["tarifa_hora"] == 250
-    assert out["dam"]["calibration"]["profile"] == "default"
-    assert out["dam"]["calibration"]["hours_multiplier"] == 1.0
+    assert out["ps"]["comercial"]["tarifa_hora"] == 250
+    assert out["ps"]["calibration"]["profile"] == "default"
+    assert out["ps"]["calibration"]["hours_multiplier"] == 1.0
     # Confidence unchanged from the catalog defaults.
     assert out["confidence"]["escopo"] == 0.92
 
@@ -467,13 +467,13 @@ async def test_conservative_profile_inflates_hours_and_value():
 
     assert out_cons["total_hours"] > out_default["total_hours"]
     assert (
-        out_cons["dam"]["comercial"]["valor_referencia"]
-        > out_default["dam"]["comercial"]["valor_referencia"]
+        out_cons["ps"]["comercial"]["valor_referencia"]
+        > out_default["ps"]["comercial"]["valor_referencia"]
     )
     # Confidence is penalized; QA threshold is stricter.
     assert out_cons["confidence"]["escopo"] < out_default["confidence"]["escopo"]
-    assert out_cons["dam"]["qa_min_score"] == 90
-    assert out_cons["dam"]["calibration"]["profile"] == "conservative"
+    assert out_cons["ps"]["qa_min_score"] == 90
+    assert out_cons["ps"]["calibration"]["profile"] == "conservative"
     # agents_fired records which profile was applied.
     assert any("conservative" in a for a in out_cons["agents_fired"])
 
@@ -511,8 +511,8 @@ async def test_conservative_profile_flags_qa_needs_review_when_score_low():
         llm=llm,
     )
     out = await orch.run()
-    assert out["dam"]["qa_score"] == 85
-    assert out["dam"]["qa_needs_review"] is True
+    assert out["ps"]["qa_score"] == 85
+    assert out["ps"]["qa_needs_review"] is True
 
 
 async def test_default_profile_does_not_flag_qa_when_above_default_threshold():
@@ -527,7 +527,7 @@ async def test_default_profile_does_not_flag_qa_when_above_default_threshold():
         llm=llm,
     )
     out = await orch.run()
-    assert out["dam"]["qa_needs_review"] is False
+    assert out["ps"]["qa_needs_review"] is False
 
 
 async def test_unknown_profile_name_falls_back_silently():
@@ -539,7 +539,7 @@ async def test_unknown_profile_name_falls_back_silently():
     )
     out = await orch.run()
     # Behaves like default.
-    assert out["dam"]["calibration"]["profile"] == "default"
+    assert out["ps"]["calibration"]["profile"] == "default"
 
 
 async def test_rag_empty_results_produce_no_preamble():

@@ -1,9 +1,11 @@
 """
-DAM (Word) generator — Direto ao Ponto template.
+PS (Word) generator — Direto ao Ponto template.
 
-Migrated from legacy/propostai-monolith/backend/generators/dam.py (v3
-Onda 5). The legacy module rendered the full Direto ao Ponto DAM template
-(cover, summary, sections 1–8). This module:
+PS = Proposta de Solução (renomeada de "DAM" na Onda 5 close).
+
+Migrated from legacy/propostai-monolith/backend/generators/dam.py. The
+legacy module rendered the full Direto ao Ponto template (cover, summary,
+sections 1–8). This module:
 
   - Keeps that rich layout and style choices (Arial 11pt, AZUL/AZUL_CL
     headings, D9E1F2 table-row backgrounds, page breaks between sections).
@@ -15,7 +17,7 @@ Onda 5). The legacy module rendered the full Direto ao Ponto DAM template
 The rendering function intentionally avoids pulling in any non-stdlib
 dependency beyond `python-docx`. No DB access — call sites are expected
 to load the Proposal eagerly with its relationships (resources, deliverables,
-premises) before invoking generate_dam_document().
+premises) before invoking generate_ps_document().
 """
 from __future__ import annotations
 
@@ -106,30 +108,30 @@ def _proposal_to_sections(proposal) -> dict[str, Any]:
     """Build the dict shape the legacy renderer expects from a SQLAlchemy
     Proposal (and its loaded relationships).
 
-    Pulls from proposal.dam.dam_json when present — that's the AI-generated
-    structured content. Falls back to direct columns when dam_json is missing
+    Pulls from proposal.ps.ps_json when present — that's the AI-generated
+    structured content. Falls back to direct columns when ps_json is missing
     (e.g., a draft proposal that hasn't been generated yet).
     """
-    dam_json = (proposal.dam.dam_json if getattr(proposal, "dam", None) else None) or {}
-    comercial = dam_json.get("comercial") or {}
+    ps_json = (proposal.ps.ps_json if getattr(proposal, "ps", None) else None) or {}
+    comercial = ps_json.get("comercial") or {}
 
     valor_referencia = comercial.get("valor_referencia")
     if valor_referencia is None and proposal.valor is not None:
         valor_referencia = float(proposal.valor)
 
     return {
-        "titulo": dam_json.get("titulo") or proposal.title,
+        "titulo": ps_json.get("titulo") or proposal.title,
         "tipo_projeto": proposal.project_type,
         "versao_sap": proposal.sap_version,
         "ufs": proposal.states or [],
-        "necessidade": dam_json.get("necessidade") or proposal.rfp_text or "",
-        "plano": dam_json.get("plano") or {"needs_cpi": bool(proposal.needs_cpi)},
-        "reforma": dam_json.get("reforma") or {},
+        "necessidade": ps_json.get("necessidade") or proposal.rfp_text or "",
+        "plano": ps_json.get("plano") or {"needs_cpi": bool(proposal.needs_cpi)},
+        "reforma": ps_json.get("reforma") or {},
         "entregaveis": [
             f"[{d.module}] {d.item}" for d in (proposal.deliverables or [])
-        ] or dam_json.get("entregaveis") or [],
+        ] or ps_json.get("entregaveis") or [],
         "premissas": [p.text for p in (proposal.premises or [])]
-        or dam_json.get("premissas")
+        or ps_json.get("premissas")
         or [],
         "equipe": [
             {
@@ -153,8 +155,9 @@ def _proposal_to_sections(proposal) -> dict[str, Any]:
 # ── public entry point ─────────────────────────────────────────────────────
 
 
-def generate_dam_document(proposal) -> io.BytesIO:
-    """Build a Direto ao Ponto DAM .docx from a Proposal and return an in-memory buffer."""
+def generate_ps_document(proposal) -> io.BytesIO:
+    """Build a Direto ao Ponto PS (Proposta de Solução) .docx from a Proposal
+    and return an in-memory buffer."""
     sections = _proposal_to_sections(proposal)
     return _render(sections)
 
@@ -195,7 +198,7 @@ def _render(sections: dict[str, Any]) -> io.BytesIO:
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run("DAM — Documento de Arquitetura de Melhoria — v1")
+    run = p.add_run("PS — Proposta de Solução — v1")
     run.font.size = Pt(12)
     run.font.color.rgb = AZUL_CL
 
@@ -323,7 +326,7 @@ def _render(sections: dict[str, Any]) -> io.BytesIO:
         _set_cell_bg(hdr.cells[i], HEADER_BG_HEX)
 
     for row_data in [
-        ("SD", "Entendimento do cenário", "Sim", "Análise da legislação e geração do DAM"),
+        ("SD", "Entendimento do cenário", "Sim", "Análise da legislação e geração da PS"),
         ("FI", "Entendimento do cenário", "Sim", "Análise do fluxo financeiro"),
         ("FI", "Configuração / especificação", "Sim", "Conciliação bancária + trigger do evento"),
         ("SD", "Configuração / especificação", "Sim", "BAPI Z + BAdI + RFC + monitor"),
@@ -438,7 +441,7 @@ def _render(sections: dict[str, Any]) -> io.BytesIO:
         f"Esta proposta tem validade de {validade}.",
         "Os valores incluem ISS, PIS e COFINS atualmente em vigor.",
         f"Faturamento: {faturamento} (aprovação / Go-Live).",
-        "Em caso de paralisação: Cast reserva-se o direito de faturar o % de avanço.",
+        "Em caso de paralisação: a consultoria reserva-se o direito de faturar o % de avanço.",
         f"Garantia pós go-live: {garantia}.",
     ]:
         p = doc.add_paragraph(style="List Bullet")

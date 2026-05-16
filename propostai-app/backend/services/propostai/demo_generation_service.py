@@ -113,8 +113,8 @@ def gerar_proposta_demo(payload: IntakePayload) -> dict:
         "comercial": 0.95,
     }
 
-    dam = {
-        "titulo": f"DAM — {rfp[:60] if rfp else 'Proposta SAP'} ({','.join(ufs)})",
+    ps = {
+        "titulo": f"PS — {rfp[:60] if rfp else 'Proposta SAP'} ({','.join(ufs)})",
         "tipo_projeto": payload.project_type,
         "versao_sap": payload.sap_version,
         "ufs": ufs,
@@ -130,7 +130,7 @@ def gerar_proposta_demo(payload: IntakePayload) -> dict:
     }
 
     return {
-        "dam": dam,
+        "ps": ps,
         "wp_resources": resources,
         "total_hours": total_h,
         "confidence": confidence,

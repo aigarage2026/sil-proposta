@@ -39,7 +39,7 @@ TELEFONE_RE = re.compile(
 )
 
 # Order matters: e-mail before telefone, so a number-bearing local-part
-# (e.g. user2024@cast.com) doesn't get phone-masked first.
+# (e.g. user2024@example.com) doesn't get phone-masked first.
 PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (CPF_RE, "[CPF]"),
     (CNPJ_RE, "[CNPJ]"),

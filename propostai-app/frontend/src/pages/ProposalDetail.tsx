@@ -47,7 +47,7 @@ export default function ProposalDetail() {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Link to="/proposals" className="btn-secondary">{t('proposal.back')}</Link>
-          <a href={`/api/v1/proposals/${id}/export/dam`} className="btn-secondary">⬇ {t('proposal.export_dam')}</a>
+          <a href={`/api/v1/proposals/${id}/export/ps`} className="btn-secondary">⬇ {t('proposal.export_ps')}</a>
           {p.status === 'draft' && (
             <button onClick={() => approveMut.mutate()} className="btn-primary">{t('proposal.approve')} →</button>
           )}

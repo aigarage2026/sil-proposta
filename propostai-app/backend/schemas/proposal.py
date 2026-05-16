@@ -110,7 +110,7 @@ class ProposalDetail(BaseModel):
     premises: list[PremiseSchema] = []
     legislations: list[LegislationSchema] = []
     agent_executions: list[AgentExecutionSchema] = []
-    dam_json: Optional[dict] = None
+    ps_json: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
 

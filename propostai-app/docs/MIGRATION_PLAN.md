@@ -126,7 +126,7 @@ Base: matriz §18.0.1 do guia, perfil "1 dev sênior + apoio". Estimativas com f
 | **2** | Contratos Portal: implementar `POST /integrations/portal/provision` (HMAC), `POST /deprovision`, `GET /api/v1/dashboard/summary` (cache 60s), `GET /health` enriquecido (DB+Redis+Qdrant), `POST /lgpd/delete-tenant`, `POST /lgpd/export-tenant`. SubscriptionMiddleware. | 3 sem | ✅ **DONE** | B2 🟡 → testar contra Wiremock até Portal estar pronto |
 | **3** | Eventos Redis Streams: consumer de `portal.events` (handlers `tenant.created`, `subscription.upgraded`, etc.). Publisher de `usage.metric`, `audit.action`. Audit central via `POST /api/portal/audit/events` (com fallback REST). | 2 sem | ✅ **DONE** | B4 🔴 → fallback REST `POST /usage/events` no Portal |
 | **4** | **PULAR/POSTERGAR** — `agn-shared` ainda 🟡. Manter código duplicado em `propostai-app/backend/core/`. Revisitar pós-GA. | (postergada) | — | B1 🟡 |
-| **5** | Domínio + infra prod: migrar RAG real (Qdrant + OpenAI embeddings), DAM Word generator, WP Excel generator, orchestrator_v5 do legacy. Anonimização LGPD. Sentry + Prometheus. Cloud Run deploy. CI/CD GitHub Actions. | 3 sem | ✅ **DONE** (código completo; deploy real depende de D3) | D3 (Postgres compartilhado) precisa estar provisionado |
+| **5** | Domínio + infra prod: migrar RAG real (Qdrant + OpenAI embeddings), PS (Proposta de Solução) Word generator, WP Excel generator, orchestrator_v5 do legacy. Anonimização LGPD. Sentry + Prometheus. Cloud Run deploy. CI/CD GitHub Actions. | 3 sem | ✅ **DONE** (código completo; deploy real depende de D3) | D3 (Postgres compartilhado) precisa estar provisionado |
 | **6** | Frontend integrado no Portal SPA: migrar 5 páginas como módulos lazy (`agn-portal/src/products/propostai/`). Adotar `agn-ui` (AuthContext, ProductSwitcher, httpClient). Branding via tenant. i18n hierárquico. | 3 sem | 🟡 **PREP DONE** (lazy routes, namespace `products/propostai/`, AuthContext com claims v3, ESLint v9 flat-config); integração com `agn-ui` espera Portal SPA | Portal SPA precisa existir em ambiente acessível |
 | **7** | Cutover & split: `git subtree split --prefix=propostai-app` para `github.com/ai-garage/propostai-app`. Remover `legacy/`. DNS para Cloud Run. Smoke test E2E em sandbox por 7 dias. | 1 sem | 🟡 **RUNBOOK DONE** (`docs/RUNBOOK_CUTOVER.md`); execução real espera Ondas 1–6 mergeadas + Cloud Run em sandbox | Ondas 1-6 completas |
 
@@ -165,7 +165,7 @@ Onda 5:
 | 3 | Redis Streams: consumer de `portal.events` com 7 handlers idempotentes; publisher de `usage.metric`+`audit.action` com fallback REST; `/sync-tenant` REST stub (§21.2.3); audit wiring em todas as rotas de Proposal |
 | 5a | Observabilidade: `/metrics` Prometheus + `MetricsMiddleware`, Sentry com tags `tenant_id`/`trace_id`/`user_id` |
 | 5b | CI GitHub Actions (ruff + pytest backend + build/lint frontend) |
-| 5c | DAM Word + WP Excel generators migrados do legado (template Direto ao Ponto) |
+| 5c | PS (Proposta de Solução) Word + WP Excel generators migrados do legado (template Direto ao Ponto) |
 | 5d | LGPD anonimizer (CPF/CNPJ/e-mail/telefone) com flag por tenant |
 | 5e | OrchestratorV5 catalog-first + LLMClient (OpenAI+Anthropic) + billing por execução; ligado em `generation_service` (legacy agents deletados) |
 | 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` ligado ao `OrchestratorV5` (opt-in `tenant.features.rag_enabled`, fail-open, anonymized query, top-3 chunks viram preâmbulo nos prompts descritivos) |

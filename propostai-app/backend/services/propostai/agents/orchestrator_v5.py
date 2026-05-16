@@ -17,15 +17,15 @@ Pipeline (preserved from the legacy port):
   4. calculate_team(tipo, total_horas) — Python deterministic
   5. filter_premissas / EXCLUSOES_PADRAO
   6. comercial = total_horas × tarifa_hora (default 250)
-  7. assemble dam {} with the shape the DAM Word generator already consumes
+  7. assemble ps {} with the shape the PS Word generator already consumes
   8. qa_review (LLM)
   9. return { main_proc, total_hours, wp_resources, confidence,
-              agents_fired, dam, billing_records }
+              agents_fired, ps, billing_records }
 
 LGPD anonymization (v3 §4.5.5 E2): the orchestrator masks the RFP once,
 up front, when the tenant has anonymization enabled. The masked text is
 what flows into every LLM prompt. The original RFP is preserved on the
-returned dam.necessidade so the DB / DAM Word generator render real
+returned ps.necessidade so the DB / PS Word generator render real
 values for the customer-facing document.
 
 RAG context (v3 §4.5.5 E5 + Onda 5 close): when a RAGService is injected
@@ -224,7 +224,7 @@ async def _detalhar_modulo_funcional(
     return entregaveis
 
 
-async def _qa_review(ctx: _AgentContext, dam: dict) -> dict:
+async def _qa_review(ctx: _AgentContext, ps: dict) -> dict:
     """QA revisa a proposta consolidada. Sempre retorna um dict (fail-open)."""
     import json as _json
     system = (
@@ -235,10 +235,10 @@ async def _qa_review(ctx: _AgentContext, dam: dict) -> dict:
     resumo = _json.dumps(
         {
             "rfp": (ctx.rfp_for_llm or "")[:500],
-            "modulos": dam.get("plano", {}).get("modules", []),
-            "n_entregaveis": len(dam.get("entregaveis", [])),
-            "horas": dam.get("total_horas", 0),
-            "valor": dam.get("comercial", {}).get("valor_referencia", 0),
+            "modulos": ps.get("plano", {}).get("modules", []),
+            "n_entregaveis": len(ps.get("entregaveis", [])),
+            "horas": ps.get("total_horas", 0),
+            "valor": ps.get("comercial", {}).get("valor_referencia", 0),
         },
         ensure_ascii=False,
     )
@@ -377,20 +377,20 @@ class OrchestratorV5:
         tarifa_hora = profile.tariff_hora
         valor = round(total_horas * tarifa_hora)
 
-        # 7. assemble DAM
+        # 7. assemble PS (Proposta de Solução)
         ver_label = SAP_VERSION_LABELS.get(self.payload.sap_version, self.payload.sap_version)
         if rfp_real:
             titulo = (
                 f"{config['label']} — {rfp_real[:50]}"
                 if config["label"] != "Demanda Customizada"
-                else f"DAM — {rfp_real[:60]}"
+                else f"PS — {rfp_real[:60]}"
             )
         else:
             titulo = config.get("label", "Proposta SAP")
 
         entregaveis = filter_entregaveis(entregaveis)
 
-        dam = {
+        ps = {
             "titulo": titulo,
             "cliente": client_name,
             "tipo_projeto": self.payload.project_type,
@@ -456,19 +456,19 @@ class OrchestratorV5:
         }
 
         # 8. QA review
-        qa = await _qa_review(ctx, dam)
+        qa = await _qa_review(ctx, ps)
         agents_fired.append("QA (LLM)")
         qa_score = qa.get("score", 80)
-        dam["qa_score"] = qa_score
-        dam["qa_aprovado"] = qa.get("aprovado", True)
-        dam["qa_problemas"] = qa.get("problemas", [])
-        dam["qa_sugestoes"] = qa.get("sugestoes", [])
+        ps["qa_score"] = qa_score
+        ps["qa_aprovado"] = qa.get("aprovado", True)
+        ps["qa_problemas"] = qa.get("problemas", [])
+        ps["qa_sugestoes"] = qa.get("sugestoes", [])
         # Profile sets a stricter floor — UI / approval flow can read this
         # to decide whether human review is required.
-        dam["qa_min_score"] = profile.qa_min_score
-        dam["qa_needs_review"] = qa_score < profile.qa_min_score
+        ps["qa_min_score"] = profile.qa_min_score
+        ps["qa_needs_review"] = qa_score < profile.qa_min_score
 
-        dam["calibration"] = {
+        ps["calibration"] = {
             "profile": profile.name,
             "hours_multiplier": profile.hours_multiplier,
             "tariff_hora": profile.tariff_hora,
@@ -493,7 +493,7 @@ class OrchestratorV5:
             "wp_resources": recursos,
             "confidence": confidence,
             "agents_fired": agents_fired,
-            "dam": dam,
+            "ps": ps,
             "billing_records": list(self.llm.billing),
         }
 

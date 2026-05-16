@@ -9,8 +9,8 @@ from sqlalchemy.orm import selectinload
 
 from core.database import get_db
 from core.metrics import (
-    dam_documents_exported_total,
     proposals_generated_total,
+    ps_documents_exported_total,
     wp_documents_exported_total,
 )
 from core.security import get_current_user
@@ -79,7 +79,7 @@ async def get_proposal(
             selectinload(Proposal.deliverables),
             selectinload(Proposal.premises),
             selectinload(Proposal.legislations),
-            selectinload(Proposal.dam),
+            selectinload(Proposal.ps),
             selectinload(Proposal.agent_executions),
         )
     )
@@ -118,7 +118,7 @@ async def get_proposal(
         premises=[PremiseSchema.model_validate(p) for p in proposal.premises],
         legislations=[LegislationSchema.model_validate(leg) for leg in proposal.legislations],
         agent_executions=[AgentExecutionSchema.model_validate(a) for a in proposal.agent_executions],
-        dam_json=proposal.dam.dam_json if proposal.dam else None,
+        ps_json=proposal.ps.ps_json if proposal.ps else None,
         created_at=proposal.created_at,
         updated_at=proposal.updated_at,
     )
@@ -231,15 +231,15 @@ async def delete_proposal(
     return {"ok": True, "proposal_id": proposal_id}
 
 
-@router.get("/{proposal_id}/export/dam")
-async def export_dam(
+@router.get("/{proposal_id}/export/ps")
+async def export_ps(
     proposal_id: str,
     request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Download DAM como Word."""
-    from services.propostai.export_service import generate_dam_document
+    """Download da PS (Proposta de Solução) como Word."""
+    from services.propostai.export_service import generate_ps_document
 
     result = await db.execute(
         select(Proposal)
@@ -248,30 +248,30 @@ async def export_dam(
             selectinload(Proposal.resources),
             selectinload(Proposal.deliverables),
             selectinload(Proposal.premises),
-            selectinload(Proposal.dam),
+            selectinload(Proposal.ps),
         )
     )
     proposal = result.scalar_one_or_none()
     if not proposal:
         raise HTTPException(status_code=404, detail="Proposta nao encontrada")
 
-    buf = generate_dam_document(proposal)
-    fname = f"DAM_{proposal.title[:30].replace(' ', '_')}.docx"
+    buf = generate_ps_document(proposal)
+    fname = f"PS_{proposal.title[:30].replace(' ', '_')}.docx"
 
     await audit(
         request, user,
-        action="proposal.dam_exported",
+        action="proposal.ps_exported",
         entity="Proposal",
         entity_id=proposal_id,
     )
     await emit_usage_metric(
         tenant_id=user.tenant_id,
-        metric="dam_documents_exported",
+        metric="ps_documents_exported",
         value=1,
         unit="count",
         metadata={"proposal_id": proposal_id},
     )
-    dam_documents_exported_total.labels(tenant_id=user.tenant_id).inc()
+    ps_documents_exported_total.labels(tenant_id=user.tenant_id).inc()
 
     return StreamingResponse(
         buf,

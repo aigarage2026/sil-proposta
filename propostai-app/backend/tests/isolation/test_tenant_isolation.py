@@ -16,7 +16,7 @@ Routes covered:
   - GET    /api/v1/proposals/{id}          (detail)
   - PATCH  /api/v1/proposals/{id}/status   (mutation)
   - DELETE /api/v1/proposals/{id}          (destructive)
-  - GET    /api/v1/proposals/{id}/export/dam (binary export)
+  - GET    /api/v1/proposals/{id}/export/ps (binary export)
   - GET    /api/v1/proposals/{id}/export/wp  (binary export)
 
 `isolation_client` shims SubscriptionMiddleware so both tenants read as
@@ -134,16 +134,16 @@ async def test_delete_200_for_own_proposal(
     assert r.status_code == 200
 
 
-# ── Export DAM ─────────────────────────────────────────────────────────────
+# ── Export PS (Proposta de Solução) ────────────────────────────────────────
 
 
-async def test_export_dam_404_for_other_tenant(
+async def test_export_ps_404_for_other_tenant(
     isolation_client, two_tenants, auth_headers,
 ):
     user_a = two_tenants["a"]["user"]
     proposal_b_id = two_tenants["b"]["proposal"].id
     r = await isolation_client.get(
-        f"/api/v1/proposals/{proposal_b_id}/export/dam",
+        f"/api/v1/proposals/{proposal_b_id}/export/ps",
         headers=auth_headers(user_a),
     )
     assert r.status_code == 404
@@ -175,7 +175,7 @@ async def test_endpoints_require_auth(isolation_client, two_tenants):
         ("GET", f"/api/v1/proposals/{proposal_id}"),
         ("PATCH", f"/api/v1/proposals/{proposal_id}/status"),
         ("DELETE", f"/api/v1/proposals/{proposal_id}"),
-        ("GET", f"/api/v1/proposals/{proposal_id}/export/dam"),
+        ("GET", f"/api/v1/proposals/{proposal_id}/export/ps"),
         ("GET", f"/api/v1/proposals/{proposal_id}/export/wp"),
     ]:
         kwargs = {"json": {"status": "review"}} if method == "PATCH" else {}

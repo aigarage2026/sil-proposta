@@ -64,7 +64,7 @@ async def test_delete_tenant_success(client, sap_world, db):
     from models.user import User
 
     tenant_id = sap_world["tenant"].id
-    body = {"tenant_id": tenant_id, "requested_by": "compliance@cast.com", "reason": "art. 18, VI"}
+    body = {"tenant_id": tenant_id, "requested_by": "compliance@example.com", "reason": "art. 18, VI"}
     raw, headers = _sign(body)
     r = await client.post("/api/v1/lgpd/delete-tenant", content=raw, headers=headers)
 
@@ -95,7 +95,7 @@ async def test_delete_tenant_not_found(client):
 
 async def test_export_tenant_success(client, sap_world):
     tenant_id = sap_world["tenant"].id
-    body = {"tenant_id": tenant_id, "requested_by": "compliance@cast.com"}
+    body = {"tenant_id": tenant_id, "requested_by": "compliance@example.com"}
     raw, headers = _sign(body)
     r = await client.post("/api/v1/lgpd/export-tenant", content=raw, headers=headers)
 

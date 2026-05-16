@@ -4,7 +4,7 @@
   "auth": { "login": "Entrar", "email": "E-mail", "password": "Senha", "logout": "Sair" },
   "intake": {
     "title": "Criar proposta SAP",
-    "desc": "Preencha os campos. Os agentes IA analisarao o escopo e gerarao o rascunho v1 do DAM.",
+    "desc": "Preencha os campos. Os agentes IA analisarao o escopo e gerarao o rascunho v1 da PS (Proposta de Solucao).",
     "project_type": "Tipo de projeto",
     "sap_version": "Versao SAP",
     "states": "UF(s) do cliente",
@@ -19,7 +19,7 @@
   "proposal": {
     "draft": "Rascunho", "review": "Em revisao", "approved": "Aprovada", "won": "Ganha", "lost": "Perdida",
     "summary": "Resumo da solucao", "wp": "Work Package", "premises": "Premissas gerais", "investment": "Investimento",
-    "detail": "Detalhar", "export_dam": "DAM Word", "export_wp": "WP Excel", "approve": "Aprovar", "back": "Voltar"
+    "detail": "Detalhar", "export_ps": "PS Word", "export_wp": "WP Excel", "approve": "Aprovar", "back": "Voltar"
   },
   "agents": {
     "title": "Agentes IA trabalhando",

@@ -1,5 +1,5 @@
 """
-Servico de geracao de propostas.
+Servico de geracao de propostas (PS — Proposta de Solução).
 Orquestra agentes IA (OrchestratorV5) e fallback para demo mode.
 
 OrchestratorV5 é o catálogo-first migrado em §Onda 5: classifica a
@@ -15,10 +15,10 @@ from core.config import get_settings
 from core.logger import get_logger
 from models.propostai.agent_execution import AgentExecution
 from models.propostai.proposal import Proposal
-from models.propostai.proposal_dam import ProposalDam
 from models.propostai.proposal_deliverable import ProposalDeliverable
 from models.propostai.proposal_legislation import ProposalLegislation
 from models.propostai.proposal_premise import ProposalPremise
+from models.propostai.proposal_ps import ProposalPS
 from models.propostai.proposal_resource import ProposalResource
 from models.tenant import Tenant
 from schemas.intake import IntakePayload
@@ -59,7 +59,7 @@ async def generate_proposal(
         tenant_id=tenant_id,
         company_id=payload.company_id,
         created_by=user_id,
-        title=result["dam"]["titulo"],
+        title=result["ps"]["titulo"],
         project_type=payload.project_type,
         sap_version=payload.sap_version,
         states=payload.states,
@@ -71,9 +71,9 @@ async def generate_proposal(
         lang=payload.lang,
         status="draft",
         main_proc=result.get("main_proc", "SD"),
-        needs_cpi=result["dam"].get("plano", {}).get("needs_cpi", False),
+        needs_cpi=result["ps"].get("plano", {}).get("needs_cpi", False),
         total_hours=result["total_hours"],
-        valor=result["dam"].get("comercial", {}).get("valor_referencia", 0),
+        valor=result["ps"].get("comercial", {}).get("valor_referencia", 0),
         confidence_escopo=result.get("confidence", {}).get("escopo", 0),
         confidence_horas=result.get("confidence", {}).get("horas", 0),
         confidence_legislacao=result.get("confidence", {}).get("legislacao", 0),
@@ -98,7 +98,7 @@ async def generate_proposal(
         ))
 
     # Deliverables
-    for i, e in enumerate(result["dam"].get("entregaveis", [])):
+    for i, e in enumerate(result["ps"].get("entregaveis", [])):
         db.add(ProposalDeliverable(
             tenant_id=tenant_id,
             proposal_id=proposal.id,
@@ -108,7 +108,7 @@ async def generate_proposal(
         ))
 
     # Premises
-    for i, p in enumerate(result["dam"].get("premissas", [])):
+    for i, p in enumerate(result["ps"].get("premissas", [])):
         db.add(ProposalPremise(
             tenant_id=tenant_id,
             proposal_id=proposal.id,
@@ -118,7 +118,7 @@ async def generate_proposal(
         ))
 
     # Legislation
-    for leg in result["dam"].get("fiscal", {}).get("legislacao", []):
+    for leg in result["ps"].get("fiscal", {}).get("legislacao", []):
         db.add(ProposalLegislation(
             tenant_id=tenant_id,
             proposal_id=proposal.id,
@@ -126,11 +126,11 @@ async def generate_proposal(
             description=leg.get("description", "") if isinstance(leg, dict) else "",
         ))
 
-    # DAM JSON
-    db.add(ProposalDam(
+    # PS JSON
+    db.add(ProposalPS(
         tenant_id=tenant_id,
         proposal_id=proposal.id,
-        dam_json=result["dam"],
+        ps_json=result["ps"],
     ))
 
     # Agent executions
@@ -152,7 +152,7 @@ async def generate_proposal(
         "total_hours": result["total_hours"],
         "main_proc": result.get("main_proc"),
         "agents_fired": result.get("agents_fired", []),
-        "dam": result["dam"],
+        "ps": result["ps"],
         "wp_resources": result.get("wp_resources", []),
         "confidence": result.get("confidence", {}),
     }

@@ -5,7 +5,7 @@ Exposes the standard `{produto}_*` metric set required by the platform:
   - {slug}_http_requests_total{method, path, status, tenant_id}
   - {slug}_http_request_duration_seconds_bucket{method, path}
   - {slug}_proposals_generated_total{tenant_id}
-  - {slug}_dam_documents_exported_total{tenant_id}
+  - {slug}_ps_documents_exported_total{tenant_id}
 
 Path label uses the matched route pattern (`/api/v1/proposals/{proposal_id}`)
 rather than the literal URL — otherwise high-cardinality IDs blow up the
@@ -68,9 +68,9 @@ proposals_generated_total = Counter(
     registry=registry,
 )
 
-dam_documents_exported_total = Counter(
-    f"{_slug()}_dam_documents_exported_total",
-    "DAM Word documents exported.",
+ps_documents_exported_total = Counter(
+    f"{_slug()}_ps_documents_exported_total",
+    "PS (Proposta de Solução) Word documents exported.",
     labelnames=("tenant_id",),
     registry=registry,
 )
@@ -97,7 +97,7 @@ def reset_for_tests() -> None:
         http_requests_total,
         http_request_duration_seconds,
         proposals_generated_total,
-        dam_documents_exported_total,
+        ps_documents_exported_total,
         wp_documents_exported_total,
     ):
         collector._metrics.clear()  # type: ignore[attr-defined]

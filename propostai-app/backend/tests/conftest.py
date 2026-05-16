@@ -108,8 +108,8 @@ def make_company(db):
 async def sap_world(db, make_tenant, make_user, make_company):
     """Mundo completo PropostAI para testes integrados."""
     tenant = await make_tenant("Direto ao Ponto Test")
-    owner = await make_user(tenant.id, "owner@cast.com", "owner")
-    editor = await make_user(tenant.id, "editor@cast.com", "editor")
+    owner = await make_user(tenant.id, "owner@example.com", "owner")
+    editor = await make_user(tenant.id, "editor@example.com", "editor")
     company = await make_company(tenant.id, "Cliente ABC")
     await db.commit()
     return {

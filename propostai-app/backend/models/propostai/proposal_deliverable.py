@@ -1,4 +1,4 @@
-"""ProposalDeliverable — entregavel do DAM."""
+"""ProposalDeliverable — entregavel da PS (Proposta de Solução)."""
 from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
