@@ -85,11 +85,11 @@ Adoto **todos os defaults** sem divergência:
 | E2 | Anonimização LGPD antes de mandar pra LLM | **Configurável por tenant.** Default: anonimizar **CPF, CNPJ, nomes próprios, endereços, e-mails de pessoas físicas**. Plano `enterprise` permite desativar. |
 | E3 | Limites por plano (fonte da verdade) | **Portal envia `subscription.upgraded`** via Redis Stream; produto cacheia em `tenants.max_*`. Enquanto Portal não emite, valor vem do seed. |
 | E4 | Versão do código legado a herdar | **`orchestrator_v5.py`** (mais recente, descartar `orchestrator.py` v1). |
-| E5 | Cutover de RAG legado vs novo | **Feature flag** `RAG_PROVIDER=qdrant\|fake`. Default `qdrant` em dev/prod, `fake` apenas para testes determinísticos. Hash-based RAG removido após Onda 5. |
+| E5 | Cutover de RAG legado vs novo | **Feature flag** `RAG_PROVIDER=qdrant\|fake` + **opt-in per-tenant** `features.rag_enabled` (default off — só liga quando o tenant tem corpus indexado). Hash-based RAG legado removido. RAG ligado ao OrchestratorV5 com fail-open na busca. |
 | E6 | Dados legados (`legacy/.../proposals.json`) | **Descartar.** Eram propostas demo do desenvolvimento, não dados reais. Sem migração de produção. |
 | E7 | Geração de propostas — modo síncrono ou async? | **Async via WebSocket** (`ws_generation.py` já existe). Stream de eventos por agente. |
 | E8 | Modelo LLM padrão para os 8 agentes IA | **Claude Sonnet 4** (Anthropic) — já configurado em `pyproject.toml`. OpenAI como fallback opcional por tenant. |
-| E9 | Calibração dos agentes (gap memória [DAM Quality](C:\Users\Rogerio Ribeiro\.claude\projects\--wsl-localhost-Ubuntu-home-rogerio-ribeiro-propostai\memory\feedback_dam_quality.md), [Upgrade Proposal](C:\Users\Rogerio Ribeiro\.claude\projects\--wsl-localhost-Ubuntu-home-rogerio-ribeiro-propostai\memory\feedback_upgrade_proposal.md)) | **Per-tenant calibration profiles** (ex.: "conservative", "aggressive") configuráveis via `tenants.features.agent_profile`. Validar contra DAMs reais (passo final da Onda 5). |
+| E9 | Calibração dos agentes (gap memória [DAM Quality](C:\Users\Rogerio Ribeiro\.claude\projects\--wsl-localhost-Ubuntu-home-rogerio-ribeiro-propostai\memory\feedback_dam_quality.md), [Upgrade Proposal](C:\Users\Rogerio Ribeiro\.claude\projects\--wsl-localhost-Ubuntu-home-rogerio-ribeiro-propostai\memory\feedback_upgrade_proposal.md)) | ✅ **Implementado** em `services/propostai/agents/profiles.py`. Três perfis built-in (`default`, `conservative` +50% / QA≥90 / -0.10 confiança, `aggressive` -15%) selecionáveis via `tenants.features.agent_profile`. Validação contra DAMs reais segue como ação de operação (não bloqueia o código). |
 
 ### 3.6 Grupo F — Execução
 
@@ -168,12 +168,13 @@ Onda 5:
 | 5c | DAM Word + WP Excel generators migrados do legado (template Direto ao Ponto) |
 | 5d | LGPD anonimizer (CPF/CNPJ/e-mail/telefone) com flag por tenant |
 | 5e | OrchestratorV5 catalog-first + LLMClient (OpenAI+Anthropic) + billing por execução; ligado em `generation_service` (legacy agents deletados) |
-| 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` (não conectado ao orchestrator — depende de corpus real) |
+| 5f | RAG: Embedder OpenAI + Qdrant client multi-tenant + `RAGService` ligado ao `OrchestratorV5` (opt-in `tenant.features.rag_enabled`, fail-open, anonymized query, top-3 chunks viram preâmbulo nos prompts descritivos) |
+| 5h | Calibration profiles per-tenant (E9 / H2 / H3): `services/propostai/agents/profiles.py` com `default`/`conservative`/`aggressive`, selecionável via `tenant.features.agent_profile`. Conservative multiplica horas/valor por 1.5×, penaliza confiança em 0.1 e exige QA ≥ 90. Endereça `feedback_dam_quality` + `feedback_upgrade_proposal`. |
 | 5g | Deploy: `Dockerfile.cloudrun`, Terraform skeleton (Artifact Registry + Cloud Run + SA + Secret Manager bindings), workflow `.github/workflows/deploy.yml` |
 | 6 (prep) | Frontend: ESLint v9 flat-config (`eslint.config.js`), `Suspense + React.lazy` por rota (chunks separados emitidos pelo vite), `frontend/src/products/propostai/routes.tsx` (namespace alinhado com §17.4), `AuthContext` enriquecido com `products[]` + `rolesByProduct` + `hasProduct()` + `roleFor()` (assinatura espelha o contrato esperado de `agn-ui`) |
 | 7 (runbook) | `docs/RUNBOOK_CUTOVER.md` cobre subtree split, limpeza do monorepo, CI/CD no repo destino, DNS via Cloudflare tunnel, smoke E2E de 7 dias, go-live e rollback de cutover |
 
-**Suite:** 196 testes verdes; ruff clean.
+**Suite:** 216 testes verdes; ruff clean.
 
 **Inclui agora:**
 - `tests/isolation/test_tenant_isolation.py` (11 testes) — todas as rotas
@@ -181,11 +182,19 @@ Onda 5:
   (severidade *Crítico*).
 - `RAGService.purge_tenant()` chamado pelo `POST /lgpd/delete-tenant`
   (best-effort: falha do Qdrant não bloqueia LGPD).
+- `RAGService.search()` ligado ao `OrchestratorV5` via injeção (opt-in
+  per-tenant via `features.rag_enabled`, fail-open, query anonimizada).
 - Counters Prometheus `proposals_generated_total`/`dam_documents_exported_total`/`wp_documents_exported_total`
   incrementados nos endpoints reais — viraram observáveis.
+- `services/propostai/agents/profiles.py`: calibration profiles
+  per-tenant (`default`/`conservative`/`aggressive`) selecionáveis via
+  `features.agent_profile`. Fecha E9 e mitiga H2 / H3 — tenants que
+  fazem upgrades grandes (memória [Upgrade Proposal Gap]) ativam
+  `conservative` e ganham +50% horas, confiança penalizada e QA ≥ 90.
 
-**Não conectados ainda (debt curto):**
-- `RAGService.search()` no orchestrator (depende de corpus indexado).
+**Debt restante:**
+- Corpus real indexado por tenant — depende de produto (RAG está plumbed
+  end-to-end, mas só agrega valor com legislação/templates ingeridos).
 
 ---
 

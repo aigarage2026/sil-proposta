@@ -164,14 +164,17 @@ async def _generate_with_agents(
     """Gera via OrchestratorV5 (catalog + LLM descriptive).
 
     Loads the Tenant so the orchestrator can read its lgpd_anonymize_llm
-    feature flag before anonymizing the RFP for external LLM calls.
+    and rag_enabled feature flags before each external call. RAGService
+    is always constructed (cheap, no HTTP until search()) and gated
+    per-tenant inside the orchestrator.
     """
     from services.propostai.agents.orchestrator_v5 import OrchestratorV5
+    from services.rag.service import RAGService
 
     tenant_row = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = tenant_row.scalar_one_or_none()
 
-    orch = OrchestratorV5(payload=payload, tenant=tenant)
+    orch = OrchestratorV5(payload=payload, tenant=tenant, rag=RAGService.from_settings())
     return await orch.run()
 
 

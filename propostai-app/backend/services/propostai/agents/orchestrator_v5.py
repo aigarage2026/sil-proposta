@@ -27,12 +27,20 @@ up front, when the tenant has anonymization enabled. The masked text is
 what flows into every LLM prompt. The original RFP is preserved on the
 returned dam.necessidade so the DB / DAM Word generator render real
 values for the customer-facing document.
+
+RAG context (v3 §4.5.5 E5 + Onda 5 close): when a RAGService is injected
+AND the tenant opted in via features.rag_enabled, the orchestrator runs
+one tenant-scoped vector search at the start of run() using the
+anonymized RFP as the query. The top-k chunks are concatenated into a
+preamble that's prepended to every descriptive LLM prompt. Failures
+during retrieval are swallowed (fail-open) — the catalog path is always
+authoritative.
 """
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from core.logger import get_logger
 from services.lgpd.anonymizer import anonymize, should_anonymize_for_tenant
@@ -47,6 +55,8 @@ from services.propostai.agents.catalog import (
     get_demand_config,
 )
 from services.propostai.agents.llm_client import LLMClient, parse_llm_json
+from services.propostai.agents.profiles import resolve_profile_for_tenant
+from services.rag.service import RAGService
 
 logger = get_logger()
 
@@ -62,6 +72,39 @@ DEFAULT_TARIFA_HORA = 250
 
 FUNCTIONAL_MODULES = ("SD", "FI", "MM", "CO", "PP", "HR", "QM", "WM", "BASIS")
 
+# RAG: how many chunks to pull per proposal. Keep small — we paste these
+# verbatim into every agent prompt, so cost scales with k × agents.
+RAG_TOP_K = 3
+RAG_PURPOSE = "legislacao"
+
+
+def _rag_enabled_for_tenant(tenant) -> bool:
+    """Per-tenant opt-in. Fail-closed (off by default) — most tenants won't
+    have an indexed corpus yet, and embedding the RFP costs API calls.
+    Mirrors the should_anonymize_for_tenant shape so callers in tests can
+    use the same SimpleNamespace(features={...}) idiom.
+    """
+    if tenant is None:
+        return False
+    features = getattr(tenant, "features", None) or {}
+    return bool(features.get("rag_enabled"))
+
+
+def _format_rag_preamble(chunks: list[dict]) -> str:
+    """Turn search hits into a compact block the LLM can read once and
+    reuse across the prompt. Each item: rank, score, text.
+    """
+    if not chunks:
+        return ""
+    lines = ["Contexto recuperado da base de conhecimento (use como referência, não copie):"]
+    for i, c in enumerate(chunks, 1):
+        text = (c.get("payload") or {}).get("text", "") or ""
+        if not text:
+            continue
+        score = c.get("score", 0.0)
+        lines.append(f"[{i}] (score={score:.2f}) {text}")
+    return "\n".join(lines) + "\n\n"
+
 
 # ── LLM agents (descriptive text only) ─────────────────────────────────────
 
@@ -71,6 +114,7 @@ class _AgentContext:
     """Bundle of injectables a single LLM agent needs."""
     llm: LLMClient
     rfp_for_llm: str  # already anonymized if the tenant requested it
+    rag_preamble: str = ""  # empty when RAG is off or returned nothing
 
 
 async def _gerar_as_is_to_be(ctx: _AgentContext) -> dict:
@@ -82,7 +126,7 @@ async def _gerar_as_is_to_be(ctx: _AgentContext) -> dict:
     try:
         text = await ctx.llm.call(
             system=system,
-            user=f"RFP:\n{ctx.rfp_for_llm}",
+            user=f"{ctx.rag_preamble}RFP:\n{ctx.rfp_for_llm}",
             agent_name="AS_IS_TO_BE",
         )
         return parse_llm_json(text) or {}
@@ -103,7 +147,7 @@ async def _detalhar_abap_item(ctx: _AgentContext, obj: dict) -> None:
         '"exemplo_codigo":"REPORT z...\\nDATA: ..."}'
     )
     user_msg = (
-        f"RFP:\n{ctx.rfp_for_llm}\n\n"
+        f"{ctx.rag_preamble}RFP:\n{ctx.rfp_for_llm}\n\n"
         f"Objeto: {obj.get('item','')}\n"
         f"Tipo: {obj.get('tipo','')}\n"
         f"Transação base: {obj.get('transacao','')}"
@@ -160,7 +204,7 @@ async def _detalhar_modulo_funcional(
     try:
         text = await ctx.llm.call(
             system=system,
-            user=f"RFP:\n{ctx.rfp_for_llm}\n\nEntregáveis {modulo}:\n{itens_texto}",
+            user=f"{ctx.rag_preamble}RFP:\n{ctx.rfp_for_llm}\n\nEntregáveis {modulo}:\n{itens_texto}",
             agent_name=modulo,
             max_tokens=4000,
         )
@@ -219,7 +263,7 @@ async def _gerar_entregaveis_genericos(ctx: _AgentContext) -> list[dict]:
     )
     try:
         text = await ctx.llm.call(
-            system=system, user=f"RFP:\n{ctx.rfp_for_llm}", agent_name="GENERIC",
+            system=system, user=f"{ctx.rag_preamble}RFP:\n{ctx.rfp_for_llm}", agent_name="GENERIC",
         )
         r = parse_llm_json(text) or {}
         return r.get("entregaveis", []) if isinstance(r, dict) else []
@@ -247,10 +291,17 @@ class OrchestratorV5:
 
     `llm` is the LLMClient instance — pass a stub in tests; production
     callers can omit it to get one from settings.
+
+    `rag` is an optional RAGService. When set AND the tenant opted in
+    (`tenant.features['rag_enabled']`), the orchestrator pulls top-k
+    chunks once and uses them as a preamble in every descriptive prompt.
+    Production callers pass `RAGService.from_settings()`; tests inject a
+    stub. Leave None to disable RAG entirely (the catalog path stands).
     """
     payload: Any
     tenant: Any = None
     llm: LLMClient = field(default_factory=LLMClient.from_settings)
+    rag: Optional[RAGService] = None
 
     async def run(self) -> dict:
         rfp_real = self.payload.rfp_text or ""
@@ -258,9 +309,21 @@ class OrchestratorV5:
         client_name = getattr(self.payload, "client_name", "") or "Cliente"
 
         rfp_for_llm = anonymize(rfp_real) if should_anonymize_for_tenant(self.tenant) else rfp_real
-        ctx = _AgentContext(llm=self.llm, rfp_for_llm=rfp_for_llm or "")
 
-        agents_fired: list[str] = ["Classificador (Python determinístico)"]
+        profile = resolve_profile_for_tenant(self.tenant)
+
+        agents_fired: list[str] = [
+            "Classificador (Python determinístico)",
+            f"Calibração: perfil '{profile.name}'",
+        ]
+
+        rag_preamble = await self._fetch_rag_preamble(rfp_for_llm or "")
+        if rag_preamble:
+            agents_fired.append(f"RAG (top-{RAG_TOP_K} chunks)")
+
+        ctx = _AgentContext(
+            llm=self.llm, rfp_for_llm=rfp_for_llm or "", rag_preamble=rag_preamble,
+        )
 
         # 1. classify
         tipo = classify_demand(rfp_real)
@@ -293,11 +356,14 @@ class OrchestratorV5:
         as_is = results_par[-1] if not isinstance(results_par[-1], Exception) else {}
         agents_fired.extend(labels)
 
-        # 4. team (deterministic)
+        # 4. team (deterministic) + per-tenant calibration multiplier
         total_horas_entregaveis = sum(
             int(e.get("horas", 0) or 0) for e in entregaveis if isinstance(e, dict)
         )
         recursos = calculate_team(tipo, total_horas_entregaveis)
+        if profile.hours_multiplier != 1.0:
+            for r in recursos:
+                r["dias"] = max(1, round(r.get("dias", 0) * profile.hours_multiplier))
         agents_fired.append("Equipe (calculada)")
         total_horas = sum(r.get("dias", 0) * 8 for r in recursos)
 
@@ -307,8 +373,8 @@ class OrchestratorV5:
         if config.get("complexity") == "baixa":
             exclusoes.append("Não contempla customizações além do escopo descrito acima")
 
-        # 6. comercial
-        tarifa_hora = DEFAULT_TARIFA_HORA
+        # 6. comercial (tariff comes from the calibration profile)
+        tarifa_hora = profile.tariff_hora
         valor = round(total_horas * tarifa_hora)
 
         # 7. assemble DAM
@@ -392,10 +458,22 @@ class OrchestratorV5:
         # 8. QA review
         qa = await _qa_review(ctx, dam)
         agents_fired.append("QA (LLM)")
-        dam["qa_score"] = qa.get("score", 80)
+        qa_score = qa.get("score", 80)
+        dam["qa_score"] = qa_score
         dam["qa_aprovado"] = qa.get("aprovado", True)
         dam["qa_problemas"] = qa.get("problemas", [])
         dam["qa_sugestoes"] = qa.get("sugestoes", [])
+        # Profile sets a stricter floor — UI / approval flow can read this
+        # to decide whether human review is required.
+        dam["qa_min_score"] = profile.qa_min_score
+        dam["qa_needs_review"] = qa_score < profile.qa_min_score
+
+        dam["calibration"] = {
+            "profile": profile.name,
+            "hours_multiplier": profile.hours_multiplier,
+            "tariff_hora": profile.tariff_hora,
+            "confidence_penalty": profile.confidence_penalty,
+        }
 
         confidence = {
             "escopo": 0.92 if tipo != "generic" else 0.65,
@@ -403,6 +481,11 @@ class OrchestratorV5:
             "legislacao": 0.91,
             "comercial": 0.95,
         }
+        if profile.confidence_penalty:
+            confidence = {
+                k: max(0.0, min(1.0, v - profile.confidence_penalty))
+                for k, v in confidence.items()
+            }
 
         return {
             "main_proc": config.get("main_proc", "SD"),
@@ -413,3 +496,25 @@ class OrchestratorV5:
             "dam": dam,
             "billing_records": list(self.llm.billing),
         }
+
+    async def _fetch_rag_preamble(self, query: str) -> str:
+        """Tenant-scoped RAG retrieval. Returns a preamble string ready to
+        prepend to LLM user messages, or "" when disabled / nothing found
+        / any error. Never raises — catalog path is authoritative.
+        """
+        if self.rag is None or not _rag_enabled_for_tenant(self.tenant):
+            return ""
+        tenant_id = getattr(self.tenant, "id", None)
+        if not tenant_id or not query.strip():
+            return ""
+        try:
+            chunks = await self.rag.search(
+                tenant_id=str(tenant_id),
+                query=query,
+                purpose=RAG_PURPOSE,
+                limit=RAG_TOP_K,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("orchestrator_rag_search_failed", error=str(exc))
+            return ""
+        return _format_rag_preamble(chunks)

@@ -84,8 +84,45 @@ def _stub_payload(
     )
 
 
-def _tenant(*, anonymize: bool = True):
-    return SimpleNamespace(features={"lgpd_anonymize_llm": anonymize})
+def _tenant(
+    *,
+    anonymize: bool = True,
+    rag_enabled: bool = False,
+    tenant_id: str = "t-1",
+    agent_profile: Optional[str] = None,
+):
+    features = {"lgpd_anonymize_llm": anonymize, "rag_enabled": rag_enabled}
+    if agent_profile is not None:
+        features["agent_profile"] = agent_profile
+    return SimpleNamespace(id=tenant_id, features=features)
+
+
+# ── stub RAG ────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class _RecordedSearch:
+    tenant_id: str
+    query: str
+    purpose: str
+    limit: int
+
+
+@dataclass
+class _StubRAG:
+    """Minimal RAGService-shaped stub. Records search() calls and returns
+    scripted chunks (default: empty). Set `raise_on_search` to simulate
+    Qdrant being down.
+    """
+    chunks: list[dict] = field(default_factory=list)
+    raise_on_search: bool = False
+    calls: list[_RecordedSearch] = field(default_factory=list)
+
+    async def search(self, *, tenant_id, query, purpose=None, limit=5):
+        self.calls.append(_RecordedSearch(tenant_id, query, purpose or "", limit))
+        if self.raise_on_search:
+            raise RuntimeError("simulated qdrant outage")
+        return list(self.chunks)
 
 
 # ── happy path ─────────────────────────────────────────────────────────────
@@ -290,3 +327,233 @@ async def test_unknown_sap_version_passes_through():
     )
     out = await orch.run()
     assert out["dam"]["versao_sap"] == "custom_version"
+
+
+# ── RAG wiring (Onda 5 close) ──────────────────────────────────────────────
+
+
+async def test_rag_disabled_by_default_no_search_calls():
+    # Tenant has no rag_enabled flag → orchestrator must not call rag.search().
+    rag = _StubRAG()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),  # rag_enabled defaults False
+        llm=_StubLLM(),
+        rag=rag,
+    )
+    await orch.run()
+    assert rag.calls == []
+
+
+async def test_rag_skipped_when_service_is_none_even_if_opted_in():
+    # Opt-in only matters when a RAGService is wired. None → no-op.
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, rag_enabled=True),
+        llm=_StubLLM(),
+        rag=None,
+    )
+    out = await orch.run()
+    # Still completes, no "RAG" agent fired.
+    assert not any(a.startswith("RAG") for a in out["agents_fired"])
+
+
+async def test_rag_context_injected_into_llm_prompts_when_enabled():
+    rag = _StubRAG(
+        chunks=[
+            {"id": "c1", "score": 0.91, "payload": {"text": "NT 2019.001 detalha cBenef..."}},
+            {"id": "c2", "score": 0.88, "payload": {"text": "Decreto SP 65.254 regulamenta..."}},
+        ]
+    )
+    llm = _StubLLM()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, rag_enabled=True),
+        llm=llm,
+        rag=rag,
+    )
+    out = await orch.run()
+
+    # Search ran once, scoped to the tenant + correct purpose.
+    assert len(rag.calls) == 1
+    assert rag.calls[0].tenant_id == "t-1"
+    assert rag.calls[0].purpose == "legislacao"
+
+    # agents_fired records the retrieval step.
+    assert any(a.startswith("RAG") for a in out["agents_fired"])
+
+    # Every descriptive LLM call carries the preamble (catalog-driven
+    # demand cbenef → AS_IS_TO_BE + ABAP + SD all see the chunks).
+    descriptive_calls = [c for c in llm.calls if c.agent_name in {"AS_IS_TO_BE", "ABAP", "SD"}]
+    assert descriptive_calls, "expected at least one descriptive LLM call"
+    for c in descriptive_calls:
+        assert "Contexto recuperado" in c.user
+        assert "NT 2019.001" in c.user
+        assert "Decreto SP 65.254" in c.user
+
+    # QA gets a summary, not the RFP → no preamble expected.
+    qa_calls = [c for c in llm.calls if c.agent_name == "QA"]
+    assert qa_calls and "Contexto recuperado" not in qa_calls[0].user
+
+
+async def test_rag_search_failure_does_not_break_run():
+    # Qdrant down → RAG silently returns "" and the orchestrator proceeds.
+    rag = _StubRAG(raise_on_search=True)
+    llm = _StubLLM()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, rag_enabled=True),
+        llm=llm,
+        rag=rag,
+    )
+    out = await orch.run()
+
+    # Search was attempted, but the failure was swallowed.
+    assert len(rag.calls) == 1
+    # No RAG agent in the fired list (preamble is empty).
+    assert not any(a.startswith("RAG") for a in out["agents_fired"])
+    # No prompt should mention the preamble header.
+    assert all("Contexto recuperado" not in c.user for c in llm.calls)
+
+
+async def test_rag_uses_anonymized_query():
+    # The RAG search query must be the anonymized RFP, not the raw one —
+    # the corpus is public legislation; sending real PII to vendor APIs
+    # would defeat the LGPD anonymizer.
+    rag = _StubRAG(chunks=[{"id": "c", "score": 0.5, "payload": {"text": "ctx"}}])
+    rfp_with_cpf = "Owner CPF 111.222.333-44 quer cBenef em SP"
+    orch = OrchestratorV5(
+        payload=_stub_payload(rfp_text=rfp_with_cpf),
+        tenant=_tenant(anonymize=True, rag_enabled=True),
+        llm=_StubLLM(),
+        rag=rag,
+    )
+    await orch.run()
+    assert len(rag.calls) == 1
+    assert "111.222.333-44" not in rag.calls[0].query
+
+
+# ── Calibration profiles (Onda 5 close — E9 / H2 / H3) ────────────────────
+
+
+async def test_default_profile_does_not_change_baseline():
+    # Baseline: no tenant feature set → multiplier 1.0, tariff 250, no penalty.
+    llm = _StubLLM()
+    orch = OrchestratorV5(payload=_stub_payload(), tenant=_tenant(anonymize=False), llm=llm)
+    out = await orch.run()
+    assert out["dam"]["comercial"]["tarifa_hora"] == 250
+    assert out["dam"]["calibration"]["profile"] == "default"
+    assert out["dam"]["calibration"]["hours_multiplier"] == 1.0
+    # Confidence unchanged from the catalog defaults.
+    assert out["confidence"]["escopo"] == 0.92
+
+
+async def test_conservative_profile_inflates_hours_and_value():
+    # Run twice (default vs conservative) and compare. Conservative must
+    # produce strictly more hours and value (multiplier 1.5).
+    llm_default = _StubLLM()
+    out_default = await OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=llm_default,
+    ).run()
+
+    llm_cons = _StubLLM()
+    out_cons = await OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, agent_profile="conservative"),
+        llm=llm_cons,
+    ).run()
+
+    assert out_cons["total_hours"] > out_default["total_hours"]
+    assert (
+        out_cons["dam"]["comercial"]["valor_referencia"]
+        > out_default["dam"]["comercial"]["valor_referencia"]
+    )
+    # Confidence is penalized; QA threshold is stricter.
+    assert out_cons["confidence"]["escopo"] < out_default["confidence"]["escopo"]
+    assert out_cons["dam"]["qa_min_score"] == 90
+    assert out_cons["dam"]["calibration"]["profile"] == "conservative"
+    # agents_fired records which profile was applied.
+    assert any("conservative" in a for a in out_cons["agents_fired"])
+
+
+async def test_aggressive_profile_deflates_hours():
+    llm_default = _StubLLM()
+    out_default = await OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=llm_default,
+    ).run()
+
+    llm_agg = _StubLLM()
+    out_agg = await OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, agent_profile="aggressive"),
+        llm=llm_agg,
+    ).run()
+
+    assert out_agg["total_hours"] <= out_default["total_hours"]
+    # No confidence penalty on aggressive — speed bias, not honesty bias.
+    assert out_agg["confidence"]["escopo"] == out_default["confidence"]["escopo"]
+
+
+async def test_conservative_profile_flags_qa_needs_review_when_score_low():
+    # QA returns 85; conservative requires 90 → needs_review must be True.
+    llm = _StubLLM(
+        responses_by_agent={
+            "QA": '{"aprovado":true,"score":85,"problemas":[],"sugestoes":[]}',
+        }
+    )
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, agent_profile="conservative"),
+        llm=llm,
+    )
+    out = await orch.run()
+    assert out["dam"]["qa_score"] == 85
+    assert out["dam"]["qa_needs_review"] is True
+
+
+async def test_default_profile_does_not_flag_qa_when_above_default_threshold():
+    llm = _StubLLM(
+        responses_by_agent={
+            "QA": '{"aprovado":true,"score":85,"problemas":[],"sugestoes":[]}',
+        }
+    )
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=llm,
+    )
+    out = await orch.run()
+    assert out["dam"]["qa_needs_review"] is False
+
+
+async def test_unknown_profile_name_falls_back_silently():
+    llm = _StubLLM()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, agent_profile="ultra-mega-cons"),
+        llm=llm,
+    )
+    out = await orch.run()
+    # Behaves like default.
+    assert out["dam"]["calibration"]["profile"] == "default"
+
+
+async def test_rag_empty_results_produce_no_preamble():
+    # Search returned [] (no indexed corpus matches) → no preamble injected
+    # and no "RAG" agent fired, even though the search itself ran.
+    rag = _StubRAG(chunks=[])
+    llm = _StubLLM()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False, rag_enabled=True),
+        llm=llm,
+        rag=rag,
+    )
+    out = await orch.run()
+    assert len(rag.calls) == 1
+    assert not any(a.startswith("RAG") for a in out["agents_fired"])
+    assert all("Contexto recuperado" not in c.user for c in llm.calls)
