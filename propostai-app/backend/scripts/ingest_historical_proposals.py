@@ -124,13 +124,41 @@ async def _noop_index(**kwargs):
 
 
 def write_manifest_header(path: Path) -> None:
+    """Cria o manifest com header SE ele não existir. Modo append-safe:
+    re-runs (resume) preservam o conteúdo anterior em vez de sobrescrever.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and path.stat().st_size > 0:
+        return
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow([
             "source_path", "success", "skipped_reason", "fingerprint",
             "chunks_indexed", "year", "modules", "doc_type", "size_band", "error",
         ])
+
+
+def load_processed_paths(manifest_path: Path) -> set[str]:
+    """Lê o manifest e retorna o conjunto de source_paths já marcados
+    com success=True OU com skipped_reason em ('duplicate', 'empty_text',
+    'unsupported_format'). Permite resume sem re-processar nem
+    re-indexar — economiza tempo e tokens.
+
+    Reprocessamos erros (success=False sem skipped_reason): podem ter
+    sido falhas transitórias (Qdrant down, OpenAI timeout).
+    """
+    if not manifest_path.exists():
+        return set()
+    skip_reasons = {"duplicate", "empty_text", "unsupported_format"}
+    processed: set[str] = set()
+    with manifest_path.open(newline="", encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            success = row.get("success", "").lower() in ("true", "1")
+            reason = (row.get("skipped_reason") or "").lower()
+            if success or reason in skip_reasons:
+                processed.add(row["source_path"])
+    return processed
 
 
 def append_manifest(path: Path, r: IngestResult) -> None:
@@ -177,9 +205,18 @@ async def main() -> int:
 
     print(f"Scanning {root} for supported docs…")
     files = discover(root)
+    print(f"Found {len(files)} candidate documents.")
+
+    # Resume: filtra paths já presentes no manifest com sucesso/skip definitivo.
+    already_processed = load_processed_paths(MANIFEST_PATH)
+    if already_processed:
+        before = len(files)
+        files = [p for p in files if str(p) not in already_processed]
+        print(f"Resume: pulando {before - len(files)} docs já no manifest. Restam {len(files)}.")
+
     if args.limit > 0:
         files = files[: args.limit]
-    print(f"Found {len(files)} candidate documents.")
+        print(f"Aplicando --limit={args.limit}: processando {len(files)}.")
 
     rag = RAGService.from_settings()
     llm_reviewer = None if args.no_llm_review else LLMClient.from_settings()
