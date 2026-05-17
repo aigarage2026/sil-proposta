@@ -62,6 +62,10 @@ docker-compose.override.*.yml
 data/proposals.db
 data/*.db
 
+# Sócrates ingest outputs (manifest CSV + amostras anonimizadas locais)
+propostai-app/backend/data/ingest_manifest.csv
+propostai-app/backend/data/ingest_samples/
+
 # Logs
 *.log
 logs/

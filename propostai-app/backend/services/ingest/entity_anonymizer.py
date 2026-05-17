@@ -29,8 +29,13 @@ import functools
 import re
 from typing import Optional
 
-# Module codes / acronyms spaCy tends to flag as ORG but are domain jargon.
+# Module codes / acronyms / section headings spaCy tends to flag as
+# ORG/PER/LOC but are domain jargon or boilerplate of a PS document.
+# Keeping these visible matters for Sócrates' retrieval quality —
+# embeddings of "Premissas Gerais" need to actually look like a premise
+# section, not like "[LOCAL_1]".
 _DOMAIN_STOPWORDS = frozenset({
+    # módulos SAP + siglas técnicas
     "sap", "abap", "sd", "fi", "mm", "co", "pp", "hr", "qm", "wm",
     "basis", "ams", "drc", "cpi", "ecc", "s4", "s/4", "s4hana", "s/4hana",
     "ehp", "spro", "nfe", "nf-e", "ctprime", "ctd", "tef", "sefaz",
@@ -38,8 +43,29 @@ _DOMAIN_STOPWORDS = frozenset({
     "icms", "ipi", "pis", "cofins", "iss", "irrf", "csll",
     "rfp", "ps", "wp", "kt", "qas", "prd", "dev",
     "go", "go-live", "kick-off", "kickoff",
-    "direto ao ponto", "diretoaoponto",  # nossa marca (não anonimizar)
-    "ai garage", "ai-garage",            # nossa marca
+    "sod", "sods", "sodb", "fiori", "hana", "successfactors", "ariba", "concur",
+    # nossa marca (não anonimizar)
+    "direto ao ponto", "diretoaoponto", "ai garage", "ai-garage",
+    # seções típicas de uma PS / DAM legado — não são entidades
+    "sumário", "sumario", "necessidade", "solução", "solucao", "premissa",
+    "premissas", "premissas gerais", "equipe", "equipe do projeto",
+    "investimento", "cronograma", "impactos", "análise", "analise",
+    "análise de impactos", "analise de impactos", "faturamento",
+    "condições de faturamento", "condicoes de faturamento",
+    "informações adicionais", "informacoes adicionais",
+    "escopo", "escopo da melhoria", "escopo de melhoria",
+    "resumo", "quadro resumo", "benefício esperado", "beneficio esperado",
+    "benefício", "beneficio",
+    "processo atual", "processo futuro",
+    "entregáveis", "entregaveis", "transações", "transacoes",
+    "manutenção", "manutencao", "manutenção de perfis", "perfis",
+    # SEFAZ / siglas tributárias são autoridade pública, não cliente
+    "sefaz", "ibge", "receita federal", "anvisa", "anatel", "aneel",
+    # palavras vazias / artigos / cargos genéricos
+    "cliente", "clientes", "consultor", "consultores", "analista",
+    "arquiteto", "gerente", "coordenador", "diretor",
+    # ferramentas técnicas (não identificam cliente)
+    "excel", "word", "outlook", "teams", "jira", "service now", "servicenow",
 })
 
 # Entity types we want to mask. spaCy pt-br emits: PER, ORG, LOC, MISC.
@@ -53,12 +79,42 @@ _TYPE_TO_TOKEN = {
 
 @functools.lru_cache(maxsize=1)
 def _nlp():
-    """Load spaCy lazily — model is ~50 MB, no need to pay the cost in
-    test runs that don't use NER.
+    """Load spaCy lazily. Uses pt_core_news_lg (~500 MB) for the better
+    recall on Brazilian proper nouns — historical PSs reference many
+    clients with uncommon names that md misses.
     """
     import spacy
 
-    return spacy.load("pt_core_news_md", disable=["lemmatizer", "tagger"])
+    return spacy.load("pt_core_news_lg", disable=["lemmatizer", "tagger"])
+
+
+# Known client / partner / tool names observed leaking past NER. Each
+# entry is masked to a stable fictitious tag — the corpus loses traceable
+# identity but keeps the descriptive structure around it. Add aggressively;
+# false positives here just over-mask, never under-mask.
+_KNOWN_NAMES_BLOCKLIST: tuple[tuple[re.Pattern[str], str], ...] = (
+    # consultorias e parceiros (Cast Group era a marca antiga; mascarar
+    # mesmo assim — corpus histórico é antes da rebrand)
+    (re.compile(r"\bCast\s+Group\b", re.IGNORECASE), "[EMPRESA_LEGADA]"),
+    (re.compile(r"\bCastGroup\b", re.IGNORECASE), "[EMPRESA_LEGADA]"),
+    # clientes observados nas amostras
+    (re.compile(r"\bADESTE\b"), "[CLIENTE_A]"),
+    (re.compile(r"\bARMAC\b"), "[CLIENTE_B]"),
+    # ferramentas SaaS que aparecem nomeadas em PSs
+    (re.compile(r"\bQualitor\b", re.IGNORECASE), "[FERRAMENTA_1]"),
+    (re.compile(r"\bReceiv\b"), "[FERRAMENTA_2]"),
+    (re.compile(r"\bSOLMAN\b"), "[FERRAMENTA_3]"),
+)
+
+
+def apply_known_blocklist(text: str) -> str:
+    """Mascara nomes conhecidos antes do NER. Idempotente."""
+    if not text:
+        return text
+    out = text
+    for pattern, token in _KNOWN_NAMES_BLOCKLIST:
+        out = pattern.sub(token, out)
+    return out
 
 
 def _is_stopword(surface: str) -> bool:
@@ -82,6 +138,11 @@ def anonymize_entities(text: Optional[str]) -> str:
     """
     if not text:
         return text or ""
+
+    # 0. Apply hardcoded blocklist of known clients/tools first — these
+    # are the names NER historically missed; we want them gone before
+    # the placeholder stash so [CLIENTE_A] etc. are preserved as tokens.
+    text = apply_known_blocklist(text)
 
     # 1. Stash existing anonymization tokens so spaCy doesn't re-tag them.
     # Placeholder spans are kept so we can also skip NER entities that
