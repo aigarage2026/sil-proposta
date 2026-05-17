@@ -329,108 +329,172 @@ async def test_unknown_sap_version_passes_through():
     assert out["ps"]["versao_sap"] == "custom_version"
 
 
-# ── RAG wiring (Onda 5 close) ──────────────────────────────────────────────
+# ── Sócrates wiring (Onda 5 close — substitui RAG per-tenant legado) ───────
+#
+# Sócrates é always-on: roda em toda proposta, busca corpus global
+# anonimizado, devolve briefing agregado (não chunks crus). Threshold de
+# 3 matches para o briefing virar "actionable" (alimenta prompts + QA).
 
 
-async def test_rag_disabled_by_default_no_search_calls():
-    # Tenant has no rag_enabled flag → orchestrator must not call rag.search().
-    rag = _StubRAG()
+def _socrates_hits(n: int = 5, *, modules=None) -> list[dict]:
+    """Constrói N hits do Qdrant pra ativar o briefing de Sócrates."""
+    modules = modules or ["SD", "FI", "ABAP"]
+    return [
+        {
+            "id": f"hist-{i}",
+            "score": 0.9 - i * 0.05,
+            "payload": {
+                "text": f"chunk histórico {i}",
+                "modules": modules,
+                "entregaveis": ["BAdI J_1BNF_ADD_DATA", "Tabela Z manutenível"],
+                "riscos": ["Rejeição SEFAZ", "Atraso aprovação cliente"],
+            },
+        }
+        for i in range(n)
+    ]
+
+
+async def test_socrates_always_runs_even_without_tenant_feature():
+    # Sócrates é always-on — não depende de feature flag por tenant.
+    rag = _StubRAG(chunks=_socrates_hits(5))
     orch = OrchestratorV5(
         payload=_stub_payload(),
-        tenant=_tenant(anonymize=False),  # rag_enabled defaults False
+        tenant=_tenant(anonymize=False),  # sem feature flag nenhuma
         llm=_StubLLM(),
         rag=rag,
     )
     await orch.run()
-    assert rag.calls == []
+    assert len(rag.calls) == 1
 
 
-async def test_rag_skipped_when_service_is_none_even_if_opted_in():
-    # Opt-in only matters when a RAGService is wired. None → no-op.
+async def test_socrates_uses_global_tenant_and_historic_purpose():
+    rag = _StubRAG(chunks=_socrates_hits(5))
     orch = OrchestratorV5(
         payload=_stub_payload(),
-        tenant=_tenant(anonymize=False, rag_enabled=True),
+        tenant=_tenant(anonymize=False),
         llm=_StubLLM(),
-        rag=None,
+        rag=rag,
     )
-    out = await orch.run()
-    # Still completes, no "RAG" agent fired.
-    assert not any(a.startswith("RAG") for a in out["agents_fired"])
+    await orch.run()
+    call = rag.calls[0]
+    assert call.tenant_id == "_global"
+    assert call.purpose == "propostas_historicas"
 
 
-async def test_rag_context_injected_into_llm_prompts_when_enabled():
-    rag = _StubRAG(
-        chunks=[
-            {"id": "c1", "score": 0.91, "payload": {"text": "NT 2019.001 detalha cBenef..."}},
-            {"id": "c2", "score": 0.88, "payload": {"text": "Decreto SP 65.254 regulamenta..."}},
-        ]
-    )
+async def test_socrates_briefing_injected_in_specialist_prompts():
+    rag = _StubRAG(chunks=_socrates_hits(5, modules=["SD", "ABAP"]))
     llm = _StubLLM()
     orch = OrchestratorV5(
         payload=_stub_payload(),
-        tenant=_tenant(anonymize=False, rag_enabled=True),
+        tenant=_tenant(anonymize=False),
         llm=llm,
         rag=rag,
     )
     out = await orch.run()
 
-    # Search ran once, scoped to the tenant + correct purpose.
-    assert len(rag.calls) == 1
-    assert rag.calls[0].tenant_id == "t-1"
-    assert rag.calls[0].purpose == "legislacao"
+    # agents_fired registra o passo do Sócrates com N e confiança.
+    assert any(a.startswith("Sócrates") for a in out["agents_fired"])
 
-    # agents_fired records the retrieval step.
-    assert any(a.startswith("RAG") for a in out["agents_fired"])
+    # Specialistas (AS_IS_TO_BE, ABAP, SD) recebem o preamble.
+    descriptive = [c for c in llm.calls if c.agent_name in {"AS_IS_TO_BE", "ABAP", "SD"}]
+    assert descriptive, "expected at least one descriptive LLM call"
+    for c in descriptive:
+        assert "Sócrates encontrou padrão" in c.user
 
-    # Every descriptive LLM call carries the preamble (catalog-driven
-    # demand cbenef → AS_IS_TO_BE + ABAP + SD all see the chunks).
-    descriptive_calls = [c for c in llm.calls if c.agent_name in {"AS_IS_TO_BE", "ABAP", "SD"}]
-    assert descriptive_calls, "expected at least one descriptive LLM call"
-    for c in descriptive_calls:
-        assert "Contexto recuperado" in c.user
-        assert "NT 2019.001" in c.user
-        assert "Decreto SP 65.254" in c.user
-
-    # QA gets a summary, not the RFP → no preamble expected.
+    # QA recebe resumo da proposta, NÃO o briefing como preamble.
     qa_calls = [c for c in llm.calls if c.agent_name == "QA"]
-    assert qa_calls and "Contexto recuperado" not in qa_calls[0].user
+    assert qa_calls and "Sócrates encontrou padrão" not in qa_calls[0].user
 
 
-async def test_rag_search_failure_does_not_break_run():
-    # Qdrant down → RAG silently returns "" and the orchestrator proceeds.
+async def test_socrates_briefing_persists_in_output():
+    rag = _StubRAG(chunks=_socrates_hits(7))
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=_StubLLM(),
+        rag=rag,
+    )
+    out = await orch.run()
+    briefing = out["ps"]["socrates"]
+    assert briefing["demandas_semelhantes_encontradas"] == 7
+    assert briefing["confianca_match"] > 0
+
+
+async def test_socrates_empty_briefing_when_too_few_matches():
+    # Sócrates exige >= 3 matches pra virar actionable. Com 2, devolve vazio
+    # e nenhum preamble é injetado.
+    rag = _StubRAG(chunks=_socrates_hits(2))
+    llm = _StubLLM()
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=llm,
+        rag=rag,
+    )
+    await orch.run()
+    # Search ainda rodou, mas nada vazou pros prompts.
+    assert len(rag.calls) == 1
+    assert all("Sócrates encontrou padrão" not in c.user for c in llm.calls)
+
+
+async def test_socrates_search_failure_does_not_break_run():
     rag = _StubRAG(raise_on_search=True)
     llm = _StubLLM()
     orch = OrchestratorV5(
         payload=_stub_payload(),
-        tenant=_tenant(anonymize=False, rag_enabled=True),
+        tenant=_tenant(anonymize=False),
         llm=llm,
         rag=rag,
     )
     out = await orch.run()
-
-    # Search was attempted, but the failure was swallowed.
-    assert len(rag.calls) == 1
-    # No RAG agent in the fired list (preamble is empty).
-    assert not any(a.startswith("RAG") for a in out["agents_fired"])
-    # No prompt should mention the preamble header.
-    assert all("Contexto recuperado" not in c.user for c in llm.calls)
+    # Catalog completa normalmente; nada de "Sócrates" em agents_fired.
+    assert not any(a.startswith("Sócrates") for a in out["agents_fired"])
+    assert out["ps"]["tipo_demanda"] == "cbenef"
 
 
-async def test_rag_uses_anonymized_query():
-    # The RAG search query must be the anonymized RFP, not the raw one —
-    # the corpus is public legislation; sending real PII to vendor APIs
-    # would defeat the LGPD anonymizer.
-    rag = _StubRAG(chunks=[{"id": "c", "score": 0.5, "payload": {"text": "ctx"}}])
+async def test_socrates_skipped_when_rag_is_none():
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=_StubLLM(),
+        rag=None,
+    )
+    out = await orch.run()
+    assert not any(a.startswith("Sócrates") for a in out["agents_fired"])
+
+
+async def test_socrates_query_is_anonymized():
+    rag = _StubRAG(chunks=_socrates_hits(5))
     rfp_with_cpf = "Owner CPF 111.222.333-44 quer cBenef em SP"
     orch = OrchestratorV5(
         payload=_stub_payload(rfp_text=rfp_with_cpf),
-        tenant=_tenant(anonymize=True, rag_enabled=True),
+        tenant=_tenant(anonymize=True),
         llm=_StubLLM(),
         rag=rag,
     )
     await orch.run()
-    assert len(rag.calls) == 1
     assert "111.222.333-44" not in rag.calls[0].query
+
+
+async def test_socrates_query_enriched_with_intake_hints():
+    rag = _StubRAG(chunks=_socrates_hits(5))
+    payload = _stub_payload()
+    payload.industry = "varejo"
+    payload.project_size_hint = "large"
+    payload.deadline_pressure = "high"
+    payload.previous_engagement = True
+    orch = OrchestratorV5(
+        payload=payload,
+        tenant=_tenant(anonymize=False),
+        llm=_StubLLM(),
+        rag=rag,
+    )
+    await orch.run()
+    query = rag.calls[0].query
+    assert "varejo" in query
+    assert "large" in query
+    assert "high" in query
+    assert "cliente recorrente" in query
 
 
 # ── Calibration profiles (Onda 5 close — E9 / H2 / H3) ────────────────────
@@ -542,18 +606,38 @@ async def test_unknown_profile_name_falls_back_silently():
     assert out["ps"]["calibration"]["profile"] == "default"
 
 
-async def test_rag_empty_results_produce_no_preamble():
-    # Search returned [] (no indexed corpus matches) → no preamble injected
-    # and no "RAG" agent fired, even though the search itself ran.
-    rag = _StubRAG(chunks=[])
-    llm = _StubLLM()
+async def test_socrates_cross_check_flags_under_dimensioned_proposal():
+    # Briefing com horas históricas 800-1200h, proposta atual ~200h →
+    # cross-check deve marcar como sub-dimensionada e setar qa_needs_review.
+    rag = _StubRAG(chunks=[
+        {"id": f"h-{i}", "score": 0.9, "payload": {
+            "text": "histórico", "modules": ["SD"], "hours": h,
+        }}
+        for i, h in enumerate([800, 900, 1000, 1100, 1200, 1000, 950, 1050])
+    ])
     orch = OrchestratorV5(
         payload=_stub_payload(),
-        tenant=_tenant(anonymize=False, rag_enabled=True),
-        llm=llm,
+        tenant=_tenant(anonymize=False),
+        llm=_StubLLM(),
         rag=rag,
     )
     out = await orch.run()
-    assert len(rag.calls) == 1
-    assert not any(a.startswith("RAG") for a in out["agents_fired"])
-    assert all("Contexto recuperado" not in c.user for c in llm.calls)
+    check = out["ps"]["socrates_check"]
+    # Proposta cbenef do catálogo gera ~80-150h, bem abaixo da faixa simulada.
+    if not check["alinhado"]:
+        assert check["severidade"] in ("alto", "baixo")
+        assert check["motivo"]
+
+
+async def test_socrates_cross_check_silent_when_briefing_not_actionable():
+    # Sem matches suficientes → cross-check silencioso (alinhado=True).
+    rag = _StubRAG(chunks=_socrates_hits(2))  # menos que MIN_MATCHES
+    orch = OrchestratorV5(
+        payload=_stub_payload(),
+        tenant=_tenant(anonymize=False),
+        llm=_StubLLM(),
+        rag=rag,
+    )
+    out = await orch.run()
+    assert out["ps"]["socrates_check"]["alinhado"] is True
+    assert out["ps"]["socrates_check"]["severidade"] == "ok"

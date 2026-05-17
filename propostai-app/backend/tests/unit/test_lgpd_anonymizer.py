@@ -46,9 +46,59 @@ def test_masks_telefone_in_common_formats(raw):
     assert anonymize(f"tel: {raw} ok").startswith("tel: [TELEFONE]")
 
 
-def test_bare_digit_sequences_are_not_masked():
-    # Order numbers / PMS codes etc. must NOT be flagged as phones.
-    text = "OP 12345678901 PMS 9988776655"
+def test_bare_digit_sequences_are_not_masked_as_phones():
+    # Long bare digit sequences must NOT be flagged as phones.
+    # Note: OP/PMS are now masked separately — see test_masks_op_pms_pc below.
+    assert anonymize("ID 12345678901") == "ID 12345678901"
+
+
+# ── SAP-domain identifiers (Onda 5 close — Sócrates corpus ingest) ─────────
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("OP 24682 cliente", "[OP] cliente"),
+        ("OP-24682 ref", "[OP] ref"),
+        ("op12345 (lowercase)", "[OP] (lowercase)"),
+        ("PMS 9988776", "[PMS]"),
+        ("PMS-77665544", "[PMS]"),
+        ("PC 25254", "[PC]"),
+        ("Contrato 4500012345 assinado", "[CONTRATO] assinado"),
+        ("contrato Nº 12345", "[CONTRATO]"),
+        ("Pedido 4500099 fechado", "[CONTRATO] fechado"),
+    ],
+)
+def test_masks_op_pms_pc_contrato(raw, expected):
+    assert anonymize(raw) == expected
+
+
+def test_does_not_mask_op_that_is_actually_a_word():
+    # "OPÇÃO" / "OPERAÇÃO" must NOT match OP regex.
+    text = "OPÇÃO selecionada na OPERAÇÃO atual"
+    assert anonymize(text) == text
+
+
+# ── DAM → PS rewrite (legacy vocabulary scrub) ─────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("Geração do DAM concluída", "Geração do PS concluída"),
+        ("D.A.M. — versão 1", "PS — versão 1"),
+        ("Documento de Arquitetura de Melhoria", "Proposta de Solução"),
+        ("documento de arquitetura de melhoria (lower)",
+         "Proposta de Solução (lower)"),
+    ],
+)
+def test_rewrites_legacy_dam_terms_to_ps(raw, expected):
+    assert anonymize(raw) == expected
+
+
+def test_does_not_mangle_innocent_words_containing_dam():
+    # "Adamastor", "fundamentação", "amsterdam" — should not be touched.
+    text = "Adamastor citou a fundamentação em Amsterdam"
     assert anonymize(text) == text
 
 

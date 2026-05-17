@@ -28,13 +28,17 @@ what flows into every LLM prompt. The original RFP is preserved on the
 returned ps.necessidade so the DB / PS Word generator render real
 values for the customer-facing document.
 
-RAG context (v3 §4.5.5 E5 + Onda 5 close): when a RAGService is injected
-AND the tenant opted in via features.rag_enabled, the orchestrator runs
-one tenant-scoped vector search at the start of run() using the
-anonymized RFP as the query. The top-k chunks are concatenated into a
-preamble that's prepended to every descriptive LLM prompt. Failures
-during retrieval are swallowed (fail-open) — the catalog path is always
-authoritative.
+Sócrates (memória / conhecimento, Onda 5 close): roda em TODA execução,
+não é opt-in. Consulta o corpus global de PSs históricas anonimizadas
+(propostai_propostas_historicas) e devolve um briefing estruturado com
+padrão de módulos, faixa de horas histórica, entregáveis e riscos
+recorrentes em demandas similares. O briefing alimenta dois pontos:
+  (a) preamble nos prompts dos agentes especialistas (mais contexto =
+      melhor saída);
+  (b) cross-check no QA pra detectar propostas fora da distribuição
+      histórica (sub-dimensionamento ou over-engineering).
+Substitui o RAG legado per-tenant: o corpus é global anonimizado, não
+referencia documento específico, só extrai padrão agregado.
 """
 from __future__ import annotations
 
@@ -56,6 +60,10 @@ from services.propostai.agents.catalog import (
 )
 from services.propostai.agents.llm_client import LLMClient, parse_llm_json
 from services.propostai.agents.profiles import resolve_profile_for_tenant
+from services.propostai.agents.socrates import (
+    Socrates,
+    assess_against_briefing,
+)
 from services.rag.service import RAGService
 
 logger = get_logger()
@@ -71,39 +79,6 @@ SAP_VERSION_LABELS = {
 DEFAULT_TARIFA_HORA = 250
 
 FUNCTIONAL_MODULES = ("SD", "FI", "MM", "CO", "PP", "HR", "QM", "WM", "BASIS")
-
-# RAG: how many chunks to pull per proposal. Keep small — we paste these
-# verbatim into every agent prompt, so cost scales with k × agents.
-RAG_TOP_K = 3
-RAG_PURPOSE = "legislacao"
-
-
-def _rag_enabled_for_tenant(tenant) -> bool:
-    """Per-tenant opt-in. Fail-closed (off by default) — most tenants won't
-    have an indexed corpus yet, and embedding the RFP costs API calls.
-    Mirrors the should_anonymize_for_tenant shape so callers in tests can
-    use the same SimpleNamespace(features={...}) idiom.
-    """
-    if tenant is None:
-        return False
-    features = getattr(tenant, "features", None) or {}
-    return bool(features.get("rag_enabled"))
-
-
-def _format_rag_preamble(chunks: list[dict]) -> str:
-    """Turn search hits into a compact block the LLM can read once and
-    reuse across the prompt. Each item: rank, score, text.
-    """
-    if not chunks:
-        return ""
-    lines = ["Contexto recuperado da base de conhecimento (use como referência, não copie):"]
-    for i, c in enumerate(chunks, 1):
-        text = (c.get("payload") or {}).get("text", "") or ""
-        if not text:
-            continue
-        score = c.get("score", 0.0)
-        lines.append(f"[{i}] (score={score:.2f}) {text}")
-    return "\n".join(lines) + "\n\n"
 
 
 # ── LLM agents (descriptive text only) ─────────────────────────────────────
@@ -317,12 +292,23 @@ class OrchestratorV5:
             f"Calibração: perfil '{profile.name}'",
         ]
 
-        rag_preamble = await self._fetch_rag_preamble(rfp_for_llm or "")
-        if rag_preamble:
-            agents_fired.append(f"RAG (top-{RAG_TOP_K} chunks)")
+        # Sócrates: always-on. Consulta corpus histórico anonimizado e
+        # devolve briefing agregado (módulos, horas, entregáveis, riscos).
+        # A query é enriquecida com hints opcionais do intake (indústria,
+        # tamanho, pressão de prazo) pra Sócrates achar matches melhores.
+        socrates = Socrates(rag=self.rag)
+        socrates_query = self._build_socrates_query(rfp_for_llm or "")
+        briefing = await socrates.consult(socrates_query)
+        if briefing.is_actionable():
+            agents_fired.append(
+                f"Sócrates (N={briefing.demandas_semelhantes_encontradas}, "
+                f"conf={briefing.confianca_match:.2f})"
+            )
 
         ctx = _AgentContext(
-            llm=self.llm, rfp_for_llm=rfp_for_llm or "", rag_preamble=rag_preamble,
+            llm=self.llm,
+            rfp_for_llm=rfp_for_llm or "",
+            rag_preamble=briefing.as_prompt_preamble(),
         )
 
         # 1. classify
@@ -455,18 +441,27 @@ class OrchestratorV5:
             },
         }
 
-        # 8. QA review
+        # 8. QA review (LLM) + cross-check Sócrates (out-of-distribution)
         qa = await _qa_review(ctx, ps)
         agents_fired.append("QA (LLM)")
         qa_score = qa.get("score", 80)
         ps["qa_score"] = qa_score
         ps["qa_aprovado"] = qa.get("aprovado", True)
-        ps["qa_problemas"] = qa.get("problemas", [])
-        ps["qa_sugestoes"] = qa.get("sugestoes", [])
-        # Profile sets a stricter floor — UI / approval flow can read this
-        # to decide whether human review is required.
+        ps["qa_problemas"] = list(qa.get("problemas", []) or [])
+        ps["qa_sugestoes"] = list(qa.get("sugestoes", []) or [])
         ps["qa_min_score"] = profile.qa_min_score
         ps["qa_needs_review"] = qa_score < profile.qa_min_score
+
+        # Sócrates cross-check: horas propostas vs distribuição histórica.
+        # Sub-dimensionamento ou over-engineering vira problema do QA.
+        socrates_check = assess_against_briefing(total_horas, briefing)
+        if not socrates_check["alinhado"]:
+            ps["qa_problemas"].append(socrates_check["motivo"])
+            if socrates_check["severidade"] == "alto":
+                ps["qa_needs_review"] = True
+
+        ps["socrates"] = briefing.as_dict()
+        ps["socrates_check"] = socrates_check
 
         ps["calibration"] = {
             "profile": profile.name,
@@ -497,24 +492,24 @@ class OrchestratorV5:
             "billing_records": list(self.llm.billing),
         }
 
-    async def _fetch_rag_preamble(self, query: str) -> str:
-        """Tenant-scoped RAG retrieval. Returns a preamble string ready to
-        prepend to LLM user messages, or "" when disabled / nothing found
-        / any error. Never raises — catalog path is authoritative.
+    def _build_socrates_query(self, rfp_text: str) -> str:
+        """Append intake hints (industry, size, deadline) to the query so
+        Sócrates' embedding picks up the structured signal. Empty hints
+        are silently skipped — the base RFP is always the strongest signal.
         """
-        if self.rag is None or not _rag_enabled_for_tenant(self.tenant):
-            return ""
-        tenant_id = getattr(self.tenant, "id", None)
-        if not tenant_id or not query.strip():
-            return ""
-        try:
-            chunks = await self.rag.search(
-                tenant_id=str(tenant_id),
-                query=query,
-                purpose=RAG_PURPOSE,
-                limit=RAG_TOP_K,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("orchestrator_rag_search_failed", error=str(exc))
-            return ""
-        return _format_rag_preamble(chunks)
+        hints: list[str] = []
+        industry = getattr(self.payload, "industry", None)
+        size = getattr(self.payload, "project_size_hint", None)
+        deadline = getattr(self.payload, "deadline_pressure", None)
+        prev = getattr(self.payload, "previous_engagement", False)
+        if industry:
+            hints.append(f"setor: {industry}")
+        if size:
+            hints.append(f"tamanho estimado: {size}")
+        if deadline and deadline != "low":
+            hints.append(f"prazo: {deadline}")
+        if prev:
+            hints.append("cliente recorrente (já houve projeto anterior)")
+        if not hints:
+            return rfp_text
+        return f"{rfp_text}\n\n[contexto adicional: {'; '.join(hints)}]"

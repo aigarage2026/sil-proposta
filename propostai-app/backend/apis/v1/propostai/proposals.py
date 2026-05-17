@@ -200,6 +200,21 @@ async def update_status(
         entity_id=proposal_id,
         changes={"from": old_status, "to": body.status},
     )
+
+    # Sócrates continuous-improvement hook: quando uma PS é aprovada (ou
+    # ganha), o conteúdo anonimizado vai pro corpus pra alimentar a
+    # próxima geração. Fail-open — falha aqui não bloqueia o status.
+    if body.status in ("approved", "won") and old_status != body.status:
+        from services.propostai.generation_service import index_approved_ps_into_socrates
+        try:
+            await index_approved_ps_into_socrates(db, proposal.id)
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "socrates_auto_index_failed",
+                extra={"proposal_id": proposal_id, "error": str(exc)},
+            )
+
     return {"ok": True, "proposal_id": proposal_id, "status": body.status}
 
 

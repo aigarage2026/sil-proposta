@@ -14,7 +14,15 @@
     "generate": "Gerar proposta",
     "types": { "ams": "AMS / Sustentacao", "new": "Projeto novo", "migration": "Migracao ECC → S/4HANA", "support": "Suporte emergencial" },
     "versions": { "ecc604": "ECC <= 6.04", "ecc605": "ECC 6.05+", "s4op": "S/4HANA On-premise", "s4cloud": "S/4HANA Cloud" },
-    "models": { "fixed": "Valor fechado", "t_m": "Time & Material" }
+    "models": { "fixed": "Valor fechado", "t_m": "Time & Material" },
+    "socrates_hint": "Opcional. Quanto mais sinal, melhor o match de Sócrates no historico.",
+    "industry": "Setor do cliente",
+    "industries": { "varejo": "Varejo", "financeiro": "Financeiro", "industrial": "Industrial", "saude": "Saude", "agro": "Agro", "publico": "Publico", "logistica": "Logistica", "energia": "Energia", "telecom": "Telecom", "outro": "Outro" },
+    "project_size": "Tamanho estimado",
+    "sizes": { "small": "Pequeno", "medium": "Medio", "large": "Grande", "xl": "Extra grande" },
+    "deadline": "Pressao de prazo",
+    "deadlines": { "low": "Baixa", "medium": "Media", "high": "Alta", "critical": "Critica" },
+    "previous_engagement": "Ja fizemos projeto para este cliente antes"
   },
   "proposal": {
     "draft": "Rascunho", "review": "Em revisao", "approved": "Aprovada", "won": "Ganha", "lost": "Perdida",

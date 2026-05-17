@@ -182,3 +182,89 @@ def _generate_demo(payload: IntakePayload) -> dict:
     """Fallback: geracao deterministica sem LLM."""
     from services.propostai.demo_generation_service import gerar_proposta_demo
     return gerar_proposta_demo(payload)
+
+
+async def index_approved_ps_into_socrates(db: AsyncSession, proposal_id: str) -> int:
+    """Continuous-improvement hook: rola uma PS aprovada pelo pipeline de
+    ingestão e indexa o conteúdo anonimizado no corpus do Sócrates.
+
+    Chamado pelo endpoint PATCH /proposals/{id}/status quando o status
+    vira "approved" ou "won". Fail-open: erros são logados pelo caller,
+    nunca raise.
+
+    Pipeline aplicado:
+      1. Lê ps_json da ProposalPS (texto estruturado da PS gerada).
+      2. Serializa em texto plano (uma seção por linha-bloco).
+      3. Passa pelo IngestPipeline (anonimização + dedupe + index).
+
+    Retorna o número de chunks indexados (0 se PS vazia / duplicata).
+    """
+    from sqlalchemy.orm import selectinload
+
+    from models.propostai.proposal import Proposal
+    from services.ingest.pipeline import IngestPipeline
+    from services.rag.service import RAGService
+
+    row = await db.execute(
+        select(Proposal)
+        .where(Proposal.id == proposal_id)
+        .options(selectinload(Proposal.ps))
+    )
+    proposal = row.scalar_one_or_none()
+    if not proposal or not proposal.ps or not proposal.ps.ps_json:
+        return 0
+
+    text = _flatten_ps_for_corpus(proposal.ps.ps_json)
+    if not text.strip():
+        return 0
+
+    pipeline = IngestPipeline(rag=RAGService.from_settings(), llm_reviewer=None)
+    # Reuse the pipeline's anonymize+chunk+upsert path, but skip the file
+    # loader by writing the text to a synthetic Path. The pipeline's
+    # extract_metadata reads year from filename mtime — for a freshly
+    # approved PS we just pass a stable name.
+    from pathlib import Path
+    synthetic = Path(f"/tmp/socrates_approved_{proposal_id}.txt")
+    synthetic.write_text(text, encoding="utf-8")
+    try:
+        # The pipeline expects loader to read the file; a quick override.
+        from services.ingest import pipeline as _pl
+        original_loader = _pl.load_document
+        _pl.load_document = lambda p: text  # type: ignore[assignment]
+        try:
+            result = await pipeline.process(synthetic)
+        finally:
+            _pl.load_document = original_loader  # type: ignore[assignment]
+    finally:
+        synthetic.unlink(missing_ok=True)
+
+    return result.chunks_indexed if result.success else 0
+
+
+def _flatten_ps_for_corpus(ps_json: dict) -> str:
+    """Serializa as seções textuais da PS num bloco que o embedder
+    consegue digerir. Ignora campos numéricos puros — só interessa o
+    conteúdo descritivo pro Sócrates.
+    """
+    parts: list[str] = []
+    title = ps_json.get("titulo")
+    if title:
+        parts.append(f"# {title}")
+    for key in ("necessidade", "processo_atual", "processo_futuro", "beneficio_esperado"):
+        v = ps_json.get(key)
+        if isinstance(v, str) and v.strip():
+            parts.append(f"## {key}\n{v}")
+    entregaveis = ps_json.get("entregaveis") or []
+    if entregaveis:
+        items = []
+        for e in entregaveis:
+            if isinstance(e, dict):
+                items.append(f"- [{e.get('mod','?')}] {e.get('item','')}")
+            elif isinstance(e, str):
+                items.append(f"- {e}")
+        if items:
+            parts.append("## entregaveis\n" + "\n".join(items))
+    premissas = ps_json.get("premissas") or []
+    if premissas:
+        parts.append("## premissas\n" + "\n".join(f"- {p}" for p in premissas))
+    return "\n\n".join(parts)
