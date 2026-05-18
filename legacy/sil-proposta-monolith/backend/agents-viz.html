@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agentes IA · Sil-Proposta · Cast Group</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#060C1A;color:#E2E8F0;height:100vh;width:100vw;overflow:hidden;display:flex;flex-direction:column}
+.bg{position:fixed;inset:0;background:radial-gradient(ellipse at 20% 15%,rgba(59,130,246,.1) 0%,transparent 55%),radial-gradient(ellipse at 80% 80%,rgba(0,255,150,.06) 0%,transparent 55%),linear-gradient(135deg,#060C1A 0%,#0A1025 100%);z-index:0}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:52px 52px;z-index:0}
+/* PARTICLES */
+.particles{position:fixed;inset:0;z-index:0;pointer-events:none}
+.particle{position:absolute;border-radius:50%;pointer-events:none;animation:float linear infinite}
+@keyframes float{0%{transform:translateY(0);opacity:0}10%{opacity:.6}90%{opacity:.6}100%{transform:translateY(-100vh);opacity:0}}
+/* TOPBAR */
+.topbar{position:relative;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:rgba(6,12,26,.97);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(30px);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#3B82F6,#6366F1);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;box-shadow:0 3px 12px rgba(59,130,246,.25)}
+.pill{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;font-size:10px;font-weight:700;font-family:'Fira Code',monospace;transition:all .3s}
+.pill-ready{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:rgba(255,255,255,.35)}
+.pill-live{border:1px solid rgba(0,255,150,.25);background:rgba(0,255,150,.06);color:#00FF96}
+.pill-done{border:1px solid rgba(74,222,128,.2);background:rgba(74,222,128,.05);color:#4ADE80}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot-idle{background:rgba(255,255,255,.2)}
+.dot-live{background:#00FF96;box-shadow:0 0 8px #00FF96;animation:dotP 1.8s ease-in-out infinite}
+.dot-done{background:#4ADE80}
+@keyframes dotP{0%,100%{opacity:1}50%{opacity:.4}}
+.tbtn{padding:6px 16px;border-radius:7px;border:1.5px solid;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.tbtn:hover{transform:translateY(-1px)}
+.btn-blue{border-color:rgba(96,165,250,.5);background:rgba(59,130,246,.1);color:#60A5FA}
+.btn-blue:hover{background:rgba(59,130,246,.2)}
+.btn-ghost{border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.5)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+.btn-green{border-color:rgba(0,255,150,.4);background:rgba(0,255,150,.08);color:#00FF96}
+/* PROPOSAL SELECT */
+.prop-sel{display:flex;align-items:center;gap:8px}
+.prop-sel select{padding:6px 28px 6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#E2E8F0;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394A3B8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;min-width:220px;max-width:340px}
+.prop-sel select:focus{outline:none;border-color:rgba(59,130,246,.5)}
+.prop-sel select option{background:#0A1025;color:#E2E8F0}
+/* PROGRESS */
+.ptbar{display:flex;align-items:center;gap:8px}
+.ptbar-track{width:100px;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.ptbar-fill{height:100%;background:linear-gradient(90deg,#3B82F6,#00FF96);border-radius:2px;transition:width .8s ease;width:0%}
+.ptbar-pct{font-size:12px;font-weight:700;color:#00FF96;font-family:'Fira Code',monospace;min-width:32px}
+/* MAIN */
+.main{position:relative;z-index:1;display:flex;flex:1;overflow:hidden}
+#canvas{flex:1;position:relative;overflow:hidden}
+#svg-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* AGENT NODE */
+.ag-node{position:absolute;width:96px;text-align:center;cursor:pointer;z-index:10;transition:opacity .5s,transform .4s;transform:translate(-50%,-50%)}
+.ag-node.dim{opacity:.1;transform:translate(-50%,-50%) scale(.88)}
+.ag-node:hover{z-index:15}
+.av-wrap{position:relative;width:76px;height:76px;margin:0 auto 5px}
+.av-wrap svg{width:76px;height:76px;display:block;filter:drop-shadow(0 3px 14px rgba(0,0,0,.55));transition:transform .25s}
+.ag-node:hover svg{transform:scale(1.1)}
+.ag-ring{position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(255,255,255,.05);transition:all .5s;pointer-events:none}
+.ag-ring.running{border-color:#00FF96;box-shadow:0 0 24px rgba(0,255,150,.6),0 0 48px rgba(0,255,150,.18);animation:rP 1.6s ease-in-out infinite}
+.ag-ring.done{border-color:rgba(74,222,128,.45);box-shadow:0 0 14px rgba(74,222,128,.25)}
+@keyframes rP{0%,100%{box-shadow:0 0 24px rgba(0,255,150,.6),0 0 48px rgba(0,255,150,.18)}50%{box-shadow:0 0 38px rgba(0,255,150,1),0 0 64px rgba(0,255,150,.3)}}
+.ag-glow{position:absolute;inset:-18px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .5s}
+.ag-glow.running{background:radial-gradient(circle,rgba(0,255,150,.07) 0%,transparent 70%);opacity:1}
+.ag-glow.done{background:radial-gradient(circle,rgba(74,222,128,.04) 0%,transparent 70%);opacity:1}
+.ag-name{font-size:10px;font-weight:700;color:#E2E8F0;white-space:nowrap}
+.ag-role{font-size:8px;color:rgba(255,255,255,.25);margin-top:1px}
+.ag-badge{font-size:7px;font-weight:700;padding:2px 7px;border-radius:8px;display:inline-block;margin-top:3px;font-family:'Fira Code',monospace}
+.badge-idle{background:rgba(255,255,255,.03);color:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.05)}
+.badge-run{background:rgba(0,255,150,.1);color:#00FF96;border:1px solid rgba(0,255,150,.25);animation:bP 1.2s infinite}
+.badge-done{background:rgba(74,222,128,.07);color:#4ADE80;border:1px solid rgba(74,222,128,.18)}
+@keyframes bP{0%,100%{opacity:1}50%{opacity:.4}}
+/* BUBBLE */
+.bubble{position:absolute;top:-60px;left:50%;transform:translateX(-50%);background:rgba(10,16,37,.96);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:6px 10px;font-size:9px;color:#E2E8F0;line-height:1.4;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:30;animation:bubIn .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;font-family:'Fira Code',monospace;backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.bubble::after{content:'';position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:rgba(10,16,37,.96)}
+@keyframes bubIn{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(.88)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+/* DATA PACKET */
+.data-pkt{position:absolute;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:20;box-shadow:0 0 8px currentColor}
+/* CONNECTIONS */
+.conn{stroke:rgba(255,255,255,.035);stroke-width:1.5;fill:none;stroke-dasharray:6 5}
+.conn.active{stroke:rgba(0,255,150,.3);stroke-width:2;filter:drop-shadow(0 0 3px rgba(0,255,150,.2));animation:dash 1s linear infinite}
+.conn.done{stroke:rgba(74,222,128,.12);stroke-width:1.5}
+@keyframes dash{to{stroke-dashoffset:-22}}
+/* SIDEBAR */
+.sidebar{width:300px;flex-shrink:0;background:rgba(8,14,28,.97);border-left:1px solid rgba(255,255,255,.05);display:flex;flex-direction:column;backdrop-filter:blur(20px)}
+.sb-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.06);padding:0 8px}
+.sb-tab{flex:1;padding:10px 8px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.25);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.sb-tab:hover{color:rgba(255,255,255,.5)}
+.sb-tab.active{color:#00FF96;border-bottom-color:#00FF96}
+.sb-panel{display:none;flex:1;overflow-y:auto;padding:8px}
+.sb-panel.active{display:block}
+/* Agent list */
+.ag-li{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;margin-bottom:2px;transition:all .3s;border:1px solid transparent;cursor:pointer}
+.ag-li:hover{background:rgba(255,255,255,.03)}
+.ag-li.running{background:rgba(0,255,150,.05);border-color:rgba(0,255,150,.12)}
+.ag-li.done{background:rgba(74,222,128,.03)}
+.ag-li.selected{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2)}
+.li-av{width:30px;height:30px;border-radius:50%;overflow:hidden;flex-shrink:0}
+.li-av svg{width:30px;height:30px}
+.li-name{font-size:11px;font-weight:700;color:#E2E8F0}
+.li-role{font-size:8px;color:rgba(255,255,255,.22)}
+.li-st{font-size:8px;font-weight:700;font-family:'Fira Code',monospace;white-space:nowrap}
+.st-idle{color:rgba(255,255,255,.15)} .st-running{color:#00FF96} .st-done{color:#4ADE80}
+/* Agent detail panel */
+.ag-detail{padding:14px;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ag-detail-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.ag-detail-av{width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0}
+.ag-detail-av svg{width:44px;height:44px}
+.ag-detail-name{font-size:14px;font-weight:700}
+.ag-detail-role{font-size:10px;color:rgba(255,255,255,.3)}
+.ag-detail-section{margin-bottom:12px}
+.ag-detail-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.2);margin-bottom:6px}
+.ag-detail-item{display:flex;align-items:flex-start;gap:6px;padding:5px 0;font-size:11px;color:#94A3B8;line-height:1.5;border-bottom:1px solid rgba(255,255,255,.03)}
+.ag-detail-item:last-child{border-bottom:none}
+.ag-detail-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;margin-top:6px}
+.ag-detail-comm{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.03);margin-bottom:4px;font-size:10px;color:#94A3B8}
+.ag-detail-comm svg{flex-shrink:0}
+/* LOG */
+.log-list{padding:8px}
+.log-e{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:10px;font-family:'Fira Code',monospace;animation:logIn .25s ease}
+@keyframes logIn{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:translateX(0)}}
+.log-ts{color:rgba(0,255,150,.45);flex-shrink:0}.log-msg{color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* SPARK */
+@keyframes sparkAnim{0%{transform:translate(-50%,-50%) scale(0);opacity:1}100%{transform:translate(-50%,-50%) scale(3.2);opacity:0}}
+.spark{position:absolute;width:76px;height:76px;border-radius:50%;border:2px solid #00FF96;pointer-events:none;animation:sparkAnim .65s ease-out forwards;left:38px;top:38px}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+/* DONE OVERLAY */
+.done-overlay{position:fixed;inset:0;z-index:200;background:rgba(6,12,26,.88);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.done-card{background:rgba(10,16,37,.98);border:1px solid rgba(0,255,150,.2);border-radius:20px;padding:40px 50px;text-align:center;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.5),0 0 60px rgba(0,255,150,.08);animation:cardIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes cardIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.done-icon{width:64px;height:64px;border-radius:50%;background:rgba(0,255,150,.1);border:2px solid rgba(0,255,150,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px}
+.done-title{font-size:20px;font-weight:700;color:#E2E8F0;margin-bottom:6px}
+.done-sub{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:22px;line-height:1.6}
+.done-btn{padding:10px 28px;border-radius:10px;border:1.5px solid rgba(0,255,150,.3);background:rgba(0,255,150,.1);color:#00FF96;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.done-btn:hover{background:rgba(0,255,150,.18);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,255,150,.15)}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="particles" id="particles"></div>
+
+<header class="topbar">
+  <div style="display:flex;align-items:center;gap:14px">
+    <a href="index.html" style="text-decoration:none"><button class="tbtn btn-ghost">←</button></a>
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div><div style="font-size:13px;font-weight:700">Sil-Proposta</div><div style="font-size:8px;color:rgba(255,255,255,.22)">AI Agents · Cast Group</div></div>
+    </div>
+    <div class="pill pill-ready" id="status-pill"><span class="dot dot-idle" id="status-dot"></span><span id="status-txt">Selecione uma proposta</span></div>
+  </div>
+  <div class="prop-sel">
+    <select id="prop-select" onchange="onSelectProposal()">
+      <option value="">-- Selecione uma proposta --</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="ptbar">
+      <div class="ptbar-track"><div class="ptbar-fill" id="prog"></div></div>
+      <span class="ptbar-pct" id="prog-pct">0%</span>
+    </div>
+    <button class="tbtn btn-blue" id="sim-btn" onclick="simToggle()" disabled>▶ Simular</button>
+  </div>
+</header>
+
+<div class="main">
+  <div id="canvas">
+    <svg id="svg-overlay"></svg>
+    <div id="ag-container"></div>
+  </div>
+  <aside class="sidebar">
+    <div class="sb-tabs">
+      <div class="sb-tab active" onclick="showSbTab('agents')">Agentes</div>
+      <div class="sb-tab" onclick="showSbTab('detail')">Detalhes</div>
+      <div class="sb-tab" onclick="showSbTab('log')">Log</div>
+    </div>
+    <div class="sb-panel active" id="pan-agents">
+      <div id="sb-list"></div>
+    </div>
+    <div class="sb-panel" id="pan-detail">
+      <div id="ag-detail-content" style="padding:20px;text-align:center;font-size:12px;color:rgba(255,255,255,.2)">Clique em um agente para ver detalhes</div>
+    </div>
+    <div class="sb-panel" id="pan-log">
+      <div class="log-list" id="log-entries"></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+var API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000' : window.location.origin;
+
+// ── AGENTS ──────────────────────────────────────────────────────────────────
+var AGENTS = [
+  {id:'orch', name:'Orion Silva',     fn:'Orion',   role:'Orquestrador',    c:'#60A5FA', sk:'#F5C8A0', hr:'#2D1400', ec:'#60A5FA', gl:true,  acc:'crown',   gF:false},
+  {id:'ver',  name:'Valeria Souza',   fn:'Valeria', role:'Versão SAP',      c:'#A78BFA', sk:'#FDDCB5', hr:'#8B1A1A', ec:'#A78BFA', gl:false, acc:'none',    gF:true},
+  {id:'sd',   name:'Sofia Duarte',    fn:'Sofia',   role:'Agente SD',       c:'#34D399', sk:'#F4C690', hr:'#1A1A3E', ec:'#34D399', gl:false, acc:'none',    gF:true},
+  {id:'fi',   name:'Felix Inácio',    fn:'Felix',   role:'Agente FI',       c:'#4ADE80', sk:'#C88050', hr:'#1A1A1A', ec:'#4ADE80', gl:false, acc:'tie',     gF:false},
+  {id:'abap', name:'Axel Braga',      fn:'Axel',    role:'ABAP Estrutural', c:'#C084FC', sk:'#F0C8A0', hr:'#8B6914', ec:'#C084FC', gl:true,  acc:'hoodie',  gF:false},
+  {id:'drc',  name:'Diana Rocha',     fn:'Diana',   role:'Agente DRC',      c:'#22D3EE', sk:'#FDDCB5', hr:'#5A3010', ec:'#22D3EE', gl:false, acc:'bun',     gF:true},
+  {id:'fest', name:'Estela Torres',   fn:'Estela',  role:'Fiscal Estadual', c:'#FB923C', sk:'#F5C8A0', hr:'#1A1A2E', ec:'#FB923C', gl:true,  acc:'none',    gF:true},
+  {id:'ffed', name:'Fábio Mendes',    fn:'Fábio',   role:'Fiscal Federal',  c:'#F87171', sk:'#C08040', hr:'#1A1A1A', ec:'#F87171', gl:false, acc:'tie',     gF:false},
+  {id:'eq',   name:'Eduardo Gomes',   fn:'Eduardo', role:'Equipe / GP',     c:'#818CF8', sk:'#E8B890', hr:'#2D1400', ec:'#818CF8', gl:false, acc:'headset', gF:false},
+  {id:'com',  name:'Camila Oliveira', fn:'Camila',  role:'Comercial',       c:'#2DD4BF', sk:'#F4C890', hr:'#8B2020', ec:'#2DD4BF', gl:false, acc:'none',    gF:true},
+  {id:'mm',    name:'Marina Costa',    fn:'Marina',  role:'Agente MM',          c:'#7C3AED', sk:'#F4C690', hr:'#5A3010', ec:'#7C3AED', gl:false, acc:'none',    gF:true},
+  {id:'fmun',  name:'Miguel Santos',   fn:'Miguel',  role:'Fiscal Municipal',   c:'#EC4899', sk:'#C88050', hr:'#1A1A1A', ec:'#EC4899', gl:false, acc:'tie',     gF:false},
+  {id:'rtrib', name:'Rafael Lima',     fn:'Rafael',  role:'Reforma Tributária', c:'#EF4444', sk:'#F5C8A0', hr:'#2D1400', ec:'#EF4444', gl:true,  acc:'none',    gF:false},
+  {id:'migr',  name:'Marcos Dias',     fn:'Marcos',  role:'Migração/Dados',     c:'#6366F1', sk:'#E8B890', hr:'#1A1A2E', ec:'#6366F1', gl:false, acc:'headset', gF:false},
+  {id:'basis', name:'Beatriz Nunes',   fn:'Beatriz', role:'Basis/Infra',        c:'#14B8A6', sk:'#FDDCB5', hr:'#8B1A1A', ec:'#14B8A6', gl:true,  acc:'none',    gF:true},
+  {id:'pp',    name:'Paulo Ferreira',  fn:'Paulo',   role:'Agente PP',          c:'#DC2626', sk:'#C08040', hr:'#1A1A1A', ec:'#DC2626', gl:false, acc:'none',    gF:false},
+  {id:'hr',    name:'Helena Rocha',    fn:'Helena',  role:'Agente HR',          c:'#F472B6', sk:'#F4C890', hr:'#5A3010', ec:'#F472B6', gl:false, acc:'bun',     gF:true},
+];
+
+var POS = {orch:[50,11],ver:[82,24],sd:[18,28],fi:[40,32],abap:[68,52],drc:[32,56],fest:[12,76],ffed:[32,82],eq:[54,82],com:[76,76],mm:[88,48],fmun:[50,42],rtrib:[72,36],migr:[88,76],basis:[10,42],pp:[90,28],hr:[28,42]};
+
+var CONNS = [
+  ['orch','sd'],['orch','fi'],['orch','ver'],['orch','abap'],['orch','drc'],
+  ['sd','fi'],['sd','abap'],['fi','drc'],['fi','abap'],['drc','abap'],
+  ['abap','eq'],['fest','ffed'],['fest','eq'],['ffed','eq'],['eq','com'],['com','orch'],
+  ['orch','mm'],['orch','pp'],['orch','hr'],['mm','fi'],['mm','eq'],
+  ['fmun','fest'],['fmun','ffed'],['rtrib','fest'],['rtrib','ffed'],['rtrib','drc'],
+  ['migr','abap'],['migr','ver'],['basis','ver'],['basis','abap'],
+  ['pp','abap'],['hr','eq'],
+];
+
+// Map frente names from WP to agent ids
+var FRENTE_MAP = {'SD':'sd','FI':'fi','ABAP':'abap','ABAP 1':'abap','ABAP 2':'abap','ABAP 3':'abap','GP':'eq','DRC':'drc','Fiscal Estadual':'fest','Fiscal Federal':'ffed','Comercial':'com','MM':'mm','PP':'pp','HR':'hr','Fiscal Municipal':'fmun','Reforma Tributária':'rtrib','Migração':'migr','Basis':'basis'};
+
+// What each agent says per process
+var AG_MSGS = {
+  orch:['Analisando intake...','Identificando módulos...','Ativando agentes ✓','RAG consultado ✓'],
+  ver:['Verificando versão SAP...','Compatibilidade OK ✓','Features disponíveis ✓'],
+  sd:['Mapeando fluxo SD...','Pricing configurado ✓','NF-e validada ✓'],
+  fi:['Configurando FI...','F110 automático ✓','Conciliação OK ✓'],
+  abap:['Cadeia ABAP...','Objetos Z mapeados ✓','Code review ✓'],
+  drc:['Avaliando DRC/CPI...','Canal configurado ✓','SEFAZ OK ✓'],
+  fest:['Legislação estadual...','cBenef mapeado ✓','UFs validadas ✓'],
+  ffed:['Impostos federais...','PIS/COFINS ✓','SPED OK ✓'],
+  eq:['Dimensionando equipe...','Cronograma ✓','Recursos alocados ✓'],
+  com:['Calculando valor...','Pricing definido ✓','Proposta fechada ✓'],
+  mm:['Ciclo de compras...','ME21→MIGO→MIRO ✓','MRP configurado ✓'],
+  fmun:['NFS-e municipal...','ISS configurado ✓','Lei 14.206 OK ✓'],
+  rtrib:['LC 214 analisada...','IBS/CBS planejado ✓','Cronograma 2026-2033 ✓'],
+  migr:['Custom code check...','Simplification list ✓','Dados migrados ✓'],
+  basis:['Sizing calculado...','Landscape DEV/QAS/PRD ✓','Certificados OK ✓'],
+  pp:['MRP configurado...','Ordem produção ✓','Custeio OK ✓'],
+  hr:['eSocial mapeado...','Folha configurada ✓','HCM OK ✓'],
+};
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+var states = {};
+AGENTS.forEach(function(a){ states[a.id] = 'idle'; });
+var simRunning = false, simTimer = null, simSec = 0, simIdx = 0, bubTO = {};
+var currentProposal = null;
+var selectedAgentId = null;
+var agentActions = {}; // {agentId: [actions done]}
+var agentComms = {};   // {agentId: [communicated with]}
+
+// ── SVG FACE ────────────────────────────────────────────────────────────────
+function makeFace(ag, sz) {
+  sz = sz || 76;
+  var h = sz/2, c=ag.c, sk=ag.sk, hr=ag.hr, ec=ag.ec;
+  var eyeY=h*.88, eyeX=h*.31, eyeR=h*.12, mouthY=h*1.3, uid=ag.id+sz;
+  var hairEl='<ellipse cx="'+h+'" cy="'+(h*.5)+'" rx="'+(h*.78)+'" ry="'+(h*.55)+'" fill="'+hr+'"/>';
+  if(ag.acc==='bun'){hairEl+='<circle cx="'+h+'" cy="'+(h*.2)+'" r="'+(h*.28)+'" fill="'+hr+'"/>';hairEl+='<rect x="'+(h*.82)+'" y="'+(h*.18)+'" width="'+(h*.35)+'" height="'+(h*.6)+'" rx="'+(h*.1)+'" fill="'+hr+'"/>';}
+  else if(ag.gF){hairEl+='<rect x="'+(h*.12)+'" y="'+(h*.55)+'" width="'+(h*.22)+'" height="'+(h*1)+'" rx="'+(h*.1)+'" fill="'+hr+'"/>';hairEl+='<rect x="'+(h*1.66)+'" y="'+(h*.55)+'" width="'+(h*.22)+'" height="'+(h*1)+'" rx="'+(h*.1)+'" fill="'+hr+'"/>';}
+  else if(ag.acc==='hoodie'){hairEl='<ellipse cx="'+h+'" cy="'+(h*.75)+'" rx="'+(h*.92)+'" ry="'+(h*.9)+'" fill="#3B1F6B"/>';hairEl+='<ellipse cx="'+h+'" cy="'+(h*.5)+'" rx="'+(h*.72)+'" ry="'+(h*.5)+'" fill="'+hr+'"/>';}
+  var crownEl='';
+  if(ag.acc==='crown'){var cx=h;crownEl='<polygon points="'+(cx-h*.55)+','+(h*.18)+' '+(cx-h*.3)+','+(h*.02)+' '+cx+','+(h*.12)+' '+(cx+h*.3)+','+(h*.02)+' '+(cx+h*.55)+','+(h*.18)+'" fill="#F59E0B" stroke="#D97706" stroke-width="0.8"/>';crownEl+='<circle cx="'+(cx-h*.3)+'" cy="'+(h*.02)+'" r="'+(h*.07)+'" fill="#EF4444"/>';crownEl+='<circle cx="'+cx+'" cy="'+(h*.12)+'" r="'+(h*.07)+'" fill="#EF4444"/>';crownEl+='<circle cx="'+(cx+h*.3)+'" cy="'+(h*.02)+'" r="'+(h*.07)+'" fill="#EF4444"/>';}
+  var tieEl='';if(ag.acc==='tie'){tieEl='<path d="M'+(h*.9)+' '+(h*1.78)+' L'+(h*.82)+' '+(h*1.95)+' L'+h+' '+(h*2.08)+' L'+(h*1.18)+' '+(h*1.95)+' L'+(h*1.1)+' '+(h*1.78)+' Z" fill="'+c+'" opacity="0.9"/>';}
+  var headsetEl='';if(ag.acc==='headset'){headsetEl='<path d="M'+(h*.28)+' '+(h*.9)+' Q'+(h*.28)+' '+(h*.18)+' '+h+' '+(h*.18)+' Q'+(h*1.72)+' '+(h*.18)+' '+(h*1.72)+' '+(h*.9)+'" stroke="'+c+'" stroke-width="'+(h*.09)+'" fill="none" opacity="0.8"/>';headsetEl+='<rect x="'+(h*.17)+'" y="'+(h*.83)+'" width="'+(h*.26)+'" height="'+(h*.4)+'" rx="'+(h*.09)+'" fill="'+c+'" opacity="0.8"/>';headsetEl+='<rect x="'+(h*1.57)+'" y="'+(h*.83)+'" width="'+(h*.26)+'" height="'+(h*.4)+'" rx="'+(h*.09)+'" fill="'+c+'" opacity="0.8"/>';headsetEl+='<rect x="'+(h*1.67)+'" y="'+(h*1.08)+'" width="'+(h*.14)+'" height="'+(h*.22)+'" rx="'+(h*.06)+'" fill="'+c+'"/>';}
+  var faceEl='<ellipse cx="'+h+'" cy="'+(h*1.1)+'" rx="'+(h*.68)+'" ry="'+(h*.74)+'" fill="'+sk+'"/>';
+  var eyesEl='';
+  if(ag.gl){var gW=h*.4,gH=h*.3,gY=eyeY-gH/2,lx=h-eyeX-gW/2,rx=h+eyeX-gW/2;eyesEl='<rect x="'+lx+'" y="'+gY+'" width="'+gW+'" height="'+gH+'" rx="'+(h*.1)+'" fill="rgba(0,0,0,.12)" stroke="'+ec+'" stroke-width="'+(h*.05)+'" opacity=".9"/>';eyesEl+='<rect x="'+rx+'" y="'+gY+'" width="'+gW+'" height="'+gH+'" rx="'+(h*.1)+'" fill="rgba(0,0,0,.12)" stroke="'+ec+'" stroke-width="'+(h*.05)+'" opacity=".9"/>';eyesEl+='<line x1="'+(lx+gW)+'" y1="'+eyeY+'" x2="'+rx+'" y2="'+eyeY+'" stroke="'+ec+'" stroke-width="'+(h*.04)+'"/>';eyesEl+='<circle cx="'+(h-eyeX)+'" cy="'+eyeY+'" r="'+(eyeR*.65)+'" fill="'+ec+'" opacity=".85"/>';eyesEl+='<circle cx="'+(h+eyeX)+'" cy="'+eyeY+'" r="'+(eyeR*.65)+'" fill="'+ec+'" opacity=".85"/>';eyesEl+='<circle cx="'+(h-eyeX+eyeR*.3)+'" cy="'+(eyeY-eyeR*.3)+'" r="'+(eyeR*.22)+'" fill="white" opacity=".8"/>';eyesEl+='<circle cx="'+(h+eyeX+eyeR*.3)+'" cy="'+(eyeY-eyeR*.3)+'" r="'+(eyeR*.22)+'" fill="white" opacity=".8"/>';}
+  else{eyesEl='<ellipse cx="'+(h-eyeX)+'" cy="'+eyeY+'" rx="'+eyeR+'" ry="'+(eyeR*1.1)+'" fill="#1a1a2e"/>';eyesEl+='<ellipse cx="'+(h+eyeX)+'" cy="'+eyeY+'" rx="'+eyeR+'" ry="'+(eyeR*1.1)+'" fill="#1a1a2e"/>';eyesEl+='<ellipse cx="'+(h-eyeX)+'" cy="'+eyeY+'" rx="'+(eyeR*.55)+'" ry="'+(eyeR*.65)+'" fill="'+ec+'" opacity=".8"/>';eyesEl+='<ellipse cx="'+(h+eyeX)+'" cy="'+eyeY+'" rx="'+(eyeR*.55)+'" ry="'+(eyeR*.65)+'" fill="'+ec+'" opacity=".8"/>';eyesEl+='<circle cx="'+(h-eyeX+eyeR*.35)+'" cy="'+(eyeY-eyeR*.35)+'" r="'+(eyeR*.32)+'" fill="white"/>';eyesEl+='<circle cx="'+(h+eyeX+eyeR*.35)+'" cy="'+(eyeY-eyeR*.35)+'" r="'+(eyeR*.32)+'" fill="white"/>';}
+  var mouthEl='<path d="M'+(h-h*.33)+' '+mouthY+' Q'+h+' '+(mouthY+h*.18)+' '+(h+h*.33)+' '+mouthY+'" stroke="#b07060" stroke-width="'+(h*.065)+'" fill="none" stroke-linecap="round"/>';
+  return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="rg'+uid+'" cx="40%" cy="30%" r="70%"><stop offset="0%" stop-color="'+c+'" stop-opacity="0.25"/><stop offset="100%" stop-color="'+c+'" stop-opacity="0.06"/></radialGradient><clipPath id="cp'+uid+'"><circle cx="'+h+'" cy="'+h+'" r="'+(h-1)+'"/></clipPath></defs><circle cx="'+h+'" cy="'+h+'" r="'+(h-1)+'" fill="url(#rg'+uid+')" stroke="'+c+'" stroke-width="1.5"/><g clip-path="url(#cp'+uid+')">'+crownEl+hairEl+faceEl+tieEl+headsetEl+eyesEl+mouthEl+'</g></svg>';
+}
+
+// ── POSITIONS ──────────────────────────────────────────────────────────────
+function getPos(id){var canvas=document.getElementById('canvas');var W=canvas.offsetWidth||900;var H=canvas.offsetHeight||560;var p=POS[id];return{x:W*p[0]/100,y:H*p[1]/100};}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderAll(){renderNodes();renderConns();renderSidebar();}
+
+function renderNodes(){
+  var cont=document.getElementById('ag-container');
+  AGENTS.forEach(function(ag){
+    var id='n-'+ag.id;var node=document.getElementById(id);
+    if(!node){node=document.createElement('div');node.id=id;node.className='ag-node';node.onclick=function(){selectAgent(ag.id);};cont.appendChild(node);}
+    var p=getPos(ag.id);node.style.left=p.x+'px';node.style.top=p.y+'px';
+    var st=states[ag.id];var dimCls=(st==='idle')?' dim':'';
+    node.className='ag-node'+dimCls;
+    var bCls=st==='running'?'badge-run':st==='done'?'badge-done':'badge-idle';
+    var bTxt=st==='running'?'processando':st==='done'?'✓ concluído':'aguardando';
+    node.innerHTML='<div class="av-wrap"><div class="ag-glow '+st+'"></div><div class="ag-ring '+st+'"></div>'+makeFace(ag,76)+'</div><div class="ag-name">'+ag.fn+'</div><div class="ag-role">'+ag.role+'</div><span class="ag-badge '+bCls+'">'+bTxt+'</span>';
+  });
+}
+
+function renderConns(){
+  var svg=document.getElementById('svg-overlay');var canvas=document.getElementById('canvas');
+  var W=canvas.offsetWidth||900;var H=canvas.offsetHeight||560;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);var out='';
+  CONNS.forEach(function(pair){
+    var a=pair[0],b=pair[1];var pa=getPos(a),pb=getPos(b);
+    var stA=states[a],stB=states[b];
+    var cls=(stA==='running'||stB==='running')?'active':(stA==='done'&&stB==='done')?'done':'';
+    var mx=(pa.x+pb.x)/2,my=(pa.y+pb.y)/2-22;
+    out+='<path class="conn '+cls+'" d="M'+pa.x+' '+pa.y+' Q'+mx+' '+my+' '+pb.x+' '+pb.y+'"/>';
+  });
+  svg.innerHTML=out;
+}
+
+function renderSidebar(){
+  var el=document.getElementById('sb-list');var html='';
+  AGENTS.forEach(function(ag){
+    var st=states[ag.id];
+    var liCls=st==='running'?' running':st==='done'?' done':'';
+    if(ag.id===selectedAgentId) liCls+=' selected';
+    var stTxt=st==='running'?'processando...':st==='done'?'✓ concluído':'aguardando';
+    html+='<div class="ag-li'+liCls+'" onclick="selectAgent(\''+ag.id+'\')">'
+      +'<div class="li-av">'+makeFace(ag,30)+'</div>'
+      +'<div style="flex:1;min-width:0"><div class="li-name">'+ag.name+'</div><div class="li-role">'+ag.role+'</div></div>'
+      +'<div class="li-st st-'+st+'">'+stTxt+'</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+// ── SIDEBAR TABS ──────────────────────────────────────────────────────────
+function showSbTab(tab){
+  document.querySelectorAll('.sb-tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.sb-panel').forEach(function(p){p.classList.remove('active');});
+  var tabs={agents:0,detail:1,log:2};
+  document.querySelectorAll('.sb-tab')[tabs[tab]].classList.add('active');
+  document.getElementById('pan-'+tab).classList.add('active');
+}
+
+// ── AGENT DETAIL ──────────────────────────────────────────────────────────
+function selectAgent(id){
+  selectedAgentId=id;
+  renderSidebar();
+  renderAgentDetail(id);
+  showSbTab('detail');
+}
+
+function renderAgentDetail(id){
+  var ag=null;for(var i=0;i<AGENTS.length;i++){if(AGENTS[i].id===id){ag=AGENTS[i];break;}}
+  if(!ag) return;
+  var el=document.getElementById('ag-detail-content');
+  var actions=agentActions[id]||[];
+  var comms=agentComms[id]||[];
+  var st=states[id];
+
+  var html='<div class="ag-detail">';
+  html+='<div class="ag-detail-hdr"><div class="ag-detail-av">'+makeFace(ag,44)+'</div><div><div class="ag-detail-name" style="color:'+ag.c+'">'+ag.name+'</div><div class="ag-detail-role">'+ag.role+'</div></div></div>';
+
+  // Status
+  var stLabel=st==='running'?'Processando...':st==='done'?'Concluído':'Aguardando';
+  var stColor=st==='running'?'#00FF96':st==='done'?'#4ADE80':'rgba(255,255,255,.2)';
+  html+='<div class="ag-detail-section"><div class="ag-detail-label">Status</div><div style="font-size:12px;font-weight:700;color:'+stColor+'">● '+stLabel+'</div></div>';
+
+  // Actions performed
+  if(actions.length){
+    html+='<div class="ag-detail-section"><div class="ag-detail-label">O que fez</div>';
+    actions.forEach(function(a){
+      html+='<div class="ag-detail-item"><div class="ag-detail-dot" style="background:'+ag.c+'"></div><span>'+a+'</span></div>';
+    });
+    html+='</div>';
+  }
+
+  // Communications
+  if(comms.length){
+    html+='<div class="ag-detail-section"><div class="ag-detail-label">Comunicou-se com</div>';
+    var uniqueComms={};comms.forEach(function(c){uniqueComms[c]=true;});
+    Object.keys(uniqueComms).forEach(function(cId){
+      var other=null;for(var j=0;j<AGENTS.length;j++){if(AGENTS[j].id===cId){other=AGENTS[j];break;}}
+      if(!other) return;
+      html+='<div class="ag-detail-comm"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="'+other.c+'" stroke-width="1.5"><path d="M2 4l6 4 6-4M2 4v8h12V4"/></svg><span style="color:'+other.c+';font-weight:600">'+other.fn+'</span><span style="color:rgba(255,255,255,.2)">'+other.role+'</span></div>';
+    });
+    html+='</div>';
+  }
+
+  if(!actions.length && st==='idle'){
+    html+='<div style="padding:20px 0;text-align:center;font-size:11px;color:rgba(255,255,255,.15)">Agente ainda não foi ativado</div>';
+  }
+
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+// ── BUBBLE & EFFECTS ──────────────────────────────────────────────────────
+function showBubble(id,msg){
+  var node=document.getElementById('n-'+id);if(!node)return;
+  var old=node.querySelector('.bubble');if(old)old.remove();
+  if(bubTO[id])clearTimeout(bubTO[id]);
+  var b=document.createElement('div');b.className='bubble';b.textContent=msg;
+  var wrap=node.querySelector('.av-wrap');if(wrap)wrap.appendChild(b);
+  bubTO[id]=setTimeout(function(){b.style.transition='opacity .5s';b.style.opacity='0';setTimeout(function(){if(b.parentNode)b.remove();},500);},3500);
+}
+function doSpark(id){var node=document.getElementById('n-'+id);if(!node)return;var s=document.createElement('div');s.className='spark';node.querySelector('.av-wrap').appendChild(s);setTimeout(function(){if(s.parentNode)s.remove();},700);}
+
+function sendPacket(fromId,toId){
+  var canvas=document.getElementById('canvas');var pFrom=getPos(fromId),pTo=getPos(toId);
+  var pkt=document.createElement('div');pkt.className='data-pkt';
+  var fromAg=null;for(var i=0;i<AGENTS.length;i++){if(AGENTS[i].id===fromId){fromAg=AGENTS[i];break;}}
+  var color=fromAg?fromAg.c:'#00FF96';pkt.style.background=color;pkt.style.color=color;
+  pkt.style.left=pFrom.x+'px';pkt.style.top=pFrom.y+'px';canvas.appendChild(pkt);
+  var dur=500+Math.random()*350,start=performance.now();
+  function animate(now){var t=Math.min((now-start)/dur,1);var ease=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;var mx=(pFrom.x+pTo.x)/2,my=(pFrom.y+pTo.y)/2-22;var x=(1-ease)*(1-ease)*pFrom.x+2*(1-ease)*ease*mx+ease*ease*pTo.x;var y=(1-ease)*(1-ease)*pFrom.y+2*(1-ease)*ease*my+ease*ease*pTo.y;pkt.style.left=x+'px';pkt.style.top=y+'px';pkt.style.opacity=t>.85?(1-(t-.85)/.15):'1';if(t<1)requestAnimationFrame(animate);else pkt.remove();}
+  requestAnimationFrame(animate);
+}
+
+function addLog(msg){
+  var el=document.getElementById('log-entries');if(!el)return;
+  var ts=new Date().toLocaleTimeString('pt-BR',{hour12:false});
+  var d=document.createElement('div');d.className='log-e';
+  d.innerHTML='<span class="log-ts">'+ts+'</span><span class="log-msg">'+msg+'</span>';
+  el.insertBefore(d,el.firstChild);
+  while(el.children.length>15)el.removeChild(el.lastChild);
+}
+
+// ── PARTICLES ──────────────────────────────────────────────────────────────
+function initParticles(){var cont=document.getElementById('particles');for(var i=0;i<15;i++){var p=document.createElement('div');p.className='particle';var sz=1+Math.random()*2;p.style.width=sz+'px';p.style.height=sz+'px';p.style.left=Math.random()*100+'%';p.style.top=Math.random()*100+'%';p.style.background=['#3B82F6','#00FF96','#A78BFA','#22D3EE'][Math.floor(Math.random()*4)];p.style.animationDuration=(15+Math.random()*20)+'s';p.style.animationDelay=(Math.random()*15)+'s';p.style.opacity='0';cont.appendChild(p);}}
+
+// ── LOAD PROPOSALS ─────────────────────────────────────────────────────────
+function loadProposals(){
+  fetch(API+'/api/proposals').then(function(r){return r.json();}).then(function(d){
+    var sel=document.getElementById('prop-select');
+    var proposals=d.proposals||[];
+    sel.innerHTML='<option value="">-- Selecione uma proposta ('+proposals.length+') --</option>';
+    proposals.forEach(function(p){
+      var label=(p.title||'Proposta').replace('DAM — ','').slice(0,40);
+      var info=(p.main_proc||'')+ ' · '+(p.total_hours||0)+'h · '+(p.states||[]).join(',');
+      sel.innerHTML+='<option value="'+p.id+'">'+label+' ('+info+')</option>';
+    });
+  }).catch(function(){});
+}
+
+function onSelectProposal(){
+  var sel=document.getElementById('prop-select');
+  var pid=sel.value;
+  if(!pid){currentProposal=null;document.getElementById('sim-btn').disabled=true;return;}
+  fetch(API+'/api/proposals/'+pid).then(function(r){return r.json();}).then(function(p){
+    currentProposal=p;
+    document.getElementById('sim-btn').disabled=false;
+    // Reset
+    if(simRunning) simStop();
+    AGENTS.forEach(function(a){states[a.id]='idle';});
+    agentActions={};agentComms={};
+    renderAll();
+    setStatus('ready','Proposta carregada — clique Simular');
+    addLog('Proposta carregada: '+(p.title||'').slice(0,30));
+    buildSimFromProposal(p);
+  }).catch(function(e){addLog('Erro ao carregar proposta');});
+}
+
+// ── BUILD SIM FROM PROPOSAL DATA ──────────────────────────────────────────
+var simSteps=[];
+var simAgentMsgs={};
+
+function buildSimFromProposal(p){
+  simSteps=[];simAgentMsgs={};
+  var dam=p.dam||(p.dam_json?(typeof p.dam_json==='string'?JSON.parse(p.dam_json):p.dam_json):{});
+  var resources=dam.equipe||p.resources||[];
+  var entregs=dam.entregaveis||[];
+  var needsCPI=dam.plano?dam.plano.needs_cpi:false;
+  var mainProc=p.main_proc||'SD';
+
+  // Determine which agents are involved based on resources
+  var involvedAgents=['orch','ver']; // always
+  var frenteToAgent={};
+  resources.forEach(function(r){
+    var f=r.frente||'';
+    var agId=FRENTE_MAP[f]||FRENTE_MAP[f.toUpperCase()]||null;
+    if(agId&&involvedAgents.indexOf(agId)<0){involvedAgents.push(agId);frenteToAgent[f]=agId;}
+  });
+  // Always add fiscal agents if proposal has legislacao
+  if(dam.fiscal&&dam.fiscal.legislacao&&dam.fiscal.legislacao.length){
+    if(involvedAgents.indexOf('fest')<0) involvedAgents.push('fest');
+    if(involvedAgents.indexOf('ffed')<0) involvedAgents.push('ffed');
+  }
+  if(needsCPI&&involvedAgents.indexOf('drc')<0) involvedAgents.push('drc');
+  if(involvedAgents.indexOf('eq')<0) involvedAgents.push('eq');
+  if(involvedAgents.indexOf('com')<0) involvedAgents.push('com');
+
+  // Build agent messages from entregaveis
+  AGENTS.forEach(function(a){simAgentMsgs[a.id]=AG_MSGS[a.id].slice();});
+  entregs.forEach(function(e){
+    var mod=e.mod||'';var agId=FRENTE_MAP[mod]||null;
+    if(agId){simAgentMsgs[agId].push((e.item||'').slice(0,45));}
+  });
+
+  // Build sim steps
+  // Step 1: Orchestrator
+  simSteps.push({act:['orch'],msg:'Orion: analisando '+mainProc+' — '+involvedAgents.length+' agentes'});
+
+  // Step 2: Version + main module agents
+  var wave2=['ver'];
+  if(involvedAgents.indexOf('sd')>=0) wave2.push('sd');
+  if(involvedAgents.indexOf('fi')>=0) wave2.push('fi');
+  simSteps.push({done:['orch'],act:wave2,msg:wave2.map(function(id){var a=null;AGENTS.forEach(function(x){if(x.id===id)a=x;});return a?a.fn:'';}).join(' + ')+': análise em paralelo'});
+
+  // Step 3: ABAP + DRC
+  var wave3=[];
+  if(involvedAgents.indexOf('abap')>=0) wave3.push('abap');
+  if(involvedAgents.indexOf('drc')>=0) wave3.push('drc');
+  if(wave3.length) simSteps.push({done:['ver'],act:wave3,msg:wave3.map(function(id){var a=null;AGENTS.forEach(function(x){if(x.id===id)a=x;});return a?a.fn+': '+a.role:'';}).join(' · ')});
+
+  // Step 4: Fiscal
+  var wave4=[];
+  if(involvedAgents.indexOf('fest')>=0) wave4.push('fest');
+  if(involvedAgents.indexOf('ffed')>=0) wave4.push('ffed');
+  var done3=wave2.filter(function(x){return x!=='ver';});
+  if(wave4.length) simSteps.push({done:done3.length?done3:wave3,act:wave4,msg:'Fiscais: análise estadual + federal'});
+
+  // Step 5: Team
+  var done4=wave3.length?wave3:done3;
+  simSteps.push({done:wave4.length?wave4:done4,act:['eq'],msg:'Eduardo: dimensionando equipe — '+resources.length+' frentes'});
+
+  // Step 6: Commercial
+  simSteps.push({done:['eq'],act:['com'],msg:'Camila: calculando investimento'});
+
+  // Step 7: Done
+  var totalH=p.total_hours||resources.reduce(function(s,r){return s+(r.dias||0)*8;},0);
+  simSteps.push({done:['com'],msg:'✓ Proposta concluída · '+totalH+'h'});
+}
+
+// ── SIMULATION ─────────────────────────────────────────────────────────────
+function simStep(){
+  if(!simRunning)return;
+  if(simIdx>=simSteps.length){simFinish();return;}
+  var step=simSteps[simIdx++];
+
+  if(step.done)step.done.forEach(function(id){states[id]='done';doSpark(id);});
+  if(step.act)step.act.forEach(function(id){states[id]='running';});
+
+  // Track communications
+  if(step.act&&step.done){
+    step.done.forEach(function(from){
+      step.act.forEach(function(to){
+        if(!agentComms[from])agentComms[from]=[];
+        if(!agentComms[to])agentComms[to]=[];
+        agentComms[from].push(to);agentComms[to].push(from);
+        setTimeout(function(){sendPacket(from,to);},Math.random()*250);
+      });
+    });
+  }
+  if(step.act&&!step.done){
+    step.act.forEach(function(id){
+      if(id!=='orch'){if(!agentComms['orch'])agentComms['orch']=[];agentComms['orch'].push(id);if(!agentComms[id])agentComms[id]=[];agentComms[id].push('orch');setTimeout(function(){sendPacket('orch',id);},Math.random()*200);}
+    });
+  }
+
+  // Show bubbles & track actions
+  if(step.act){
+    step.act.forEach(function(id){
+      var msgs=simAgentMsgs[id]||AG_MSGS[id]||['...'];
+      var mi=Math.floor(Math.random()*msgs.length);
+      var msg=msgs[mi];
+      if(!agentActions[id])agentActions[id]=[];
+      agentActions[id].push(msg);
+      (function(i,m){setTimeout(function(){showBubble(i,m);},150+Math.random()*350);})(id,msg);
+    });
+  }
+
+  var doneN=0;AGENTS.forEach(function(a){if(states[a.id]==='done')doneN++;});
+  var pct=Math.round(doneN/AGENTS.length*100);
+  document.getElementById('prog').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  addLog(step.msg);
+
+  // Update detail if agent selected
+  if(selectedAgentId)renderAgentDetail(selectedAgentId);
+  renderAll();
+
+  setTimeout(simStep,2000+Math.random()*800);
+}
+
+function setStatus(mode,txt){
+  var pill=document.getElementById('status-pill');
+  var dot=document.getElementById('status-dot');
+  var stxt=document.getElementById('status-txt');
+  pill.className='pill pill-'+mode;
+  dot.className='dot dot-'+mode;
+  stxt.textContent=txt;
+}
+
+function simStart(){
+  if(!currentProposal||!simSteps.length)return;
+  AGENTS.forEach(function(a){states[a.id]='idle';});
+  agentActions={};agentComms={};selectedAgentId=null;
+  simIdx=0;simSec=0;simRunning=true;
+  if(simTimer)clearInterval(simTimer);
+  simTimer=setInterval(function(){simSec++;},1000);
+  setStatus('live','Processando...');
+  document.getElementById('prog').style.width='0%';
+  document.getElementById('prog-pct').textContent='0%';
+  document.getElementById('log-entries').innerHTML='';
+  document.getElementById('ag-detail-content').innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:rgba(255,255,255,.2)">Clique em um agente para ver detalhes</div>';
+  var btn=document.getElementById('sim-btn');
+  btn.textContent='■ Parar';btn.className='tbtn btn-green';
+  document.getElementById('prop-select').disabled=true;
+  showSbTab('agents');
+  renderAll();
+  setTimeout(simStep,500);
+}
+
+function simStop(){
+  simRunning=false;clearInterval(simTimer);
+  AGENTS.forEach(function(a){states[a.id]='idle';});
+  agentActions={};agentComms={};
+  renderAll();
+  var btn=document.getElementById('sim-btn');
+  btn.textContent='▶ Simular';btn.className='tbtn btn-blue';
+  setStatus('ready','Parado');
+  document.getElementById('prog').style.width='0%';
+  document.getElementById('prog-pct').textContent='0%';
+  document.getElementById('prop-select').disabled=false;
+}
+
+function simFinish(){
+  simRunning=false;clearInterval(simTimer);
+  setStatus('done','✓ Proposta concluída em '+simSec+'s');
+  document.getElementById('prog').style.width='100%';
+  document.getElementById('prog-pct').textContent='100%';
+  var btn=document.getElementById('sim-btn');
+  btn.textContent='↺ Repetir';btn.className='tbtn btn-blue';
+  document.getElementById('prop-select').disabled=false;
+  renderAll();
+  // Auto-open detail of orchestrator
+  selectAgent('orch');
+}
+
+function simToggle(){if(simRunning)simStop();else simStart();}
+
+// ── LIVE MODE (popup from main app during generation) ─────────────────────
+var isLiveMode = window.location.hash === '#live';
+var liveGenDone = false;
+
+function buildGenericLiveSim(){
+  simSteps=[];simAgentMsgs={};
+  AGENTS.forEach(function(a){simAgentMsgs[a.id]=AG_MSGS[a.id].slice();});
+  simSteps=[
+    {act:['orch'],msg:'Orion: recebendo solicitação do cliente...'},
+    {done:['orch'],act:['ver','sd','fi'],msg:'Valeria + Sofia + Felix: análise em paralelo'},
+    {done:['ver'],act:['abap','drc'],msg:'Axel: mapeando objetos ABAP · Diana: avaliando DRC/CPI'},
+    {done:['sd','fi'],act:['fest','ffed'],msg:'Estela + Fábio: análise fiscal estadual + federal'},
+    {done:['abap','drc'],act:['eq'],msg:'Eduardo: dimensionando equipe e cronograma'},
+    {done:['fest','ffed'],act:['com'],msg:'Camila: calculando investimento e condições'},
+  ];
+  // Last step — only added when generation is done or after timeout
+}
+
+function liveSimStep(){
+  if(!simRunning)return;
+  if(simIdx>=simSteps.length){
+    // If gen is done, finish. Otherwise loop the last running agents
+    if(liveGenDone){liveSimFinish();return;}
+    // Keep last agents running, waiting for backend
+    setTimeout(liveSimStep,1500);
+    return;
+  }
+  var step=simSteps[simIdx++];
+  if(step.done)step.done.forEach(function(id){states[id]='done';doSpark(id);});
+  if(step.act)step.act.forEach(function(id){states[id]='running';});
+  if(step.act&&step.done){step.done.forEach(function(from){step.act.forEach(function(to){setTimeout(function(){sendPacket(from,to);},Math.random()*250);});});}
+  if(step.act&&!step.done){step.act.forEach(function(id){if(id!=='orch')setTimeout(function(){sendPacket('orch',id);},Math.random()*200);});}
+  if(step.act){step.act.forEach(function(id){
+    var msgs=simAgentMsgs[id]||AG_MSGS[id]||['...'];
+    var mi=Math.floor(Math.random()*msgs.length);
+    if(!agentActions[id])agentActions[id]=[];
+    agentActions[id].push(msgs[mi]);
+    (function(i,m){setTimeout(function(){showBubble(i,m);},150+Math.random()*300);})(id,msgs[mi]);
+  });}
+  var doneN=0;AGENTS.forEach(function(a){if(states[a.id]==='done')doneN++;});
+  var pct=Math.min(90,Math.round(doneN/AGENTS.length*100));
+  document.getElementById('prog').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  addLog(step.msg);
+  if(selectedAgentId)renderAgentDetail(selectedAgentId);
+  renderAll();
+  setTimeout(liveSimStep,2200+Math.random()*800);
+}
+
+function liveSimFinish(){
+  // Mark all as done
+  AGENTS.forEach(function(a){if(states[a.id]!=='done'){states[a.id]='done';doSpark(a.id);}});
+  simRunning=false;clearInterval(simTimer);
+  document.getElementById('prog').style.width='100%';
+  document.getElementById('prog-pct').textContent='100%';
+  setStatus('done','✓ Proposta gerada com sucesso!');
+  addLog('✓ Todos os agentes concluíram — proposta pronta');
+  renderAll();
+  // Show done overlay
+  setTimeout(showDoneOverlay,800);
+}
+
+function showDoneOverlay(){
+  var overlay=document.createElement('div');
+  overlay.className='done-overlay';
+  overlay.id='done-overlay';
+  overlay.innerHTML='<div class="done-card">'
+    +'<div class="done-icon">✓</div>'
+    +'<div class="done-title">Proposta gerada com sucesso!</div>'
+    +'<div class="done-sub">Todos os agentes especialistas concluíram a análise.<br>O rascunho v1 está pronto para revisão.</div>'
+    +'<button class="done-btn" onclick="closeDoneAndReturn()">Ver proposta →</button>'
+    +'</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeDoneAndReturn(){
+  var ov=document.getElementById('done-overlay');
+  if(ov){ov.style.transition='opacity .3s';ov.style.opacity='0';setTimeout(function(){ov.remove();},300);}
+  // Focus back on opener and close popup
+  if(window.opener&&!window.opener.closed){
+    try{window.opener.focus();}catch(e){}
+  }
+  setTimeout(function(){window.close();},400);
+}
+
+function startLiveMode(){
+  // Hide proposal selector, change title
+  document.querySelector('.prop-sel').style.display='none';
+  document.getElementById('sim-btn').style.display='none';
+  setStatus('live','Gerando proposta...');
+
+  AGENTS.forEach(function(a){states[a.id]='idle';});
+  agentActions={};agentComms={};
+  simIdx=0;simSec=0;simRunning=true;
+  if(simTimer)clearInterval(simTimer);
+  simTimer=setInterval(function(){simSec++;},1000);
+  document.getElementById('prog').style.width='0%';
+  document.getElementById('prog-pct').textContent='0%';
+  document.getElementById('log-entries').innerHTML='';
+
+  buildGenericLiveSim();
+  renderAll();
+  setTimeout(liveSimStep,500);
+}
+
+// Listen for agent events and completion from parent window
+window.addEventListener('message',function(ev){
+  if(!ev.data) return;
+
+  // Real-time agent events from streaming
+  if(ev.data.type==='sil-agent-event' && ev.data.event){
+    var e = ev.data.event;
+    if(e.type==='agent' && e.name){
+      var nameMap = {
+        'Orquestrador':'orch','Agente SD':'sd','Agente FI':'fi','Agente MM':'mm',
+        'Agente CO':'co','Agente PP':'pp','Agente PM':'pm','Agente HR':'hr',
+        'Agente QM':'qm','Agente WM':'wm','ABAP Estrutural':'abap','Agente ABAP':'abap',
+        'Agente DRC':'drc','Agente CPI':'drc','Agente Basis':'basis','Agente Migração':'migr',
+        'Fiscal Estadual':'fest','Fiscal Federal':'ffed','Fiscal Municipal':'fmun',
+        'Reforma Tributária':'rtrib','Equipe/GP':'eq','Comercial':'com'
+      };
+      var nodeId = nameMap[e.name] || e.name.toLowerCase().replace(/[^a-z]/g,'');
+      if(e.status==='running'){
+        states[nodeId]='active';
+        addLog(e.name+' analisando...');
+      } else if(e.status==='done'){
+        states[nodeId]='done';
+        addLog(e.name+' ✓');
+        // Store outputs if any
+        if(e.outputs && e.outputs.length){
+          agentActions[nodeId] = e.outputs.map(function(o){return typeof o==='string'?o:(o.item||'');});
+        }
+      } else if(e.status==='error'){
+        states[nodeId]='error';
+        addLog(e.name+' ✗ '+(e.error||''));
+      }
+      renderNodes();
+      // Update progress
+      var done=0,total=0;
+      for(var k in states){total++;if(states[k]==='done')done++;}
+      var pct=total?Math.round(done/total*100):0;
+      var progEl=document.getElementById('prog');
+      if(progEl)progEl.style.width=pct+'%';
+      var pctEl=document.getElementById('pctTxt');
+      if(pctEl)pctEl.textContent=pct+'%';
+    }
+  }
+
+  // Completion event
+  if(ev.data.type==='sil-gen-done'){
+    liveGenDone=true;
+    var totalH=ev.data.result?ev.data.result.total_hours||0:0;
+    AGENTS.forEach(function(a){if(states[a.id]==='active')states[a.id]='done';});
+    renderNodes();
+    addLog('✓ Proposta concluída'+(totalH?' · '+totalH+'h':''));
+    var progEl=document.getElementById('prog');
+    if(progEl)progEl.style.width='100%';
+    var pctEl=document.getElementById('pctTxt');
+    if(pctEl)pctEl.textContent='100%';
+  }
+});
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener('load',function(){
+  initParticles();
+  requestAnimationFrame(function(){requestAnimationFrame(function(){
+    renderAll();
+    if(isLiveMode){
+      startLiveMode();
+    } else {
+      loadProposals();
+    }
+  });});
+});
+window.addEventListener('resize',function(){renderConns();renderNodes();});
+</script>
+</body>
+</html>

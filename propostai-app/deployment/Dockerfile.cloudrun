@@ -1,0 +1,43 @@
+# Cloud Run-optimized image for propostai backend.
+#
+# Differences vs deployment/backend.Dockerfile (Docker Compose dev):
+#   - Listens on $PORT (Cloud Run injects 8080 by default) — NOT hardcoded.
+#   - Single worker (--workers 1) — Cloud Run scales by spawning more
+#     container instances; multiple workers per instance just steal CPU.
+#   - Runs as non-root user `app` (UID 10001) — Cloud Run best practice.
+#   - No /data volume mount: ephemeral filesystem; persistent state goes
+#     to Cloud SQL / GCS (deferred until those are provisioned).
+#
+# Build context: propostai-app/ (so backend/ is reachable from `.`).
+
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PORT=8080
+
+# System deps for psycopg2-binary / cryptography wheels.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gcc libpq-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install deps first for layer cache.
+COPY backend/pyproject.toml /app/
+RUN pip install /app/ --root-user-action=ignore
+
+# Then copy application code.
+COPY backend/ /app/
+
+# Non-root runtime user.
+RUN useradd --system --uid 10001 --no-create-home app \
+ && chown -R app:app /app
+USER 10001
+
+EXPOSE 8080
+
+# Cloud Run sets $PORT; honor it. Single worker, async uvicorn.
+CMD exec uvicorn main:app --host 0.0.0.0 --port "${PORT}" --workers 1

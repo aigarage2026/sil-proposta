@@ -1,0 +1,25 @@
+{
+  "app": { "name": "PropostAI", "subtitle": "Direto ao Ponto" },
+  "nav": { "proposals": "Proposals", "new": "New proposal", "analytics": "Analytics", "settings": "Settings" },
+  "auth": { "login": "Sign in", "email": "Email", "password": "Password", "logout": "Sign out" },
+  "intake": {
+    "title": "Create SAP proposal",
+    "desc": "Fill in the fields. AI agents will analyze the scope and generate the PS (Solution Proposal) v1 draft.",
+    "project_type": "Project type",
+    "sap_version": "SAP version",
+    "states": "Client state(s)",
+    "commercial": "Commercial model",
+    "rfp": "Requirement description (RFP)",
+    "notes": "Additional notes",
+    "generate": "Generate proposal",
+    "socrates_hint": "Optional. More signal = better historical match by Socrates.",
+    "industry": "Client industry",
+    "industries": { "varejo": "Retail", "financeiro": "Financial", "industrial": "Industrial", "saude": "Healthcare", "agro": "Agribusiness", "publico": "Public sector", "logistica": "Logistics", "energia": "Energy", "telecom": "Telecom", "outro": "Other" },
+    "project_size": "Estimated size",
+    "sizes": { "small": "Small", "medium": "Medium", "large": "Large", "xl": "Extra large" },
+    "deadline": "Deadline pressure",
+    "deadlines": { "low": "Low", "medium": "Medium", "high": "High", "critical": "Critical" },
+    "previous_engagement": "We've worked with this client before"
+  },
+  "common": { "loading": "Loading...", "error": "Error", "save": "Save", "cancel": "Cancel", "delete": "Delete", "search": "Search", "no_results": "No results" }
+}

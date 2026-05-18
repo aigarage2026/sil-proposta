@@ -1,0 +1,344 @@
+"""
+Sil-Proposta — Pipeline RAG
+Indexação de fontes SAP, fiscais e NT no pgvector (Supabase)
+Funciona também em modo local com in-memory store quando sem Supabase
+"""
+import os, json, hashlib, asyncio
+from typing import List, Dict, Optional
+from datetime import datetime
+
+# ── Cliente Anthropic para embeddings ──
+import anthropic
+_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic()
+    return _client
+
+# ══════════════════════════════════════
+# IN-MEMORY STORE (fallback sem Supabase)
+# ══════════════════════════════════════
+_memory_store: List[Dict] = []
+
+def _keyword_score(query: str, text: str) -> float:
+    """Busca por keywords reais — conta quantas palavras da query aparecem no texto."""
+    import re
+    query_words = set(re.findall(r'[a-záàâãéèêíïóôõúüç]{3,}', query.lower()))
+    text_lower = text.lower()
+    if not query_words:
+        return 0.0
+    matches = sum(1 for w in query_words if w in text_lower)
+    return matches / max(len(query_words), 1)
+
+# ══════════════════════════════════════
+# DOCUMENTOS DE CONHECIMENTO BASE
+# ══════════════════════════════════════
+SAP_KNOWLEDGE_BASE = [
+    # ── SAP DRC / GRC ──
+    {"id":"drc-econf-001","source":"SAP Community","category":"DRC",
+     "title":"ECONF evento 110750 — sem suporte DRC nativo",
+     "content":"""O evento ECONF (Evento de Conciliação Financeira, código 110750) da Nota Técnica 2024.002
+não possui suporte nativo no SAP Document and Reporting Compliance (DRC) nem no SAP GRC/NFe.
+Diferente de eventos como cancelamento, CC-e e Manifestação do Destinatário que foram incorporados
+ao standard SAP, o ECONF ainda não tem nota SAP publicada para ECC nem S/4HANA.
+A arquitetura correta é: SAP CPI como middleware — o ECC/FI gera o payload via ABAP Z,
+o CPI monta o XML conforme NT 2024.002, assina com certificado digital e transmite ao
+Web Service SVRS SEFAZ (recepcaoevento4.asmx).
+Endpoint SVRS: https://nfe.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx"""},
+
+    {"id":"drc-cbenef-001","source":"SAP Notes","category":"DRC",
+     "title":"cBenef — Código de Benefício Fiscal ICMS — BAdI J_1BNF_ADD_DATA",
+     "content":"""Para implementar o preenchimento automático do cBenef (Código de Benefício Fiscal ICMS)
+no SAP ECC, a solução técnica padrão utiliza a BAdI J_1BNF_ADD_DATA (ou CL_NFE_PRINT em releases
+superiores). É necessário criar uma tabela Z de mapeamento CST × UF × cBenef manutenível via SM30,
+sem necessidade de ABAP a cada atualização de código.
+Premissas críticas: ECC releases menores que 6.05 não têm as notas SAP para cBenef disponíveis,
+exigindo desenvolvimento Z completo. Risco de conflito entre BAdIs quando há múltiplas
+implementações ativas — verificar no filtro de BAdIs.
+Rejeição 930: campo cBenef inválido. Rejeição 931: combinação CST × cBenef × UF inválida."""},
+
+    {"id":"abap-chain-001","source":"Sil-Proposta Rules","category":"ABAP",
+     "title":"Cadeia de objetos ABAP — regra de derivação obrigatória",
+     "content":"""Regra de derivação ABAP Estrutural do Sil-Proposta:
+1. BAPI Z: sempre que o escopo envolver hardware externo (terminal TEF, POS, maquininha,
+   PINPAD), uma BAPI Z deve ser o primeiro entregável. Ela recebe os dados do terminal.
+   Premissa obrigatória: 'não contempla a extração dos dados da maquininha'.
+2. BAdI: mapeia as estruturas de dados (ex: Grupo YA da NF-e, tpIntegra=1).
+3. RFC Z: transporta os dados mapeados para o XML da NF-e no momento da geração.
+4. iFlow CPI: quando o evento não tem suporte SAP nativo → CPI transmite para SEFAZ.
+5. Monitor Z: tela de consulta, reenvio, cancelamento, status SEFAZ, erros/rejeições.
+Paralelismo: 4+ desenvolvimentos ABAP independentes → alocar 3 ABAPers em paralelo."""},
+
+    # ── Fiscal Estadual — Goiás ──
+    {"id":"go-in1608-001","source":"SEFAZ-GO","category":"Fiscal Estadual",
+     "title":"IN 1.608/2025-GSE Goiás — vinculação meios de pagamento NF-e",
+     "content":"""Instrução Normativa nº 1.608/2025-GSE (Goiás) regulamenta a vinculação obrigatória
+dos meios de pagamento eletrônico nas NF-e emitidas no estado.
+Campos obrigatórios: tpIntegra="1" (Pagamento integrado) é obrigatório para indicar que
+a transação está tecnologicamente integrada ao sistema emissor da NF-e.
+Cenário 1 (pagamento imediato): Grupo YA preenchido no XML da NF-e com IndPag, tpIntegra=1,
+CNPJ beneficiário, ID transação, código do terminal.
+Cenário 2 (pagamento posterior): Evento ECONF (110750) enviado após a baixa financeira.
+Prazo: escalonado por faixa de faturamento. IN 1.623/2026 prorrogou alguns prazos."""},
+
+    {"id":"go-in1608-002","source":"SEFAZ-GO","category":"Fiscal Estadual",
+     "title":"ECONF Goiás — campo tpIntegra=1 obrigatório",
+     "content":"""Para clientes em Goiás com IN 1.608/2025-GSE, o campo tpIntegra="1" é obrigatório
+tanto no Grupo YA da NF-e (Cenário 1) quanto no payload do ECONF (Cenário 2).
+Sem este campo, a SEFAZ-GO pode rejeitar o documento ou considerar a operação como
+pagamento não integrado, gerando exposição fiscal.
+O campo indica que o sistema de pagamento está diretamente integrado ao ERP emissor,
+sem intervenção manual na captura dos dados financeiros."""},
+
+    # ── Fiscal Estadual — São Paulo ──
+    {"id":"sp-cbenef-001","source":"SEFAZ-SP","category":"Fiscal Estadual",
+     "title":"cBenef SP — Portaria SRE nº 70/2025",
+     "content":"""A Portaria SRE nº 70/2025 de São Paulo exige o preenchimento do código cBenef
+nas NF-e de saída sempre que há benefício fiscal ICMS aplicável.
+São Paulo tem 310 códigos cBenef ativos. A tabela oficial é publicada no portal SEFAZ-SP
+e deve ser mantida atualizada (cron semanal recomendado).
+Campos da tabela Z SAP: CST ICMS, UF destino, código cBenef, vigência inicial, vigência final.
+Transações SAP para manutenção: J1B1N (saída), J1B2N (entrada), J1B3N (outros).
+Impacto no DANFE: o campo cBenef deve aparecer nos dados complementares.
+Rejeição SEFAZ: 930 (campo inválido), 931 (combinação CST×cBenef×UF inválida)."""},
+
+    # ── NT 2024.002 — ECONF ──
+    {"id":"nt2024002-001","source":"Portal NF-e","category":"Legislação Federal",
+     "title":"NT 2024.002 — Evento ECONF (110750/110751)",
+     "content":"""A Nota Técnica 2024.002 versão 1.00 institui o Evento de Conciliação Financeira (ECONF):
+- Evento 110750: ECONF — Conciliação Financeira
+- Evento 110751: Cancelamento de Conciliação Financeira
+O ECONF é enviado pelo emitente da NF-e para informar a transação financeira da operação.
+É facultativo na maioria dos estados, mas obrigatório em Goiás (IN 1.608/2025-GSE).
+Para NF-e modelo 55: Web Service SVRS (todas as UFs).
+URL: https://nfe.svrs.rs.gov.br/ws/recepcaoevento/recepcaoevento4.asmx
+cOrgao=92 para eventos nacionais via SVRS.
+Campos principais: indPag, tPag, vPag, dPag, CNPJPag, UFPag, tpIntegra."""},
+
+    # ── Reforma Tributária ──
+    {"id":"reforma-001","source":"LC 214/2021","category":"Reforma Tributária",
+     "title":"LC 214/2021 — IBS/CBS/IS — impacto SAP",
+     "content":"""A Lei Complementar 214/2021 (regulamentação da EC 132/2023) institui:
+IBS (Imposto sobre Bens e Serviços) — substitui ICMS estadual e ISS municipal
+CBS (Contribuição sobre Bens e Serviços) — substitui PIS e COFINS federais
+IS (Imposto Seletivo) — incide sobre produtos prejudiciais à saúde e ao meio ambiente
+Vigência: transição 2026-2033. Alíquota-teste em 2026 (0,1% CBS + 0,05% IBS).
+Split payment obrigatório a partir de 2027: recolhimento na fonte pelo intermediário financeiro.
+Impacto SAP: módulos SD (NF-e com novos campos IBS/CBS), FI (contas contábeis separadas),
+MM (NF entrada), CO (novos centros de custo), SPED (novos registros).
+Lógica Sil-Proposta: go-live pós jul/2026 + escopo SD/FI → fazer agora."""},
+
+    # ── Fontes Federais de Legislação ──
+    {"id":"fonte-dou-001","source":"Imprensa Nacional","category":"Legislação Federal",
+     "title":"Diário Oficial da União — Imprensa Nacional",
+     "content":"""Portal oficial do Diário Oficial da União (DOU).
+URL: https://www.in.gov.br/
+Publicação de leis, decretos, instruções normativas, portarias e demais atos oficiais federais.
+Consulta obrigatória para verificar vigência de novas normas tributárias (CBS, IBS, IS),
+instruções normativas da Receita Federal e portarias do Ministério da Fazenda.
+Busca por edição, seção (1, 2, 3) e data de publicação."""},
+
+    {"id":"fonte-planalto-001","source":"Planalto","category":"Legislação Federal",
+     "title":"Portal da Legislação — Planalto",
+     "content":"""Portal oficial da Presidência da República para legislação federal consolidada.
+URL: https://www4.planalto.gov.br/legislacao
+Acesso a: Constituição Federal, Leis Complementares (LC 214/2021 — Reforma Tributária),
+Leis Ordinárias, Medidas Provisórias, Decretos e Emendas Constitucionais (EC 132/2023).
+Fonte primária para texto integral e consolidado de leis federais que impactam SAP fiscal."""},
+
+    {"id":"fonte-normas-001","source":"LegBr","category":"Legislação Federal",
+     "title":"Normas.leg.br — Pesquisa de Normas Jurídicas",
+     "content":"""Portal de pesquisa de normas jurídicas mantido pelo Poder Legislativo.
+URL: https://normas.leg.br/
+Busca unificada de legislação federal incluindo leis, decretos, medidas provisórias
+e atos normativos. Útil para pesquisa consolidada de normas tributárias e fiscais
+que impactam obrigações acessórias (SPED, NF-e, EFD)."""},
+
+    {"id":"fonte-lexml-001","source":"LexML","category":"Legislação Federal",
+     "title":"LexML Brasil — Rede de Informação Legislativa e Jurídica",
+     "content":"""Portal de busca integrada de legislação, jurisprudência e proposições legislativas.
+URL: https://www.lexml.gov.br/
+Agrega normas de todas as esferas (federal, estadual, municipal) e poderes.
+Ferramenta de pesquisa para encontrar legislação tributária por tema, número ou ementa.
+Indexa também decisões do CARF e jurisprudência tributária relevante para análise de risco."""},
+
+    {"id":"fonte-sped-001","source":"RFB/SPED","category":"Legislação Federal",
+     "title":"Portal SPED — Sistema Público de Escrituração Digital",
+     "content":"""Portal oficial do SPED mantido pela Receita Federal do Brasil.
+URL: http://sped.rfb.gov.br/
+Documentação técnica de todas as obrigações SPED: EFD-ICMS/IPI, EFD-Contribuições,
+ECF, ECD, EFD-Reinf, e-Financeira. Contém leiautes, guias práticos, tabelas de códigos,
+perguntas frequentes e notas técnicas. Fonte obrigatória para validar registros SPED
+impactados por mudanças fiscais no SAP (novos campos IBS/CBS na Reforma Tributária)."""},
+
+    {"id":"fonte-nfe-001","source":"Portal NF-e","category":"Legislação Federal",
+     "title":"Portal Nacional da NF-e — SEFAZ/CONFAZ",
+     "content":"""Portal oficial da Nota Fiscal Eletrônica mantido pelo ENCAT/CONFAZ.
+URL: https://www.nfe.fazenda.gov.br/
+Publicação de Notas Técnicas (NT 2024.002 — ECONF, entre outras), schemas XML,
+Web Services, regras de validação, tabelas de códigos (cBenef, CFOP, CST) e manuais.
+Fonte primária para qualquer alteração no layout XML da NF-e modelo 55/65 que impacta SAP DRC."""},
+
+    {"id":"fonte-esocial-001","source":"Gov.br/eSocial","category":"Legislação Federal",
+     "title":"eSocial — Documentação Técnica",
+     "content":"""Portal oficial da documentação técnica do eSocial.
+URL: https://www.gov.br/esocial/pt-br/documentacao-tecnica
+Leiautes, manuais de orientação, notas técnicas e schemas XSD do eSocial.
+Relevante para projetos SAP HCM/SuccessFactors que envolvem obrigações trabalhistas
+e previdenciárias digitais. Eventos periódicos, não periódicos e de tabela."""},
+
+    {"id":"fonte-confaz-001","source":"CONFAZ","category":"Legislação Federal",
+     "title":"CONFAZ — Conselho Nacional de Política Fazendária",
+     "content":"""Portal oficial do CONFAZ — deliberações entre os estados sobre ICMS.
+URL: https://www.confaz.fazenda.gov.br/
+Publicação de Convênios ICMS, Protocolos, Ajustes SINIEF e Atos COTEPE.
+Fonte obrigatória para validar regras interestaduais de ICMS, substituição tributária,
+benefícios fiscais e diferencial de alíquota (DIFAL) que impactam configuração SAP SD/FI."""},
+
+    {"id":"fonte-reforma-rfb-001","source":"RFB","category":"Reforma Tributária",
+     "title":"Receita Federal — Reforma do Consumo (IBS/CBS)",
+     "content":"""Portal da Receita Federal dedicado à Reforma Tributária do Consumo.
+URL: https://www.gov.br/receitafederal/pt-br/acesso-a-informacao/acoes-e-programas/programas-e-atividades/reforma-consumo
+Informações oficiais sobre a implementação da CBS (Contribuição sobre Bens e Serviços),
+cronograma de transição, regulamentação infralegal, split payment e obrigações acessórias.
+Fonte primária para acompanhar regras que impactarão SAP FI/SD na transição 2026-2033."""},
+
+    {"id":"fonte-reforma-com-001","source":"reformatributaria.com","category":"Reforma Tributária",
+     "title":"ReformaTributaria.com — Portal de Acompanhamento",
+     "content":"""Portal independente de acompanhamento da Reforma Tributária brasileira.
+URL: https://www.reformatributaria.com/
+Análises, comparativos, simuladores e atualizações sobre IBS, CBS e IS.
+Útil para contextualização e análise de impacto em propostas SAP,
+complementando as fontes oficiais do governo."""},
+
+    {"id":"fonte-reforma-org-001","source":"reformatributaria.org.br","category":"Reforma Tributária",
+     "title":"ReformaTributaria.org.br — Centro de Estudos",
+     "content":"""Centro de estudos e debates sobre a Reforma Tributária.
+URL: https://www.reformatributaria.org.br
+Artigos técnicos, pareceres e análises sobre a EC 132/2023 e LC 214/2021.
+Referência para embasamento técnico em propostas SAP que envolvem adequação
+à nova legislação tributária (IBS/CBS/IS) e seus impactos nos módulos fiscais."""},
+
+    {"id":"fonte-camara-001","source":"Câmara dos Deputados","category":"Legislação Federal",
+     "title":"Câmara dos Deputados — Pesquisa de Proposições",
+     "content":"""Portal de pesquisa de proposições legislativas da Câmara dos Deputados.
+URL: https://www.camara.leg.br/busca-portal/proposicoes/pesquisa-simplificada
+Busca de Projetos de Lei (PL), Projetos de Lei Complementar (PLP), Medidas Provisórias (MP)
+e emendas em tramitação. Útil para monitorar proposições tributárias e fiscais
+que possam impactar obrigações SAP antes mesmo da sanção presidencial."""},
+
+    {"id":"fonte-senado-001","source":"Senado Federal","category":"Legislação Federal",
+     "title":"Senado Federal — Portal Legislativo",
+     "content":"""Portal legislativo do Senado Federal.
+URL: https://www12.senado.leg.br/hpsenado
+Acompanhamento de projetos de lei em tramitação no Senado, incluindo regulamentação
+da Reforma Tributária, proposições sobre obrigações acessórias e alterações no CTN.
+Complementa a pesquisa da Câmara para visão completa do processo legislativo."""},
+
+    # ── SAP Activate ──
+    {"id":"activate-001","source":"SAP Activate","category":"Metodologia",
+     "title":"SAP Activate — fases e estimativas de horas",
+     "content":"""Metodologia SAP Activate — fases padrão para projetos:
+Prepare: aprovação, kick-off, planejamento. 1-2 semanas.
+Explore: levantamento de requisitos, especificação funcional, confirmação de escopo. 1-3 semanas.
+Realize: desenvolvimento, configuração, testes unitários. Bulk do projeto.
+Deploy (Homologação): testes integrados, KT AMS, cutover, go-live. 1-2 semanas.
+Go Live: acompanhamento inicial. 3-5 dias.
+Suporte pós Go-Live: estabilização. 1-2 semanas.
+KT AMS (Knowledge Transfer): obrigatório na fase Deploy. Transferência para time de sustentação.
+Horas padrão: 8h/dia, 168h/mês."""},
+
+    # ── Padrão Cast Group ──
+    {"id":"cast-dam-001","source":"Cast Group","category":"Padrão Proposta",
+     "title":"Estrutura DAM Cast Group — padrão obrigatório",
+     "content":"""O DAM (Documento de Arquitetura de Melhoria) da Cast Group segue estrutura obrigatória:
+1. Capa com dados do cliente, arquiteto, data e código PMS
+2. Sumário automático
+3. Necessidade: processo atual, processo futuro, benefício esperado
+4. Solução: resumo técnico, escopo por módulo (tabela Mód/Entregável/Escopo/Premissas)
+5. Premissas gerais (21 itens padrão)
+6. Equipe do projeto
+7. Análise de impactos
+8. Cronograma (macro)
+9. Investimento: valor total em tabela
+10. Condições de faturamento: 50%/50% (aprovação/go-live), garantia 30 dias, validade 30 dias.
+Horas de pré-venda NÃO entram no DAM nem no WP — são custo interno apenas."""},
+
+    {"id":"cast-wp-001","source":"Cast Group","category":"Padrão Proposta",
+     "title":"Work Package Cast Group — estrutura obrigatória",
+     "content":"""O WP (Work Package) da Cast Group é uma planilha Excel com:
+- Aba WP_RFP
+- Fases SAP Activate: Prepare, Explore, Realize, Homologação, Deploy, Go Live, Suporte
+- Recursos: frente (SD/FI/ABAP/GP), nível (Sênior/Pleno), dias por semana
+- KT AMS obrigatório no Deploy
+- 8h por dia, 168h por mês
+- Totalizadores automáticos por recurso e por fase
+- Horas de pré-venda separadas (não faturáveis) — custo interno de margem
+Referência ECONF Goiás: SD 9 dias + FI 11 dias + GP 4 dias + 3×ABAP 14 dias = 66 dias = 528h"""},
+]
+
+# ══════════════════════════════════════
+# INDEXAÇÃO
+# ══════════════════════════════════════
+def index_knowledge_base():
+    """Indexa a base de conhecimento SAP no store em memória"""
+    global _memory_store
+    _memory_store = []
+    for doc in SAP_KNOWLEDGE_BASE:
+        text = f"{doc['title']}\n\n{doc['content']}"
+        _memory_store.append({**doc, "full_text": text, "indexed_at": datetime.utcnow().isoformat()})
+    return len(_memory_store)
+
+# ══════════════════════════════════════
+# BUSCA
+# ══════════════════════════════════════
+def search(query: str, top_k: int = 4, category: Optional[str] = None) -> List[Dict]:
+    """Busca por keywords reais na base de conhecimento — só retorna docs relevantes."""
+    if not _memory_store:
+        index_knowledge_base()
+
+    results = []
+    for doc in _memory_store:
+        if category and doc.get("category") != category:
+            continue
+        text = doc.get("full_text", f"{doc.get('title','')}\n{doc.get('content','')}")
+        score = _keyword_score(query, text)
+        if score > 0.05:  # mínimo 5% de match para evitar docs irrelevantes
+            results.append({**doc, "score": score})
+
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:top_k]
+
+def get_context_for_agent(agent_type: str, intake_text: str) -> str:
+    """Monta contexto RAG personalizado por tipo de agente"""
+    category_map = {
+        "DRC":             "DRC",
+        "ABAP":            "ABAP",
+        "FISCAL_ESTADUAL": "Fiscal Estadual",
+        "FISCAL_FEDERAL":  "Legislação Federal",
+        "REFORMA":         "Reforma Tributária",
+        "EQUIPE":          "Metodologia",
+        "COMERCIAL":       "Padrão Proposta",
+    }
+    cat     = category_map.get(agent_type)
+    k = 5 if agent_type in ("FISCAL_FEDERAL", "REFORMA") else 3
+    results = search(intake_text, top_k=k, category=cat)
+
+    # NÃO fazer fallback sem categoria — retornar vazio se não houver match
+    # Isso evita contaminação de docs irrelevantes (ex: ECONF em proposta de estoque)
+    if not results:
+        return ""
+
+    context = "\n\n---\n\n".join(
+        f"[{r['source']} | {r['title']}]\n{r['content']}"
+        for r in results
+    )
+    return context
+
+# Indexar ao importar
+try:
+    n = index_knowledge_base()
+except Exception:
+    pass

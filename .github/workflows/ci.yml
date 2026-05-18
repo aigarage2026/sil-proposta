@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: propostai-app/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: propostai-app/backend/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # `[dev]` pulls in pytest, ruff, mypy, plus aiosqlite/fakeredis
+          # for the test fixtures.
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Test (pytest)
+        env:
+          # Same env the test fixtures use; PORTAL_HMAC_SECRET unblocks
+          # tests that monkeypatch it but want the default to be non-empty.
+          PORTAL_HMAC_SECRET: ci-portal-secret
+          DEBUG: "true"
+        run: pytest -q --no-header
+
+  frontend:
+    name: Frontend (build + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: propostai-app/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Detect lockfile presence so we can opt into npm-cache only when it
+      # exists. setup-node@v4 hard-errors on a missing cache-dependency-path,
+      # so toggling `with.cache` conditionally is the right shape.
+      - name: Check for lockfile
+        id: lockfile
+        run: |
+          if [ -f propostai-app/frontend/package-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node (with cache)
+        if: steps.lockfile.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: propostai-app/frontend/package-lock.json
+
+      - name: Set up Node (no cache — lockfile absent)
+        if: steps.lockfile.outputs.present != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        # npm ci when the lockfile exists; npm install otherwise (first
+        # commit / pre-lockfile flow).
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Lint (eslint)
+        # ESLint v9 flat-config landed in eslint.config.js. We allow warnings
+        # to surface but fail the build on any *error* (--max-warnings keeps
+        # accumulation visible). Flip to 0 after the next style pass.
+        run: npm run lint --if-present -- --max-warnings 50
+
+      - name: Build (vite)
+        run: npm run build

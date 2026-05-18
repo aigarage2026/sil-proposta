@@ -1,0 +1,110 @@
+name: Deploy (Cloud Run)
+
+# Builds the backend Cloud Run image, pushes it to Artifact Registry, and
+# deploys via `gcloud run deploy`. Terraform is responsible for the
+# steady-state infra (Artifact Registry repo, service account, secret
+# bindings); this workflow only updates the running revision.
+#
+# Triggers:
+#   - manual via workflow_dispatch (always available)
+#   - push to main, only when backend code or this workflow changes
+#
+# Required secrets (set in the GitHub repo / org settings):
+#   GCP_PROJECT_ID            — project hosting Cloud Run
+#   GCP_REGION                — e.g. southamerica-east1
+#   GCP_WORKLOAD_IDENTITY_PROV — projects/PRJNUM/locations/global/workloadIdentityPools/POOL/providers/PROV
+#   GCP_DEPLOY_SA             — deploy service account email
+#                                (different from the runtime SA!)
+#
+# The runtime config (DATABASE_URL, JWT_SECRET, ...) lives in Secret
+# Manager and is mounted by Cloud Run — NOT injected by this workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment slug (dev | stg | prd)."
+        required: true
+        default: "dev"
+  push:
+    branches: [main]
+    paths:
+      - "propostai-app/backend/**"
+      - "propostai-app/deployment/Dockerfile.cloudrun"
+      - ".github/workflows/deploy.yml"
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write  # required for Google's Workload Identity Federation
+
+jobs:
+  deploy:
+    name: Build + Deploy (Cloud Run)
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_NAME: propostai
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image tag
+        id: tag
+        # Short SHA + run number — deterministic, monotone, debuggable.
+        run: |
+          short_sha=$(git rev-parse --short HEAD)
+          echo "tag=${short_sha}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROV }}
+          service_account: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ secrets.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build + push image
+        run: |
+          image="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${SERVICE_NAME}/${SERVICE_NAME}:${{ steps.tag.outputs.tag }}"
+          docker build \
+            -f propostai-app/deployment/Dockerfile.cloudrun \
+            -t "${image}" \
+            propostai-app/
+          docker push "${image}"
+          echo "image=${image}" >> "$GITHUB_ENV"
+
+      - name: Deploy revision
+        run: |
+          gcloud run deploy "${SERVICE_NAME}" \
+            --region "${{ secrets.GCP_REGION }}" \
+            --image "${image}" \
+            --platform managed \
+            --quiet
+
+      - name: Smoke /health on the new revision
+        run: |
+          url=$(gcloud run services describe "${SERVICE_NAME}" \
+                  --region "${{ secrets.GCP_REGION }}" \
+                  --format='value(status.url)')
+          echo "Deployed: ${url}"
+          # Retry a few times — startup probe may still be flipping ready.
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 "${url}/health" > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Service /health did not respond 2xx after 5 attempts."
+          exit 1

@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-surface text-surface-dark; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded; }
+}
+
+@layer components {
+  .btn-primary { @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand text-white font-semibold text-sm shadow-md hover:bg-brand-dark transition-all hover:-translate-y-0.5; }
+  .btn-secondary { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-600 font-medium text-sm hover:bg-gray-50 transition-all; }
+  .btn-danger { @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-all; }
+  .btn-ghost { @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 font-medium text-sm hover:bg-gray-100 transition-all; }
+  .card { @apply bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow; }
+  .input { @apply w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10 transition-all; }
+  .badge { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold; }
+  .badge-draft { @apply bg-gray-100 text-gray-500; }
+  .badge-review { @apply bg-amber-50 text-amber-600 border border-amber-200; }
+  .badge-approved { @apply bg-blue-50 text-brand border border-blue-200; }
+  .badge-won { @apply bg-emerald-50 text-emerald-600 border border-emerald-200; }
+  .badge-lost { @apply bg-red-50 text-red-500 border border-red-200; }
+}

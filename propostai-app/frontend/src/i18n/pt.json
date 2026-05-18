@@ -1,0 +1,39 @@
+{
+  "app": { "name": "PropostAI", "subtitle": "Direto ao Ponto" },
+  "nav": { "proposals": "Propostas", "new": "Nova proposta", "analytics": "Analytics", "settings": "Configuracoes" },
+  "auth": { "login": "Entrar", "email": "E-mail", "password": "Senha", "logout": "Sair" },
+  "intake": {
+    "title": "Criar proposta SAP",
+    "desc": "Preencha os campos. Os agentes IA analisarao o escopo e gerarao o rascunho v1 da PS (Proposta de Solucao).",
+    "project_type": "Tipo de projeto",
+    "sap_version": "Versao SAP",
+    "states": "UF(s) do cliente",
+    "commercial": "Modelo comercial",
+    "rfp": "Descricao da necessidade (RFP)",
+    "notes": "Observacoes adicionais",
+    "generate": "Gerar proposta",
+    "types": { "ams": "AMS / Sustentacao", "new": "Projeto novo", "migration": "Migracao ECC → S/4HANA", "support": "Suporte emergencial" },
+    "versions": { "ecc604": "ECC <= 6.04", "ecc605": "ECC 6.05+", "s4op": "S/4HANA On-premise", "s4cloud": "S/4HANA Cloud" },
+    "models": { "fixed": "Valor fechado", "t_m": "Time & Material" },
+    "socrates_hint": "Opcional. Quanto mais sinal, melhor o match de Sócrates no historico.",
+    "industry": "Setor do cliente",
+    "industries": { "varejo": "Varejo", "financeiro": "Financeiro", "industrial": "Industrial", "saude": "Saude", "agro": "Agro", "publico": "Publico", "logistica": "Logistica", "energia": "Energia", "telecom": "Telecom", "outro": "Outro" },
+    "project_size": "Tamanho estimado",
+    "sizes": { "small": "Pequeno", "medium": "Medio", "large": "Grande", "xl": "Extra grande" },
+    "deadline": "Pressao de prazo",
+    "deadlines": { "low": "Baixa", "medium": "Media", "high": "Alta", "critical": "Critica" },
+    "previous_engagement": "Ja fizemos projeto para este cliente antes"
+  },
+  "proposal": {
+    "draft": "Rascunho", "review": "Em revisao", "approved": "Aprovada", "won": "Ganha", "lost": "Perdida",
+    "summary": "Resumo da solucao", "wp": "Work Package", "premises": "Premissas gerais", "investment": "Investimento",
+    "detail": "Detalhar", "export_ps": "PS Word", "export_wp": "WP Excel", "approve": "Aprovar", "back": "Voltar"
+  },
+  "agents": {
+    "title": "Agentes IA trabalhando",
+    "orch": "Orion (Orquestrador)", "ver": "Valeria (Versao SAP)", "sd": "Sofia (SD)", "fi": "Felix (FI)",
+    "abap": "Axel (ABAP)", "drc": "Diana (DRC)", "fest": "Estela (Fiscal Estadual)", "ffed": "Fabio (Fiscal Federal)",
+    "eq": "Eduardo (Equipe/GP)", "com": "Camila (Comercial)"
+  },
+  "common": { "loading": "Carregando...", "error": "Erro", "save": "Salvar", "cancel": "Cancelar", "delete": "Excluir", "search": "Buscar", "no_results": "Nenhum resultado" }
+}

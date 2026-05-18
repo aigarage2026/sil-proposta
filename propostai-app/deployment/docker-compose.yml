@@ -1,0 +1,79 @@
+networks:
+  propostai-network:
+    driver: bridge
+
+volumes:
+  propostai_pgdata:
+  propostai_redisdata:
+  propostai_documents:
+
+services:
+  postgres-propostai:
+    image: postgres:16-alpine
+    networks: [propostai-network]
+    volumes: [propostai_pgdata:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_DB: propostai
+      POSTGRES_USER: propostai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propostai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-propostai:
+    image: redis:7-alpine
+    networks: [propostai-network]
+    volumes: [propostai_redisdata:/data]
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  migration:
+    # Build context is the app root so we can copy backend/ and (later)
+    # shared/ libraries with consistent paths.
+    build:
+      context: ..
+      dockerfile: deployment/backend.Dockerfile
+    networks: [propostai-network]
+    command: alembic upgrade head
+    depends_on:
+      postgres-propostai:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://propostai:${POSTGRES_PASSWORD:-secret}@postgres-propostai:5432/propostai
+
+  backend-propostai:
+    build:
+      context: ..
+      dockerfile: deployment/backend.Dockerfile
+    networks: [propostai-network]
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://propostai:${POSTGRES_PASSWORD:-secret}@postgres-propostai:5432/propostai
+      REDIS_URL: redis://redis-propostai:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PORTAL_API_URL: ${PORTAL_API_URL:-https://app.ai-garage.com.br}
+      PORTAL_API_KEY: ${PORTAL_API_KEY:-}
+      STORAGE_BASE_PATH: /data/propostai
+      DEBUG: "false"
+    volumes:
+      - propostai_documents:/data/propostai
+    restart: unless-stopped
+
+  frontend-propostai:
+    build:
+      context: ..
+      dockerfile: deployment/frontend.Dockerfile
+    networks: [propostai-network]
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend-propostai
+    restart: unless-stopped
