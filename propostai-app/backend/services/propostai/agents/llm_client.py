@@ -50,6 +50,11 @@ class LLMClient:
     it must be a callable taking no args and returning something with a
     `post(url, json=, headers=)` coroutine returning a response whose
     `.status_code`, `.raise_for_status()`, and `.json()` work like httpx.
+
+    Per-agent model override: `claude_model_by_agent` lets the orchestrator
+    keep critical agents on Opus (ABAP — venda) and route cheap structured
+    agents to Haiku (QA, ANON_REVIEW). All other Anthropic-routed agents
+    default to `anthropic_model` (Sonnet 4.6).
     """
 
     openai_key: Optional[str] = None
@@ -57,6 +62,7 @@ class LLMClient:
     openai_model: Optional[str] = None
     anthropic_model: Optional[str] = None
     claude_agents: frozenset[str] = frozenset()
+    claude_model_by_agent: dict[str, str] = field(default_factory=dict)
     openai_timeout: int = 60
     anthropic_timeout: int = 300
     http_factory: Optional[object] = None
@@ -67,15 +73,31 @@ class LLMClient:
     def from_settings(cls) -> "LLMClient":
         s = get_settings()
         agents = frozenset(a.strip() for a in (s.CLAUDE_AGENTS or "").split(",") if a.strip())
+        # Map JSON é lido a partir de settings.CLAUDE_MODEL_BY_AGENT. Se
+        # o JSON estiver corrompido, ignoramos e caímos no default — o
+        # objetivo é nunca quebrar a inicialização por config malformada.
+        try:
+            overrides = json.loads(s.CLAUDE_MODEL_BY_AGENT or "{}")
+            if not isinstance(overrides, dict):
+                overrides = {}
+        except (json.JSONDecodeError, AttributeError):
+            overrides = {}
         return cls(
             openai_key=s.OPENAI_API_KEY or None,
             anthropic_key=s.ANTHROPIC_API_KEY or None,
             openai_model=s.OPENAI_MODEL,
             anthropic_model=s.ANTHROPIC_MODEL,
             claude_agents=agents,
+            claude_model_by_agent=overrides,
             openai_timeout=s.LLM_TIMEOUT_OPENAI,
             anthropic_timeout=s.LLM_TIMEOUT_ANTHROPIC,
         )
+
+    def _model_for(self, agent_name: str) -> str:
+        """Picks the Anthropic model for `agent_name`. Falls back to the
+        global ANTHROPIC_MODEL when no override is configured.
+        """
+        return self.claude_model_by_agent.get(agent_name) or self.anthropic_model or ""
 
     # ── public API ──────────────────────────────────────────────────────
 
@@ -160,6 +182,7 @@ class LLMClient:
     ) -> str:
         if not self.anthropic_key:
             raise ValueError("ANTHROPIC_API_KEY not configured")
+        model = self._model_for(agent_name)
         async with self._http(self.anthropic_timeout) as client:
             r = await client.post(
                 "https://api.anthropic.com/v1/messages",
@@ -169,7 +192,7 @@ class LLMClient:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": self.anthropic_model,
+                    "model": model,
                     "max_tokens": max_tokens,
                     "system": system,
                     "messages": [{"role": "user", "content": user}],
@@ -181,7 +204,7 @@ class LLMClient:
             usage = data.get("usage", {}) or {}
             self.billing.append(
                 BillingRecord(
-                    model_name=self.anthropic_model or "",
+                    model_name=model,
                     agent_name=agent_name,
                     tokens_input=usage.get("input_tokens", 0),
                     tokens_output=usage.get("output_tokens", 0),

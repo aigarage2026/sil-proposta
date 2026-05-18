@@ -64,12 +64,28 @@ class Settings(BaseSettings):
     # Empty defaults so tests / dev environments without keys can still import.
     # The orchestrator raises if a real call is attempted while the key is empty.
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o"
+    # gpt-4o-mini é 16× mais barato que gpt-4o ($0.15/$0.60 vs $2.50/$10).
+    # Usado pra agentes "leves" (AS_IS_TO_BE narrativo) e como fallback do
+    # routing Anthropic. Pra qualidade máxima de prosa, voltar pra gpt-4o.
+    OPENAI_MODEL: str = "gpt-4o-mini"
     ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL: str = "claude-opus-4-7"
-    # Agents routed through Claude (comma-separated; rest go to OpenAI).
-    # Default mirrors the legacy: ABAP + QA get Claude when the key is set.
-    CLAUDE_AGENTS: str = "ABAP,QA"
+    # Default da Anthropic agora é Sonnet 4.6 — 5× mais barato que Opus,
+    # qualidade equivalente pros agentes funcionais (SD/FI/MM/etc).
+    # Agentes que precisam de Opus ou Haiku declaram override em
+    # CLAUDE_MODEL_BY_AGENT abaixo.
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
+    # Agents routed through Anthropic (comma-separated; rest go to OpenAI).
+    # Default agora cobre praticamente todos os agentes SAP — Sonnet é
+    # superior pro contexto técnico SAP a custo similar ao GPT-4o.
+    # Apenas AS_IS_TO_BE fica no GPT (narrativa leve, gpt-4o-mini).
+    CLAUDE_AGENTS: str = "ABAP,SD,FI,MM,CO,PP,HR,QM,WM,BASIS,GENERIC,QA,ANON_REVIEW"
+    # Per-agent model override. JSON dict mapping agent_name → model_id.
+    # Permite manter ABAP no Opus (qualidade máxima pra venda) e QA /
+    # ANON_REVIEW no Haiku (tarefas estruturadas, baratas).
+    # Agentes ausentes do dict caem no ANTHROPIC_MODEL default (Sonnet).
+    CLAUDE_MODEL_BY_AGENT: str = (
+        '{"ABAP":"claude-opus-4-7","QA":"claude-haiku-4-5","ANON_REVIEW":"claude-haiku-4-5"}'
+    )
     # Timeouts for outbound LLM calls.
     LLM_TIMEOUT_OPENAI: int = 60
     LLM_TIMEOUT_ANTHROPIC: int = 300
